@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我去抢个座 - Web版</title>
+  <style>
+    /* Global Reset & Box Sizing */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Body Styling */
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+      max-width: 700px;
+      /* Slightly increased max-width */
+      margin: 30px auto;
+      /* Increased top/bottom margin */
+      background-color: #f8f9fa;
+      /* Lighter grey background */
+      color: #343a40;
+      /* Slightly softer black */
+    }
+
+    /* Headings */
+    h1,
+    h2 {
+      color: #212529;
+      /* Darker heading color */
+      text-align: center;
+      margin-bottom: 1.5rem;
+      /* More space below headings */
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      /* Slightly larger h1 */
+      font-weight: 600;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      font-weight: 500;
+      margin-top: 2.5rem;
+      /* More space above h2 */
+    }
+
+    /* Form Styling */
+    form {
+      background-color: #ffffff;
+      padding: 30px 35px;
+      /* Increased padding */
+      border-radius: 12px;
+      /* Larger border radius */
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      /* Softer, more prominent shadow */
+      border: 1px solid #e9ecef;
+      /* Subtle border */
+    }
+
+    /* Labels */
+    label {
+      display: block;
+      margin-top: 1.2rem;
+      /* Increased spacing */
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      /* Slightly less bold */
+      color: #495057;
+      /* Greyer label color */
+      font-size: 0.95rem;
+    }
+
+    /* Input Fields & Select */
+    input[type=text],
+    input[type=number],
+    select {
+      width: 100%;
+      /* Simplified width */
+      padding: 12px 15px;
+      /* Increased padding */
+      margin-top: 5px;
+      border: 1px solid #ced4da;
+      /* Standard border color */
+      border-radius: 6px;
+      /* Softer corners */
+      font-size: 1rem;
+      color: #495057;
+      background-color: #fff;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    /* Select Specific Styling */
+    select {
+      appearance: none;
+      /* Remove default arrow */
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 16px 12px;
+      padding-right: 2.5rem;
+      /* Make space for custom arrow */
+    }
+
+    /* Focus State for Inputs/Select */
+    input:focus,
+    select:focus {
+      border-color: #86b7fe;
+      /* Lighter blue focus border */
+      outline: 0;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+      /* Standard Bootstrap focus glow */
+    }
+
+    /* Input Placeholders */
+    input::placeholder {
+      color: #adb5bd;
+      opacity: 1;
+    }
+
+    /* Button Styling */
+    button {
+      display: block;
+      width: 100%;
+      padding: 12px 25px;
+      margin-top: 30px;
+      /* More space above button */
+      cursor: pointer;
+      background-color: #0d6efd;
+      /* Standard Bootstrap blue */
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      font-weight: 500;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #0b5ed7;
+      /* Darker blue on hover */
+      transform: translateY(-1px);
+      /* Slight lift effect */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active:not(:disabled) {
+      background-color: #0a58ca;
+      /* Even darker blue when active */
+      transform: translateY(0px);
+      /* Press down effect */
+    }
+
+    button:disabled {
+      background-color: #adb5bd;
+      /* Disabled grey */
+      cursor: not-allowed;
+      opacity: 0.7;
+      box-shadow: none;
+    }
+
+    /* Result Area Styling */
+    #result {
+      margin-top: 25px;
+      padding: 20px;
+      /* Increased padding */
+      border: 1px solid #dee2e6;
+      /* Lighter border */
+      min-height: 100px;
+      max-height: 400px;
+      overflow-y: auto;
+      background-color: #eef2f7;
+      /* Light blue-grey background */
+      border-radius: 8px;
+      /* Consistent rounded corners */
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+      /* Better monospace stack */
+      font-size: 0.9rem;
+      /* Slightly smaller log font */
+      line-height: 1.5;
+      word-wrap: break-word;
+      transition: border-color 0.3s ease;
+      /* Smooth border color transition */
+    }
+
+    /* Result Area Paragraph Styling */
+    #result p {
+      margin: 6px 0;
+      /* Slightly more space between lines */
+      padding: 5px 8px;
+      /* Padding for lines */
+      border-radius: 4px;
+      /* Rounded corners for message backgrounds */
+      white-space: pre-wrap;
+      display: flex;
+      /* Use flex for alignment with spinner */
+      align-items: flex-start;
+      /* Align text top with spinner */
+    }
+
+    /* Styling for Specific Status Containers */
+    #result.success {
+      border-color: #198754;
+    }
+
+    /* Green border for success container */
+    #result.error {
+      border-color: #dc3545;
+    }
+
+    /* Red border for error container */
+    #result.info {
+      border-color: #0dcaf0;
+    }
+
+    /* Cyan border for info container */
+    #result.processing {
+      border-color: #ffc107;
+    }
+
+    /* Yellow border for processing container */
+
+    /* Styling for Specific Message Types (Overrides general p styling if needed) */
+    #result p.error-message,
+    #result.error p:last-child {
+      /* Style explicit errors and last line in error state */
+      color: #842029;
+      /* Darker red text */
+      background-color: #f8d7da;
+      /* Light red background */
+      border-left: 4px solid #dc3545;
+      /* Red left accent border */
+      padding-left: 12px;
+    }
+
+    #result.success p:last-child {
+      /* Style last line in success state */
+      color: #0f5132;
+      /* Darker green text */
+      background-color: #d1e7dd;
+      /* Light green background */
+      border-left: 4px solid #198754;
+      /* Green left accent border */
+      padding-left: 12px;
+      font-weight: 500;
+    }
+
+    #result p.disconnected-message {
+      color: #6c757d;
+      /* Grey text */
+      font-style: italic;
+      background-color: transparent;
+      /* No background */
+      border-left: 4px solid #6c757d;
+      /* Grey left accent border */
+      padding-left: 12px;
+    }
+
+    /* Spinner Styling */
+    .spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      width: 1em;
+      /* Relative size */
+      height: 1em;
+      /* Relative size */
+      border-radius: 50%;
+      border-left-color: #0d6efd;
+      /* Match button blue */
+      margin-right: 10px;
+      /* Space between spinner and text */
+      display: inline-block;
+      vertical-align: -0.125em;
+      /* Fine-tune vertical alignment */
+      flex-shrink: 0;
+      /* Prevent spinner from shrinking */
+      animation: spin 1s linear infinite;
+      /* Linear spin */
+      margin-top: 0.1em;
+      /* Align better with first line of text */
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Small Text Hint */
+    small {
+      color: #6c757d;
+      /* Standard muted color */
+      display: block;
+      margin-top: 5px;
+      font-size: 0.875em;
+      line-height: 1.4;
+    }
+
+    /* Highlight specific seat taken error hint more clearly */
+    #result p.error-message:last-child:containing('提示：该座位已被占用') {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 标题保持 Emoji -->
+  <h1>我去抢个座 v2.1.1 📚</h1>
+  <form id="seatForm">
+    <!-- Form elements remain the same -->
+    <label for="mode">操作模式:</label>
+    <select id="mode" name="mode" required onchange="updateWebForm()">
+      <option value="1">明日预约 (21:48-23:59)</option>
+      <option value="2" selected>立即抢座 (06:30-22:30)</option>
+    </select>
+
+    <label for="cookieStr">Cookie:</label>
+    <input type="text" id="cookieStr" name="cookieStr" required placeholder="在此粘贴完整的 Cookie 字符串">
+
+    <label for="libId">阅览室:</label>
+    <select id="libId" name="libId" required>
+      <option value="" disabled selected>正在加载阅览室...</option>
+    </select>
+
+    <label for="timeStr" id="time_label">抢座执行时间 (留空则立即执行):</label>
+    <input type="text" id="timeStr" name="timeStr" pattern="\d{2}:\d{2}:\d{2}" placeholder="HH:MM:SS">
+    <small id="time_hint"></small>
+
+    <label for="seatNumber" id="seat_label">座位号:</label>
+    <input type="text" id="seatNumber" name="seatNumber" required placeholder="例如 127">
+
+    <button type="submit" id="submitBtn" disabled>连接中...</button>
+  </form>
+
+  <h2>操作状态与结果:</h2>
+  <div id="result" class="info">等待连接状态更新通道...</div>
+
+  <script>
+    // --- Get DOM Elements ---
+    const modeSelect = document.getElementById('mode');
+    const cookieInput = document.getElementById('cookieStr');
+    const roomSelect = document.getElementById('libId');
+    const timeLabel = document.getElementById('time_label');
+    const timeInput = document.getElementById('timeStr');
+    const timeHint = document.getElementById('time_hint');
+    const seatLabel = document.getElementById('seat_label');
+    const seatNumberInput = document.getElementById('seatNumber');
+    const seatForm = document.getElementById('seatForm');
+    const resultDiv = document.getElementById('result');
+    const submitButton = document.getElementById('submitBtn');
+
+    let websocket = null;
+    // Generate clientId ONCE per page load
+    const clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    let wsReady = false;
+    let wsConnectionAttempted = false;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5; // Max attempts before giving up temporarily
+    let reconnectTimeoutId = null; // To store setTimeout ID for retries
+    let isManualDisconnect = false; // Flag to prevent reconnect on intentional close
+
+    // --- Helper function to add messages to the result div ---
+    function addResultMessage(message, type = 'info', includeSpinner = false) {
+      const line = document.createElement('p');
+
+      // Add specific classes for styling based on type
+      if (type === 'error') {
+        line.classList.add('error-message'); // Specific class for errors
+        // No spinner for final errors usually, but allow override
+      } else if (type === 'disconnected') {
+        line.classList.add('disconnected-message'); // Specific class for disconnect
+        includeSpinner = false; // Never show spinner for disconnect message
+      } else if (type === 'success') {
+        // Could add a 'success-message' class if needed for specific styling
+        includeSpinner = false; // No spinner for final success
+      }
+
+      // Add spinner if requested AND not an error/disconnect/success message implicitly disabling it
+      if (includeSpinner) {
+        const spinnerDiv = document.createElement('div');
+        spinnerDiv.className = 'spinner';
+        line.appendChild(spinnerDiv);
+      }
+
+      // Add text content
+      line.appendChild(document.createTextNode(message));
+
+      // Append and scroll
+      resultDiv.appendChild(line);
+      resultDiv.scrollTop = resultDiv.scrollHeight; // Auto-scroll
+    }
+
+
+    // --- WebSocket Setup with Reconnect Logic ---
+    function connectWebSocket() {
+      // Prevent multiple connection attempts simultaneously
+      if (wsConnectionAttempted) {
+        console.log("WebSocket connection attempt already in progress or active.");
+        return;
+      }
+      wsConnectionAttempted = true;
+      isManualDisconnect = false; // Reset manual disconnect flag on new attempt
+
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Use the SAME clientId for reconnection attempts
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/${clientId}`;
+      console.log(`Attempting WebSocket connection (Attempt ${reconnectAttempts + 1})...`, wsUrl);
+
+      // Clear previous messages only on the *first* attempt after a full disconnect/page load
+      // Keep logs during reconnection attempts
+      if (reconnectAttempts === 0 && !resultDiv.querySelector('p')) { // Only clear if empty
+        resultDiv.innerHTML = ''; // Clear previous results only on first fresh connect
+      }
+      // Add connecting message if not already present or if retrying
+      if (!resultDiv.querySelector('p:last-child')?.textContent.includes('正在连接')) {
+        addResultMessage('正在连接状态更新通道...', 'info', true);
+      }
+      resultDiv.className = 'info'; // Reset container class
+      submitButton.textContent = '连接中...';
+      submitButton.disabled = true;
+
+      // Clear any pending reconnect timeout
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
+
+      try {
+        websocket = new WebSocket(wsUrl);
+
+        websocket.onopen = () => {
+          console.log('WebSocket Connected');
+          wsReady = true;
+          wsConnectionAttempted = false; // Allow new attempts if needed later
+          reconnectAttempts = 0; // Reset counter on successful connection
+
+          // Remove "connecting..." or "reconnecting..." messages
+          const statusMessages = resultDiv.querySelectorAll('p');
+          statusMessages.forEach(p => {
+            if (p.textContent.includes('正在连接') || p.textContent.includes('正在尝试重新连接') || p.textContent.includes('已断开')) {
+              p.remove();
+            }
+          });
+
+          addResultMessage('✅ 通道已连接。', 'info'); // Concise connected message
+          resultDiv.className = 'info'; // Set to info state
+          submitButton.textContent = '开始执行';
+          submitButton.disabled = false;
+        };
+
+        websocket.onmessage = (event) => {
+          console.log('WebSocket Message:', event.data);
+          wsConnectionAttempted = false; // Message received, connection is active
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'status') {
+              // --- Append status messages ---
+              addResultMessage(data.message, 'processing', true); // Add spinner to status updates
+              resultDiv.className = 'processing';
+              submitButton.disabled = true;
+              submitButton.textContent = '处理中...';
+
+            } else if (data.type === 'result') {
+              // --- Handle final result ---
+              // Remove previous spinners before adding final result
+              const spinners = resultDiv.querySelectorAll('.spinner');
+              spinners.forEach(spinner => spinner.parentElement?.remove()); // Remove the whole paragraph containing the spinner
+
+              const messageType = data.status === 'success' ? 'success' : 'error';
+              const prefix = data.status === 'success' ? '✅ ' : '❌ ';
+              addResultMessage(prefix + data.message, messageType, false); // Add final message without spinner
+
+              resultDiv.className = messageType; // Set container class
+              submitButton.disabled = false;
+              submitButton.textContent = '开始执行';
+
+              // Highlight input on specific error
+              if (data.error_code === '{{ SEAT_TAKEN_ERROR_CODE }}') { // Replace placeholder if needed
+                seatNumberInput.style.borderColor = '#dc3545'; // Use error color
+                seatNumberInput.style.boxShadow = '0 0 0 0.25rem rgba(220, 53, 69, 0.25)'; // Error focus glow
+                seatNumberInput.focus();
+                addResultMessage('提示：该座位已被占用，请选择其他座位后重试。', 'error'); // Add specific hint
+              } else {
+                // Reset border/shadow on other results
+                seatNumberInput.style.borderColor = '#ced4da';
+                seatNumberInput.style.boxShadow = 'none';
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing WebSocket message:', e);
+            addResultMessage('处理 WebSocket 消息时出错: ' + event.data, 'error');
+            resultDiv.className = 'error';
+            submitButton.disabled = false; // Re-enable button on parsing error
+            submitButton.textContent = '开始执行';
+          }
+        }; // End of onmessage
+
+        websocket.onerror = (error) => {
+          console.error('WebSocket Error:', error);
+          wsConnectionAttempted = false; // Allow retry attempt
+          // onclose will handle the reconnect logic and user message
+        };
+
+        websocket.onclose = (event) => {
+          console.log('WebSocket Closed:', event.code, event.reason, `Manual disconnect: ${isManualDisconnect}`);
+          wsReady = false;
+          wsConnectionAttempted = false; // Allow new attempts
+
+          // --- Reconnection Logic ---
+          if (!isManualDisconnect) { // Only reconnect if not closed intentionally
+            // Remove any existing disconnected/connecting messages before adding a new one
+            const statusMessages = resultDiv.querySelectorAll('p.disconnected-message, p:has(> .spinner)');
+            statusMessages.forEach(p => {
+              if (p.textContent.includes('已断开') || p.textContent.includes('正在连接') || p.textContent.includes('正在尝试重新连接')) {
+                p.remove();
+              }
+            });
+
+
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+              reconnectAttempts++;
+              const delay = Math.pow(2, reconnectAttempts - 1) * 1000; // Exponential backoff
+              console.log(`WebSocket disconnected. Attempting reconnect ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delay / 1000}s...`);
+              addResultMessage(`🔌 状态更新通道已断开。正在尝试重新连接 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`, 'disconnected');
+              submitButton.disabled = true;
+              submitButton.textContent = '重新连接中...';
+              resultDiv.className = 'error'; // Indicate error state during disconnect
+
+              // Clear previous timeout if exists and set new one
+              if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId);
+              reconnectTimeoutId = setTimeout(connectWebSocket, delay);
+
+            } else {
+              console.log(`WebSocket disconnected. Max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Giving up temporarily.`);
+              addResultMessage(`❌ 状态更新通道连接失败。已达最大重连次数，请检查网络或稍后手动刷新页面重试。`, 'error');
+              submitButton.disabled = true; // Keep disabled
+              submitButton.textContent = '连接失败';
+              resultDiv.className = 'error'; // Keep error state
+            }
+          } else {
+            console.log("WebSocket closed intentionally, no reconnect needed.");
+            // Optionally add a message indicating manual close if needed
+            // addResultMessage('WebSocket 连接已手动关闭。', 'info');
+          }
+        }; // End of onclose
+
+      } catch (e) {
+        console.error("Failed to create WebSocket object:", e);
+        wsConnectionAttempted = false; // Allow retry attempt
+        resultDiv.innerHTML = ''; // Clear any previous messages
+        addResultMessage('❌ 创建 WebSocket 连接失败，您的浏览器可能不支持或网络设置阻止了连接。', 'error');
+        resultDiv.className = 'error';
+        submitButton.textContent = '连接失败';
+        submitButton.disabled = true;
+        // Optional: Add retry logic here too if desired
+      }
+    } // End of connectWebSocket function
+
+    // --- Function to close WebSocket manually ---
+    function disconnectWebSocket() {
+      if (websocket) {
+        console.log("Manually closing WebSocket connection.");
+        isManualDisconnect = true; // Set flag *before* closing
+        websocket.close();
+      }
+      // Clear any pending reconnect timeouts
+      if (reconnectTimeoutId) {
+        clearTimeout(reconnectTimeoutId);
+        reconnectTimeoutId = null;
+      }
+      wsReady = false;
+      wsConnectionAttempted = false; // Allow new connections later
+      reconnectAttempts = 0; // Reset counter on manual disconnect
+      // Update UI immediately if needed, though onclose might handle it too
+      // submitButton.textContent = '通道已断开';
+      // submitButton.disabled = true;
+      // resultDiv.className = 'info';
+      // addResultMessage('WebSocket 连接已关闭。', 'info');
+    }
+
+    // --- Listen for Page Visibility Changes ---
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Page became visible.");
+        // If WebSocket is not connected or connecting, attempt to connect
+        if (!websocket || (websocket.readyState !== WebSocket.OPEN && websocket.readyState !== WebSocket.CONNECTING)) {
+          console.log("WebSocket not connected on visibility change, attempting to connect.");
+          // Reset attempts aggressively when user comes back to the tab
+          reconnectAttempts = 0;
+          // Clear existing timeout before starting a new connection attempt
+          if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId);
+          connectWebSocket();
+        } else {
+          console.log("WebSocket already connected or connecting.");
+        }
+      } else {
+        console.log("Page became hidden.");
+        // No action needed when hidden, browser/OS handles suspension
+      }
+    });
+
+    // --- Form Logic ---
+    function updateWebForm() {
+      /* Form update logic remains the same */
+      const mode = modeSelect.value;
+      seatLabel.textContent = '座位号:'; // Reset label text
+      seatNumberInput.placeholder = '例如 127'; // Reset placeholder
+      if (mode === '1') {
+        timeLabel.textContent = '预约执行时间 (今日晚间, 必填):';
+        timeInput.placeholder = 'HH:MM:SS (例如 21:48:00)';
+        // IMPORTANT: Replace placeholders with actual values from your backend if possible
+        timeHint.textContent = `需在指定时间窗口内 (例如 21:48 - 23:59).`;
+        timeInput.required = true;
+      }
+      else {
+        timeLabel.textContent = '抢座执行时间 (可选, 留空则立即执行):';
+        timeInput.placeholder = 'HH:MM:SS (例如 08:00:00)';
+        timeHint.textContent = '如果指定时间，必须是未来的时间。';
+        timeInput.required = false;
+      }
+      // Reset error styling on mode change
+      seatNumberInput.style.borderColor = '#ced4da';
+      seatNumberInput.style.boxShadow = 'none';
+    }
+
+    // --- Load Room Mappings ---
+    async function loadRooms() {
+      submitButton.disabled = true;
+      submitButton.textContent = '加载数据...';
+      roomSelect.innerHTML = '<option value="" disabled selected>正在加载阅览室...</option>'; // Show loading state in select
+
+      try {
+        // IMPORTANT: Replace placeholder with the actual URL for your mappings
+        const response = await fetch('{{ mappings_url }}'); // Example URL
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status}, details: ${errorText || '服务器未返回错误详情'}`);
+        }
+        const data = await response.json();
+        if (!data.rooms || typeof data.rooms !== 'object' || Object.keys(data.rooms).length === 0) {
+          throw new Error("服务器返回的阅览室列表为空或格式不正确。");
+        }
+        roomSelect.innerHTML = '<option value="" disabled selected>请选择阅览室</option>'; // Clear loading state
+        for (const libId in data.rooms) {
+          const option = document.createElement('option');
+          option.value = libId;
+          option.textContent = data.rooms[libId]; // Assuming data.rooms is { "id": "name", ... }
+          roomSelect.appendChild(option);
+        }
+        // Attempt initial WebSocket connection AFTER loading rooms successfully
+        connectWebSocket();
+      } catch (error) {
+        console.error('Error loading room mappings:', error);
+        resultDiv.innerHTML = ''; // Clear previous messages
+        addResultMessage(`❌ 加载阅览室列表失败: ${error.message} 请刷新页面或检查服务器状态。`, 'error');
+        resultDiv.className = 'error';
+        submitButton.textContent = '加载失败';
+        submitButton.disabled = true;
+        roomSelect.innerHTML = '<option value="" disabled selected>加载失败</option>'; // Indicate failure in select
+      }
+    }
+
+    // --- Form Submission ---
+    seatForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      // Reset seat number input style on new submission attempt
+      seatNumberInput.style.borderColor = '#ced4da';
+      seatNumberInput.style.boxShadow = 'none';
+
+      resultDiv.innerHTML = ''; // Clear previous results before new submission
+      resultDiv.className = 'processing'; // Set initial state
+      addResultMessage('正在验证并提交请求...', 'processing', true);
+      submitButton.disabled = true;
+      submitButton.textContent = '提交中...';
+
+      // Check WebSocket state *before* submitting
+      if (!wsReady || !websocket || websocket.readyState !== WebSocket.OPEN) {
+        resultDiv.innerHTML = ''; // Clear submitting message
+        addResultMessage('❌ WebSocket 未连接或连接中断。请等待自动重连或手动刷新页面后再试。', 'error');
+        resultDiv.className = 'error';
+        submitButton.textContent = '通道断开'; // Keep button disabled
+        // Attempt to reconnect if submit is clicked while disconnected
+        if (!wsConnectionAttempted) {
+          reconnectAttempts = 0; // Reset attempts for manual trigger
+          connectWebSocket();
+        }
+        return;
+      }
+
+      // Gather Form Data
+      const data = {
+        mode: parseInt(modeSelect.value),
+        cookieStr: cookieInput.value.trim(),
+        libId: parseInt(roomSelect.value), // Ensure it's parsed
+        timeStr: timeInput.value.trim(),
+        seatNumber: seatNumberInput.value.trim(),
+        clientId: clientId // Include clientId in the request
+      };
+
+      // Frontend Validation
+      let validationError = null;
+      if (!data.cookieStr) {
+        validationError = 'Cookie 不能为空。';
+      } else if (isNaN(data.libId) || data.libId <= 0) {
+        validationError = '请选择一个有效的阅览室。';
+      } else if (!data.seatNumber || !/^\d+$/.test(data.seatNumber)) { // Ensure seat number is numeric
+        validationError = '座位号不能为空且必须为数字。';
+      } else if (data.mode === 1 && !data.timeStr) {
+        validationError = '明日预约模式必须指定执行时间 (HH:MM:SS)。';
+      } else if (data.timeStr && !/^\d{2}:\d{2}:\d{2}$/.test(data.timeStr)) {
+        validationError = '时间格式错误，应为 HH:MM:SS。';
+      }
+
+      if (validationError) {
+        resultDiv.innerHTML = ''; // Clear processing message
+        addResultMessage(`❌ 输入错误: ${validationError}`, 'error');
+        resultDiv.className = 'error';
+        submitButton.disabled = false; // Re-enable button
+        submitButton.textContent = '开始执行';
+        return;
+      }
+
+      // Submit Request via Fetch API
+      try {
+        // IMPORTANT: Replace placeholder with the actual API endpoint
+        const response = await fetch('/api/submit_request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        const responseData = await response.json(); // Try to parse JSON regardless of status
+
+        if (!response.ok) {
+          // Use detailed error from JSON if available, otherwise use status text
+          const errorDetail = responseData?.detail || responseData?.message || `HTTP Error ${response.status}`;
+          throw new Error(errorDetail);
+        }
+
+        console.log("HTTP Submission successful, backend task queued:", responseData);
+        // Message updated via WebSocket 'status' message now
+        // submitButton.textContent = '处理中...'; // Keep button disabled, wait for WS messages
+        // submitButton.disabled = true; // Kept disabled from start of submission
+        // resultDiv.innerHTML = ''; // Clear validation message
+        // addResultMessage('请求已提交，等待服务器处理...', 'processing', true); // Initial status after submit success
+
+      } catch (error) {
+        console.error('提交请求失败:', error);
+        resultDiv.innerHTML = ''; // Clear processing message
+        addResultMessage(`提交请求失败: ${error.message}`, 'error');
+        resultDiv.className = 'error';
+        submitButton.disabled = false; // Re-enable button on failure
+        submitButton.textContent = '开始执行';
+      }
+    });
+
+    // --- Initial Page Load ---
+    updateWebForm(); // Set initial form state based on default mode
+    loadRooms(); // Load rooms, which will trigger the first WebSocket connection attempt on success
+
+  </script>
+</body>
+
+</html>
