@@ -1,405 +1,517 @@
 # -*- coding: utf-8 -*-
-import json
-import time
-import requests
-import websocket # 需要安装 websocket-client
+import asyncio
 import datetime
-import re
-import sys
+import glob
+import json
 import os
-import glob # For finding seat mapping files
-from typing import Optional, Dict, Any, Tuple, List
-import asyncio # Needed for the async callback handling in the wrapper
-from fastapi import BackgroundTasks
+import re
+import stat
+import sys
+import time
+import atexit
+import traceback
+import subprocess
+from typing import Any, Callable, Dict, List, Optional, Tuple
+import requests
+import websocket  # 需要安装 websocket-client
+
+# --- 全局变量，用于跟踪 mitmproxy 进程 ---
+mitmproxy_process = None
+
+# --- Web Dependencies (Import conditionally) ---
+try:
+    from fastapi import (
+        BackgroundTasks,
+        FastAPI,
+        HTTPException,
+        Request,
+        WebSocket,
+        WebSocketDisconnect,
+    )
+    from fastapi.responses import JSONResponse
+    from fastapi.templating import Jinja2Templates
+    from pydantic import BaseModel, Field, validator
+    import uvicorn
+
+    WEB_DEPENDENCIES_MET = True
+    # Initialize app only if dependencies are met
+    app = FastAPI(title="我去抢个座", description="用于预约或抢座图书馆座位")
+
+except ImportError:
+    WEB_DEPENDENCIES_MET = False
+    # Dummy definitions for type hinting if needed elsewhere, but avoid re-assigning imported names
+    FastAPI = None
+    Request = Any
+    HTTPException = type("HTTPException", (Exception,), {}) # Basic Exception dummy
+    WebSocket = Any
+    WebSocketDisconnect = Any
+    BackgroundTasks = Any # Keep Any for type hints, don't assign None
+    JSONResponse = None
+    Jinja2Templates = Any # type: ignore
+    BaseModel = object # Basic object dummy for Pydantic
+    validator = lambda *args, **kwargs: lambda f: f # Dummy decorator
+    Field = lambda default=None, **kwargs: default
+    uvicorn = None
+    # asyncio is always available
+
+    print("\n❌ 错误：运行 Web 界面需要 FastAPI 相关依赖库，但未能成功导入。")
+    print("请确保已安装: pip install fastapi uvicorn jinja2 pydantic websockets websocket-client requests")
+    print("Web 服务器功能将不可用。\n")
+    app = None # Explicitly set app to None
 
 # --- Configuration ---
-URL = 'https://libseats.ldu.edu.cn/index.php/graphql/'
-WEBSOCKET_URL = 'wss://libseats.ldu.edu.cn/ws?ns=prereserve/queue'
-MAX_REQUEST_ATTEMPTS = 1 # 最大请求尝试次数
+URL = '这里填写URL'
+WEBSOCKET_URL = 'wss://XXXX/ws?ns=prereserve/queue'
+MAX_REQUEST_ATTEMPTS = 3 # Example: Set maximum request attempts
 SLEEP_INTERVAL_ON_FAIL = 0.5
 COOKIE_ERROR_PATTERN = r'Connection to remote host was lost|invalid session|请先登录|登陆|验证失败'
-TOMORROW_RESERVE_WINDOW_START = datetime.time(19, 48, 0)
-TOMORROW_RESERVE_WINDOW_END = datetime.time(23, 59, 59)
-DEFAULT_RESERVE_TIME_STR = "21:48:00" # Default suggestion, not used directly in logic
+TOMORROW_RESERVE_WINDOW_START = datetime.time(19, 48, 0) # Example window start
+TOMORROW_RESERVE_WINDOW_END = datetime.time(23, 59, 59) # Example window end
+DEFAULT_RESERVE_TIME_STR = "21:48:00"
+COOKIE_FILENAME = "latest_cookie.txt"
+FILE_CHECK_INTERVAL = 2 # Seconds
+MAX_WAIT_TIME = 120 # Seconds
 
-# --- NEW: Data Mapping Configuration ---
-# Assume 'data_process' directory is in the same folder as the script
+# --- 配置 mitmproxy 脚本路径 ---
+MITMPROXY_SCRIPT_NAME = "cookie_extractor.py"
+# MITMPROXY_SCRIPT_PATH = os.path.join(SCRIPT_DIR, MITMPROXY_SCRIPT_NAME)
+# --- 选择 mitmproxy 启动命令 (mitmweb 或 mitmproxy) ---
+# 使用 mitmweb 通常对用户更友好，因为它提供 Web UI (http://127.0.0.1:8081)
+MITMPROXY_COMMAND = "mitmweb"
+# 如果只想用命令行界面，或者 mitmweb 有问题，可以用下面这个
+# MITMPROXY_COMMAND = "mitmproxy"
+
+# --- Path Configuration ---
 try:
-    # Handles running from script file
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 except NameError:
-    # Handles running in interactive mode or environments where __file__ is not defined
     SCRIPT_DIR = os.getcwd()
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data_process')
 ROOM_MAPPINGS_FILE = os.path.join(DATA_DIR, 'room', 'output', 'room_mappings.json')
 SEAT_MAPPINGS_DIR = os.path.join(DATA_DIR, 'seat', 'output')
-# --- NEW: Template Directory ---
-TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates') # Define template directory path
+TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates')
+COOKIE_FILE_PATH = os.path.join(SCRIPT_DIR, COOKIE_FILENAME)
 
-# Global variables to store loaded mappings
+# --- Global Variables ---
 ROOM_ID_TO_NAME: Dict[str, str] = {}
 ROOM_NAME_TO_ID: Dict[str, str] = {}
-# Stores { room_name: { seat_number: seat_key } }
-SEAT_MAPPINGS: Dict[str, Dict[str, str]] = {}
-# Special return code for seat taken error
+SEAT_MAPPINGS: Dict[str, Dict[str, str]] = {} # { room_name: { seat_number: seat_key } }
 SEAT_TAKEN_ERROR_CODE = "SEAT_TAKEN"
 
-# --- NEW: Data Loading Function ---
-# ... (load_mappings function remains the same) ...
+# --- Data Loading Function ---
 def load_mappings() -> bool:
     """Loads room and seat mappings from JSON files."""
     global ROOM_ID_TO_NAME, ROOM_NAME_TO_ID, SEAT_MAPPINGS
     print("正在加载阅览室和座位映射数据...")
+    ROOM_ID_TO_NAME.clear(); ROOM_NAME_TO_ID.clear(); SEAT_MAPPINGS.clear()
     try:
-        # Load Room Mappings
         if not os.path.exists(ROOM_MAPPINGS_FILE):
             print(f"错误: 阅览室映射文件未找到: {ROOM_MAPPINGS_FILE}")
-            print("请确保 'data_process/room/output/room_mappings.json' 文件存在。")
             return False
         with open(ROOM_MAPPINGS_FILE, 'r', encoding='utf-8') as f:
             ROOM_ID_TO_NAME = json.load(f)
         ROOM_NAME_TO_ID = {v: k for k, v in ROOM_ID_TO_NAME.items()}
         print(f"成功加载 {len(ROOM_ID_TO_NAME)} 个阅览室映射。")
 
-        # Load Seat Mappings
         seat_files = glob.glob(os.path.join(SEAT_MAPPINGS_DIR, '*.json'))
         if not seat_files:
-             print(f"警告: 在 {SEAT_MAPPINGS_DIR} 未找到座位映射文件 (*.json)。将无法通过座位号选择。")
-             # Continue without seat mappings if none are found
+             print(f"警告: 在 {SEAT_MAPPINGS_DIR} 未找到座位映射文件 (*.json)。")
         else:
             loaded_seat_maps = 0
             for seat_file in seat_files:
                 try:
-                    # Extract room name from filename (remove .json)
                     room_name_from_file = os.path.splitext(os.path.basename(seat_file))[0]
-                    # Verify this room name exists in our loaded room mappings
-                    if room_name_from_file in ROOM_NAME_TO_ID:
+                    if room_name_from_file in ROOM_NAME_TO_ID: # Check against loaded room names
                         with open(seat_file, 'r', encoding='utf-8') as f:
-                            # Assumes format {"seat_number": "seat_key"}
                             seat_map = json.load(f)
-                            if isinstance(seat_map, dict): # Basic validation
+                            if isinstance(seat_map, dict):
                                 SEAT_MAPPINGS[room_name_from_file] = seat_map
                                 loaded_seat_maps += 1
                             else:
-                                print(f"警告: 座位文件 '{os.path.basename(seat_file)}' 内容格式不正确 (应为 JSON 对象)，已跳过。")
-
+                                print(f"警告: 座位文件 '{os.path.basename(seat_file)}' 内容格式不正确，已跳过。")
                     else:
-                        print(f"警告: 座位文件 '{os.path.basename(seat_file)}' 对应的阅览室名称 '{room_name_from_file}' 在 room_mappings.json 中未找到，已跳过。")
-                except json.JSONDecodeError:
-                    print(f"错误: 解析座位映射文件失败: {seat_file}")
+                        print(f"警告: 座位文件 '{os.path.basename(seat_file)}' 对应的阅览室 '{room_name_from_file}' 未找到，已跳过。")
                 except Exception as e:
                     print(f"加载座位文件 {seat_file} 时发生错误: {e}")
             if loaded_seat_maps > 0:
                 print(f"成功加载 {loaded_seat_maps} 个阅览室的座位映射。")
-            elif seat_files: # Files existed but none were loaded successfully
+            elif seat_files:
                 print(f"警告: 找到了座位文件，但未能成功加载任何有效的座位映射。")
-
 
         if not ROOM_ID_TO_NAME:
             print("错误: 未能加载任何阅览室数据。")
             return False
-
         return True
 
-    except FileNotFoundError:
-        print(f"错误: 数据目录或文件未找到。请确保 '{DATA_DIR}' 结构正确且包含所需文件。")
-        return False
-    except json.JSONDecodeError:
-        print(f"错误: 解析JSON映射文件失败。请检查文件格式: {ROOM_MAPPINGS_FILE}")
-        return False
     except Exception as e:
-        print(f"加载映射数据时发生未知错误: {e}")
+        print(f"加载映射数据时发生错误: {type(e).__name__} - {e}")
         return False
 
 # --- Default Payloads ---
-# ... (payloads remain the same) ...
+# Using multi-line strings for better readability
 queue_header_base: Dict[str, str] = {
-    'Host': 'libseats.ldu.edu.cn',
-    'Connection': 'Upgrade',
+    'Host': 'XXXX',
+    'Connection': 'Upgrade', 
     'Pragma': 'no-cache',
     'Cache-Control': 'no-cache',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090c33) XWEB/13603 Flue',
-    'Upgrade': 'websocket',
-    'Origin': 'https://libseats.ldu.edu.cn',
-    'Sec-WebSocket-Version': '13',
+    'Upgrade': 'websocket', 
+    'Origin': 'https://XXXX',
+    'Sec-WebSocket-Version': '13', 
     'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'zh-CN,zh;q=0.9',
-    'Cookie': '' # Placeholder
+    'Accept-Language': 'zh-CN,zh;q=0.9', 
+    'Cookie': ''
 }
-
 pre_header_base: Dict[str, str] = {
-    'Host': 'libseats.ldu.edu.cn',
+    'Host': 'XXXX', 
     'Connection': 'keep-alive',
-    # 'Content-Length': calculated by requests
+    'Content-Length': '353',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090c33) XWEB/13603 Flue',
-    'Content-Type': 'application/json',
-    'Accept': '*/*',
-    'Origin': 'https://libseats.ldu.edu.cn',
-    'Sec-Fetch-Site': 'same-origin',
-    'Sec-Fetch-Mode': 'cors',
+    'Content-Type': 'application/json', 
+    'Accept': '*/*', 
+    'Origin': 'https://XXXX',
+    'Sec-Fetch-Site': 'same-origin', 
+    'Sec-Fetch-Mode': 'cors', 
     'Sec-Fetch-Dest': 'empty',
-    'Referer': 'https://libseats.ldu.edu.cn/web/index.html',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'zh-CN,zh;q=0.9',
-    'Cookie': '' # Placeholder
+    'Referer': 'https://XXXX/web/index.html',
+    'Accept-Encoding': 'gzip, deflate, br', 
+    'Accept-Language': 'zh-CN,zh;q=0.9', 
+    'Cookie': ''
 }
-
-# Payload Templates
+_tomorrow_query = """
+mutation save($key: String!, $libid: Int!, $captchaCode: String, $captcha: String) {
+  userAuth {
+    prereserve {
+      save(key: $key, libId: $libid, captcha: $captcha, captchaCode: $captchaCode)
+    }
+  }
+}
+"""
 data_template_tomorrow: Dict[str, Any] = {
-    "operationName": "save",
-    "query": "mutation save($key: String!, $libid: Int!, $captchaCode: String, $captcha: String) {\n userAuth {\n prereserve {\n save(key: $key, libId: $libid, captcha: $captcha, captchaCode: $captchaCode)\n }\n }\n}",
-    "variables": {
-        "key": "", # Placeholder (e.g., "44,43.")
-        "libid": 0, # Placeholder for Tomorrow's Lib ID
-        "captchaCode": "",
-        "captcha": ""
-    }
+    "operationName": "save", "variables": {"key": "", "libid": 0, "captchaCode": "", "captcha": ""},
+    "query": _tomorrow_query.strip()
 }
-
+_today_query = """
+mutation reserveSeat($libId: Int!, $seatKey: String!, $captchaCode: String, $captcha: String!) {
+  userAuth {
+    reserve {
+      reserveSeat(libId: $libId, seatKey: $seatKey, captchaCode: $captchaCode, captcha: $captcha)
+    }
+  }
+}
+"""
 data_template_today: Dict[str, Any] = {
-    "operationName": "reserveSeat",
-    "query": "mutation reserveSeat($libId: Int!, $seatKey: String!, $captchaCode: String, $captcha: String!) {\n userAuth {\n reserve {\n reserveSeat(\n libId: $libId\n seatKey: $seatKey\n captchaCode: $captchaCode\n captcha: $captcha\n )\n }\n }\n}",
-    "variables": {
-        "seatKey": "", # Placeholder (e.g., "46,46")
-        "libId": 0, # Placeholder for Today's Lib ID
-        "captchaCode": "",
-        "captcha": ""
+    "operationName": "reserveSeat", "variables": {"seatKey": "", "libId": 0, "captchaCode": "", "captcha": ""},
+    "query": _today_query.strip()
+}
+_validate_query = """
+query prereserve {
+  userAuth {
+    prereserve {
+      prereserve {
+        day
+        lib_id
+        seat_key
+        seat_name
+        is_used
+        user_mobile
+        id
+        lib_name
+      }
     }
+  }
 }
-
-data_validate: Dict[str, Any] = {
-    "operationName": "prereserve",
-     "query": "query prereserve {\n userAuth {\n prereserve {\n prereserve {\n day\n lib_id\n seat_key\n seat_name\n is_used\n user_mobile\n id\n lib_name\n }\n }\n }\n}"
-     # No variables needed for this query
+"""
+data_validate: Dict[str, Any] = {"operationName": "prereserve", "query": _validate_query.strip()}
+_layout_query = """
+query libLayout($libId: Int!) {
+  userAuth {
+    prereserve {
+      libLayout(libId: $libId) {
+        max_x
+        max_y
+        seats_booking
+        seats_total
+        seats_used
+        seats {
+          key
+          name
+          seat_status
+          status
+          type
+          x
+          y
+        }
+      }
+    }
+  }
 }
-
+"""
 data_lib_chosen_template: Dict[str, Any] = {
-    "operationName": "libLayout",
-    "query": "query libLayout($libId: Int!) {\n userAuth {\n prereserve {\n libLayout(libId: $libId) {\n max_x\n max_y\n seats_booking\n seats_total\n seats_used\n seats {\n key\n name\n seat_status\n status\n type\n x\n y\n }\n }\n }\n }\n}",
-    "variables": {
-        "libId": 0 # Placeholder
-    }
+    "operationName": "libLayout", "variables": {"libId": 0},
+    "query": _layout_query.strip()
 }
+
+# --- 函数：启动 mitmproxy ---
+def start_mitmproxy():
+    """启动 mitmproxy 脚本作为后台进程"""
+    global mitmproxy_process
+    try:
+        # 尝试获取当前文件所在目录
+        CURRENT_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        # 如果在交互模式等环境中运行，回退到当前工作目录
+        CURRENT_SCRIPT_DIR = os.getcwd()
+
+    MITMPROXY_SCRIPT_PATH = os.path.join(CURRENT_SCRIPT_DIR, MITMPROXY_SCRIPT_NAME)
+
+    if mitmproxy_process and mitmproxy_process.poll() is None:
+        print("Mitmproxy 进程似乎已在运行。")
+        return True
+
+    if not os.path.exists(MITMPROXY_SCRIPT_PATH):
+        print(f"错误：mitmproxy 脚本未找到: {MITMPROXY_SCRIPT_PATH}")
+        return False
+
+    command = [MITMPROXY_COMMAND, "-s", MITMPROXY_SCRIPT_PATH, "--set", "web_port=8081"]
+
+    try:
+        print(f"正在启动 mitmproxy ({MITMPROXY_COMMAND}) 后台进程...")
+        mitmproxy_process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        )
+        print(f"Mitmproxy 进程已启动 (PID: {mitmproxy_process.pid})。")
+        if MITMPROXY_COMMAND == "mitmweb":
+             print("提示：可以在浏览器打开 http://127.0.0.1:8081 查看 mitmweb 界面。")
+        time.sleep(2)
+        if mitmproxy_process.poll() is not None:
+             print("错误：Mitmproxy 进程启动后立刻退出了。")
+             stderr_output = mitmproxy_process.stderr.read().decode(errors='ignore') if mitmproxy_process.stderr else "N/A"
+             print(f"Mitmproxy 错误输出: {stderr_output}")
+             mitmproxy_process = None
+             return False
+        return True
+    except FileNotFoundError:
+        print(f"错误：无法找到 '{MITMPROXY_COMMAND}' 命令。")
+        mitmproxy_process = None
+        return False
+    except Exception as e:
+        print(f"启动 mitmproxy 时发生错误: {e}")
+        mitmproxy_process = None
+        return False
+
+# --- 函数：停止 mitmproxy ---
+def stop_mitmproxy():
+    """停止由本程序启动的 mitmproxy 进程"""
+    global mitmproxy_process
+    if mitmproxy_process and mitmproxy_process.poll() is None: # 检查进程是否存在且在运行
+        print(f"正在尝试终止 mitmproxy 进程 (PID: {mitmproxy_process.pid})...")
+        try:
+            mitmproxy_process.terminate() # 尝试友好终止
+            mitmproxy_process.wait(timeout=5) # 等待最多5秒
+            print("Mitmproxy 进程已终止。")
+        except subprocess.TimeoutExpired:
+            print("警告：Mitmproxy 进程未能在5秒内终止，尝试强制结束...")
+            try:
+                mitmproxy_process.kill()
+                mitmproxy_process.wait(timeout=2)
+                print("Mitmproxy 进程已被强制结束。")
+            except Exception as kill_err:
+                print(f"强制结束 mitmproxy 进程时出错: {kill_err}")
+        except Exception as e:
+            print(f"终止 mitmproxy 进程时发生错误: {e}")
+        finally:
+             mitmproxy_process = None # 清理引用
+    # else:
+    #     print("没有需要停止的 mitmproxy 进程。")
+
+
+# --- 注册退出处理函数 ---
+# 确保在 beta.py 退出时，我们启动的 mitmproxy 也能退出
+atexit.register(stop_mitmproxy)
 
 # --- Helper Functions ---
-# ... (extract_error_msg, pass_queue, validate_time_format, calculate_execution_dt, perform_seat_operation remain the same) ...
 def extract_error_msg(response_text: str) -> str:
     """Extracts the error message from the JSON response."""
     try:
         data = json.loads(response_text)
-        if "errors" in data and isinstance(data["errors"], list) and len(data["errors"]) > 0:
-            error_info = data["errors"][0]
-            if isinstance(error_info, dict) and "msg" in error_info:
-                return str(error_info["msg"]) # Return decoded string
-            elif isinstance(error_info, str):
-                 # Try decoding if it looks like unicode escapes
-                 try:
-                     # Attempt to decode common web escape sequences
-                     return error_info.encode('latin-1', 'backslashreplace').decode('unicode-escape')
-                 except Exception:
-                    return error_info # Return as is if decoding fails
-        if "msg" in data and data["msg"]: # Check top-level msg
-             return str(data["msg"])
-        # Fallback if structure is unexpected but is valid JSON
+        errors = data.get("errors")
+        if errors and isinstance(errors, list) and errors:
+            error_info = errors[0]
+            msg = error_info.get("msg", str(error_info))
+            # Attempt to decode potential unicode escapes
+            return msg.encode('latin-1', 'backslashreplace').decode('unicode-escape', 'replace') if isinstance(msg, str) else str(msg)
+        msg = data.get("msg")
+        if msg:
+            return str(msg)
+        # Fallback for unexpected structure
         return response_text[:200] + ("..." if len(response_text) > 200 else "")
-
     except json.JSONDecodeError:
-        # If it's not JSON, return the raw text snippet, trying to decode common escapes
+        # Handle non-JSON response
         try:
-            # Attempt common web escape decoding
-            decoded_text = response_text.encode('latin-1', 'backslashreplace').decode('unicode-escape')
-            return decoded_text[:200] + ("..." if len(decoded_text) > 200 else "")
+            return response_text.encode('latin-1', 'backslashreplace').decode('unicode-escape', 'replace')[:200] + ("..." if len(response_text) > 200 else "")
         except Exception:
-             # Fallback to returning raw text if decoding fails
-            return response_text[:200] + ("..." if len(response_text) > 200 else "")
+             return response_text[:200] + ("..." if len(response_text) > 200 else "") # Raw fallback
     except Exception as e:
-        return f"解析错误信息时发生内部错误: {type(e).__name__} - {e}"
+        return f"解析错误信息时发生内部错误: {type(e).__name__}"
 
-def pass_queue(ws_headers: Dict[str, str], status_callback=None) -> bool:
-    """
-    Simulates the WebSocket queueing process.
-    Sends status updates via status_callback if provided.
-    Returns True if queueing seems successful or already done, False otherwise.
-    Raises ConnectionError if a Cookie issue is suspected.
-    """
 
-        # --- Define the helper function AT THE BEGINNING of pass_queue ---
-    def send_status_pq(msg):
-        print(msg) # Keep printing to console
+def pass_queue(ws_headers: Dict[str, str], status_callback: Optional[Callable[[str], None]] = None) -> bool:
+    """Simulates WebSocket queueing, sends status updates via callback."""
+
+    def send_status_pq(msg: str):
+        """Internal helper to print and send status."""
+        print(msg)
         if status_callback:
             cleaned_msg = msg.strip().replace('\r', '')
             if cleaned_msg:
                 try:
-                    # Assuming status_callback uses background_tasks.add_task now
                     status_callback(cleaned_msg)
                 except Exception as pq_cb_err:
-                    # Log error but don't crash pass_queue
                     print(f"[Callback Error in pass_queue] {pq_cb_err}")
-    # Helper to send status update if callback exists
-    def send_status(msg):
-        print(msg) # Keep printing to console
-        if status_callback:
-            # Remove potential '\r' from countdown messages for cleaner WS logs
-            cleaned_msg = msg.strip().replace('\r', '')
-            if cleaned_msg: # Avoid sending empty messages
-                status_callback(cleaned_msg)
 
-    send_status("\n================================")
-    send_status("尝试进入排队通道...")
+    send_status_pq("\n================================")
+    send_status_pq("尝试进入排队通道...")
     ws = None
     is_success = False
     try:
-        # ... (WebSocket connection logic) ...
-        ws = websocket.create_connection(WEBSOCKET_URL, header=ws_headers, suppress_origin=True)
-
+        ws = websocket.create_connection(WEBSOCKET_URL, header=ws_headers, suppress_origin=True, timeout=10) # Added connection timeout
         if ws.connected:
-            send_status('WebSocket 连接成功，开始排队...')
+            send_status_pq('WebSocket 连接成功，开始排队...')
             ws.send('{"ns":"prereserve/queue","msg":""}')
-            timeout_seconds = 10
+            timeout_seconds = 15 # Increased receive timeout
             start_time = time.time()
-
             while time.time() - start_time < timeout_seconds:
                 try:
+                    # Calculate remaining time for recv timeout
                     receive_timeout = max(0.1, timeout_seconds - (time.time() - start_time))
                     ws.settimeout(receive_timeout)
                     raw_response = ws.recv()
-                    decoded_response = raw_response
+                    decoded_response = raw_response # Default
                     try:
                         msg_data = json.loads(raw_response)
                         decoded_response = msg_data.get('msg', raw_response)
-                        send_status(f"服务器消息: {decoded_response}") # <--- Use helper
+                        send_status_pq(f"服务器消息: {decoded_response}")
                     except json.JSONDecodeError:
-                        try:
-                           decoded_response = raw_response.encode('latin-1', 'backslashreplace').decode('unicode-escape')
-                           send_status(f"排队中，服务器响应: {decoded_response}") # <--- Use helper
-                        except Exception:
-                           send_status(f"排队中，服务器原始响应: {raw_response}") # <--- Use helper
+                        try: decoded_response = raw_response.encode('latin-1', 'backslashreplace').decode('unicode-escape', 'replace')
+                        except: decoded_response = str(raw_response) # Fallback
+                        send_status_pq(f"排队中，服务器响应: {decoded_response}")
 
-                    # Check for success indicators
-                    if decoded_response == "ok" or "排队成功" in str(decoded_response) or "您已经预定了座位" in str(decoded_response) or "您已经预约了座位" in str(decoded_response):
-                        send_status("排队成功或已完成预约。") # <--- Use helper
-                        is_success = True
-                        break
-                    if "当前已经在队列中" in str(decoded_response):
-                         send_status("已在队列中。") # <--- Use helper
+                    # Check keywords case-insensitively for robustness
+                    decoded_lower = str(decoded_response).lower()
+                    success_keywords = ["ok", "排队成功", "您已经预定了座位", "您已经预约了座位", "当前已经在队列中"]
+                    if any(keyword in decoded_lower for keyword in success_keywords):
+                         send_status_pq("排队成功或已在队列/已完成预约。")
                          is_success = True
                          break
-                    if "验证失败" in str(decoded_response) or "invalid session" in str(decoded_response):
-                         send_status("排队时检测到验证失败，可能Cookie已失效。") # <--- Use helper
+                    failure_keywords = ["验证失败", "invalid session"]
+                    if any(keyword in decoded_lower for keyword in failure_keywords):
+                         send_status_pq("排队时检测到验证失败，可能Cookie已失效。")
                          raise ConnectionError("Cookie失效(WebSocket)，请更新Cookie.")
-                    time.sleep(0.1)
+                    time.sleep(0.1) # Small delay between checks
 
                 except websocket.WebSocketTimeoutException:
-                    send_status(f"排队响应超时（等待 {receive_timeout:.1f} 秒后）。") # <--- Use helper
+                    send_status_pq(f"排队响应超时（等待 {receive_timeout:.1f} 秒后）。")
                     break
                 except websocket.WebSocketConnectionClosedException as e:
-                    # Defensive access to attributes or just print the exception string
-                    code = getattr(e, 'code', 'N/A') # Get 'code' safely, default to 'N/A'
-                    reason = getattr(e, 'reason', 'N/A') # Get 'reason' safely
-                    # Use the send_status_pq helper defined within pass_queue
+                    code = getattr(e, 'code', 'N/A'); reason = getattr(e, 'reason', 'N/A')
                     send_status_pq(f"WebSocket 连接在排队过程中关闭: Code={code}, Reason={reason} (Exception: {e})")
-                    if code == 1006 or (reason and "Connection to remote host was lost" in reason):
-                        send_status_pq("连接异常关闭，可能与Cookie有关。")
-                    break # Exit inner loop on closed connection
+                    if code == 1006 or (isinstance(reason, str) and "Connection to remote host was lost" in reason):
+                         send_status_pq("连接异常关闭，可能与Cookie有关。")
+                    break
                 except Exception as e_inner:
-                    # Use send_status_pq for other errors within the loop
                     send_status_pq(f"WebSocket 通信错误: {type(e_inner).__name__} - {e_inner}")
-                    # Add traceback for debugging if needed
-                    import traceback
                     send_status_pq(traceback.format_exc())
                     break # Exit inner loop on other errors
 
             if not is_success and time.time() - start_time >= timeout_seconds:
-                 send_status("排队未在规定时间内确认成功。") # <--- Use helper
+                 send_status_pq("排队未在规定时间内确认成功。")
         else:
-            send_status("WebSocket 连接失败。") # <--- Use helper
+            send_status_pq("WebSocket 连接失败。")
 
-    except ConnectionRefusedError:
-        send_status("WebSocket 连接被拒绝，请检查网络或服务器状态。") # <--- Use helper
+    except ConnectionRefusedError: send_status_pq("WebSocket 连接被拒绝。")
+    except websocket.WebSocketTimeoutException: send_status_pq("WebSocket 建立连接超时。") # Catch connection timeout
     except websocket.WebSocketException as e:
-        send_status(f"WebSocket 建立连接时出错: {e}") # <--- Use helper
+        send_status_pq(f"WebSocket 建立连接时出错: {e}")
         if re.search(COOKIE_ERROR_PATTERN, str(e), re.IGNORECASE):
             raise ConnectionError("Cookie失效(WebSocket Init)，请更新Cookie.")
-    except ConnectionError as e:
+    except ConnectionError as e: # Propagate specific cookie errors
         raise e
     except Exception as e_outer:
-        send_status(f"排队过程中发生未知错误: {type(e_outer).__name__} - {e_outer}") # <--- Use helper
+        send_status_pq(f"排队过程中发生未知错误: {type(e_outer).__name__} - {e_outer}")
+        send_status_pq(traceback.format_exc())
     finally:
         if ws and ws.connected:
-            try:
-                ws.close()
-                send_status("WebSocket 连接已关闭。") # <--- Use helper
-            except Exception as e_close:
-                send_status(f"关闭WebSocket时出错: {e_close}") # <--- Use helper
-        send_status("排队尝试结束。")
-        send_status("================================")
+            try: ws.close(); send_status_pq("WebSocket 连接已关闭。")
+            except Exception as e_close: send_status_pq(f"关闭WebSocket时出错: {e_close}")
+        send_status_pq("排队尝试结束。"); send_status_pq("================================")
     return is_success
 
+
 def validate_time_format(time_str: str) -> bool:
-    """Validates if the time string is in HH:MM:SS format."""
+    """Validates HH:MM:SS time format."""
     return bool(re.match(r'^\d{2}:\d{2}:\d{2}$', time_str))
 
+
 def calculate_execution_dt(time_str: str, check_window: bool = False) -> Optional[datetime.datetime]:
-    """
-    Calculates the execution datetime based on today's date and the time string.
-    Optionally checks if the time falls within the TOMORROW_RESERVE_WINDOW (if check_window is True).
-    Returns datetime object or None if invalid format or time condition not met.
-    """
-    now_dt = datetime.datetime.now()
-    today_date = now_dt.date()
-
-    try:
-        exec_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
-    except ValueError:
-        print(f"错误: 时间格式无效 '{time_str}'，应为 HH:MM:SS。")
-        return None
-
-    # Combine with today's date
+    """Calculates execution datetime, optionally checks window and past time."""
+    now_dt = datetime.datetime.now(); today_date = now_dt.date()
+    try: exec_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
+    except ValueError: print(f"错误: 时间格式无效 '{time_str}'"); return None
     exec_dt = datetime.datetime.combine(today_date, exec_time)
 
-    # Optional: Check if the time is within the required window for tomorrow's reservation
     if check_window:
         window_start_dt = datetime.datetime.combine(today_date, TOMORROW_RESERVE_WINDOW_START)
         window_end_dt = datetime.datetime.combine(today_date, TOMORROW_RESERVE_WINDOW_END)
         if not (window_start_dt <= exec_dt <= window_end_dt):
-            print(f"错误: 预约模式的执行时间 {time_str} 不在允许的窗口内 "
-                  f"({TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S')} - {TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S')})。")
+            start_str = TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S')
+            end_str = TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S')
+            print(f"错误: 预约时间 {time_str} 不在窗口内 ({start_str} - {end_str})。")
             return None
-
-    # Check if time is in the past (allow small buffer, e.g., 5 seconds)
+    # Check if scheduled time is in the past (allow 5 sec buffer)
     if exec_dt < now_dt - datetime.timedelta(seconds=5):
-         print(f"错误: 指定的执行时间 {time_str} ({exec_dt.strftime('%Y-%m-%d %H:%M:%S')}) 已过。")
+         print(f"错误: 指定时间 {time_str} ({exec_dt.strftime('%Y-%m-%d %H:%M:%S')}) 已过。")
          return None
 
     print(f"计划执行时间已设置为: {exec_dt.strftime('%Y-%m-%d %H:%M:%S')}")
     return exec_dt
 
-def perform_seat_operation(mode: int, cookie: str, lib_id: int, seat_key: str, start_action_dt: Optional[datetime.datetime], status_callback=None) -> str:
-    """
-    Performs the seat reservation/grabbing process.
-    Waits until start_action_dt if provided.
-    Handles specific errors like "Seat Taken" and "Not in Reservation Time".
-    Sends detailed status updates via status_callback for each step.
-    Returns "成功", SEAT_TAKEN_ERROR_CODE, or an error message string.
-    """
 
-    # --- Helper function to print to console AND send status via callback ---
+# --- Main Operation Function (FIXED) ---
+def perform_seat_operation(
+    mode: int,
+    cookie: str,
+    lib_id: int,
+    seat_key: str,
+    start_action_dt: Optional[datetime.datetime],
+    status_callback: Optional[Callable[[str], None]] = None
+) -> str:
+    """
+    执行座位预约/抢座操作，包含详细状态更新和错误处理。
+    返回 "成功"、SEAT_TAKEN_ERROR_CODE 或错误消息字符串。
+    """
     def send_status(msg: str):
-        """Prints message to console and sends via status_callback if available."""
-        print(msg) # Keep printing to console
+        """打印到控制台并通过回调发送状态 (如果可用)。"""
+        print(msg)
         if status_callback:
-            # Clean up message (remove carriage returns, leading/trailing whitespace)
             cleaned_msg = msg.strip().replace('\r', '')
-            if cleaned_msg: # Avoid sending empty messages
+            if cleaned_msg:
                 try:
-                    # The actual sending (async call) is handled by the wrapper
-                    # The wrapper provides a sync callback that schedules the async send
                     status_callback(cleaned_msg)
                 except Exception as cb_err:
-                    # Log callback error to console, but don't stop the main operation
-                    print(f"[Callback Error] Failed to send status via callback: {cb_err}")
+                    print(f"[Callback Error] {cb_err}")
 
+    # --- 1. 尽早验证模式参数 ---
+    if mode not in [1, 2]:
+        err_msg = f"内部错误：接收到无效的操作模式值 ({mode})"
+        send_status(f"❌ {err_msg}")
+        return err_msg
     mode_str = '预约' if mode == 1 else '抢座'
+
+    # --- 获取阅览室和座位信息 (用于日志) ---
     room_name = ROOM_ID_TO_NAME.get(str(lib_id), f"ID {lib_id}")
     seat_number_str = "未知"
     if room_name in SEAT_MAPPINGS:
@@ -409,28 +521,21 @@ def perform_seat_operation(mode: int, cookie: str, lib_id: int, seat_key: str, s
     send_status(f"\n--- 开始执行 {mode_str} 操作 ---")
     send_status(f"模式: {'明日预约' if mode == 1 else '立即抢座'} | 阅览室: {room_name} ({lib_id}) | 座位: {seat_number_str} (Key: {seat_key})")
 
-    is_immediate = True
+    # --- 确定执行时间 ---
     if start_action_dt:
-        is_immediate = (start_action_dt <= datetime.datetime.now() + datetime.timedelta(seconds=2))
-        exec_time_str = start_action_dt.strftime('%Y-%m-%d %H:%M:%S') if not is_immediate else '立即执行'
+        exec_time_str = start_action_dt.strftime('%Y-%m-%d %H:%M:%S')
         send_status(f"计划执行时间: {exec_time_str}")
     else:
         send_status("计划执行时间: 立即执行")
-        start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1)
-
+        start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1) # 确保立即执行
     send_status("-" * 30)
 
-    # --- Prepare Headers & Payloads ---
-    current_pre_header = pre_header_base.copy()
-    current_pre_header['Cookie'] = cookie
-    current_queue_header = queue_header_base.copy()
-    current_queue_header['Cookie'] = cookie
-
+    # --- 准备请求头和 Payloads ---
+    current_pre_header = pre_header_base.copy(); current_pre_header['Cookie'] = cookie
+    current_queue_header = queue_header_base.copy(); current_queue_header['Cookie'] = cookie
     try:
         data_lib_chosen = json.loads(json.dumps(data_lib_chosen_template))
         data_lib_chosen['variables']['libId'] = lib_id
-
-        main_payload = None
         if mode == 1:
             main_payload = json.loads(json.dumps(data_template_tomorrow))
             main_payload['variables']['key'] = seat_key
@@ -439,831 +544,680 @@ def perform_seat_operation(mode: int, cookie: str, lib_id: int, seat_key: str, s
             main_payload = json.loads(json.dumps(data_template_today))
             main_payload['variables']['seatKey'] = seat_key
             main_payload['variables']['libId'] = lib_id
-        else:
-            # Use send_status for internal errors too, then return
-            err_msg = "内部错误：无效的操作模式"
-            send_status(f"❌ {err_msg}")
-            return err_msg
-
         data_validate_payload = json.loads(json.dumps(data_validate))
-
     except Exception as e:
-         err_msg = f"内部错误：准备请求负载时发生错误: {e}"
-         send_status(f"❌ {err_msg}")
-         return err_msg
+        err_msg = f"内部错误：准备请求负载时发生错误: {e}"
+        send_status(f"❌ {err_msg}")
+        return err_msg
 
-    # --- Handle Waiting ---
+    # --- 处理等待时间 ---
     now_dt = datetime.datetime.now()
     if start_action_dt and start_action_dt > now_dt:
         wait_seconds = (start_action_dt - now_dt).total_seconds()
         if wait_seconds > 0:
-            wait_msg = f"等待计划执行时间: {start_action_dt.strftime('%Y-%m-%d %H:%M:%S')}..."
-            send_status(wait_msg) # Send initial wait message
+            send_status(f"等待计划执行时间: {start_action_dt.strftime('%Y-%m-%d %H:%M:%S')}...")
             last_ws_update_time = time.time()
             while True:
                 now_ts = time.time()
                 remaining_seconds = start_action_dt.timestamp() - now_ts
                 if remaining_seconds <= 0.01:
-                    send_status("\n时间到，开始执行！") # Send time's up message
+                    send_status("\n时间到，开始执行！")
                     break
-
-                # Print countdown frequently to console
-                countdown_msg_console = f"\r距离计划执行时间还有 {remaining_seconds:.1f} 秒..."
-                print(countdown_msg_console, end="")
-
-                # Send countdown update to WebSocket less frequently (e.g., every 0.5s)
-                if status_callback and (now_ts - last_ws_update_time >= 0.5):
-                     countdown_msg_ws = f"距离计划执行时间还有 {remaining_seconds:.1f} 秒..."
-                     status_callback(countdown_msg_ws) # Direct call to callback here
-                     last_ws_update_time = now_ts
-
-                # Sleep adaptively
-                sleep_duration = max(0.005, min(0.1, remaining_seconds / 5))
+                # 每 0.5 秒左右更新一次控制台和 WebSocket
+                if int(remaining_seconds * 2) != int((remaining_seconds - 0.1) * 2):
+                    countdown_msg = f"距离计划执行时间还有 {remaining_seconds:.1f} 秒..."
+                    print(f"\r{countdown_msg}", end="", flush=True)
+                    if status_callback and (now_ts - last_ws_update_time >= 0.5):
+                        status_callback(countdown_msg)
+                        last_ws_update_time = now_ts
+                # 自适应休眠
+                sleep_duration = max(0.005, min(0.1, remaining_seconds / 10))
                 time.sleep(sleep_duration)
-            print() # Newline after console countdown finishes
+            print() # 倒计时结束后换行
 
-    # --- Request Loop ---
-    # Initialize last_error_msg for the case where the loop doesn't run or finishes without success
-    last_error_msg = f"达到最大尝试次数({MAX_REQUEST_ATTEMPTS})仍未成功或未执行任何尝试。"
-    session = requests.Session() # Use session for connection pooling
+    # --- 请求循环 ---
+    last_error_msg = f"达到最大尝试次数({MAX_REQUEST_ATTEMPTS})仍未成功。" # 默认最终错误消息
+    session = requests.Session() # 使用 Session 保持连接和 Cookie
 
     for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
-        attempt_msg = f"\n--- 第 {attempt}/{MAX_REQUEST_ATTEMPTS} 次尝试 ---"
-        send_status(attempt_msg) # Use helper
-        res = None
+        send_status(f"\n--- 第 {attempt}/{MAX_REQUEST_ATTEMPTS} 次尝试 ---")
+        res: Optional[requests.Response] = None # 类型提示
         text_res_validate = ""
+        current_attempt_error: Optional[str] = None # 本次尝试的具体错误
+
         try:
-            # 1. Pass Queue (WebSocket)
-            step_msg = "步骤 1/5: 执行排队..."
-            send_status(step_msg) # Use helper
-            # Pass the callback down to pass_queue
+            # --- 步骤 1: 排队 (WebSocket) ---
+            send_status("步骤 1/5: 执行排队...");
             queue_success = pass_queue(current_queue_header, status_callback=status_callback)
-            if not queue_success:
-                 # Still send warning even if queue didn't explicitly succeed
-                 send_status("警告: 排队步骤未显式确认成功，但仍继续尝试后续操作...") # Use helper
-            else:
-                send_status("排队步骤完成。") # Use helper
+            if not queue_success: send_status("警告: 排队未确认成功，继续尝试...")
+            else: send_status("排队步骤完成。")
 
-            # 2. Choose Library POST (HTTP)
-            step_msg = f"步骤 2/5: 选择阅览室 ({room_name})..."
-            send_status(step_msg) # Use helper
+            # --- 步骤 2: 选择阅览室 (HTTP POST) ---
+            send_status(f"步骤 2/5: 选择阅览室 ({room_name})...");
             response_lib_chosen = session.post(URL, headers=current_pre_header, json=data_lib_chosen, timeout=10)
-            send_status(f"  - 选择阅览室响应状态: {response_lib_chosen.status_code}") # Use helper
-            response_lib_chosen.raise_for_status() # Check for HTTP errors (4xx, 5xx)
+            send_status(f"  - 选择阅览室响应: {response_lib_chosen.status_code}")
+            response_lib_chosen.raise_for_status() # 检查 HTTP 错误
 
-            # 3. Main Action POST (Reserve/Grab) (HTTP)
-            step_msg = f"步骤 3/5: 执行 {mode_str} 操作 (座位 {seat_number_str})..."
-            send_status(step_msg) # Use helper
-            time.sleep(0.1) # Small delay might be helpful
+            # --- 步骤 3: 主操作 (HTTP POST) ---
+            send_status(f"步骤 3/5: 执行 {mode_str} (座位 {seat_number_str})...");
+            time.sleep(0.1) # 短暂延迟
             res = session.post(URL, headers=current_pre_header, json=main_payload, timeout=15)
-            send_status(f"  - 主操作响应状态: {res.status_code}") # Use helper
-            main_action_text = res.text # Get text before potential raise_for_status
+            send_status(f"  - 主操作响应: {res.status_code}")
+            main_action_text = res.text # 保存响应文本
 
-            # 4. Validation POST (HTTP)
-            step_msg = "步骤 4/5: 发送验证请求..."
-            send_status(step_msg) # Use helper
+            # --- 步骤 4: 验证请求 (HTTP POST) ---
+            send_status("步骤 4/5: 发送验证请求...");
             response_validate = session.post(URL, headers=current_pre_header, json=data_validate_payload, timeout=10)
-            send_status(f"  - 验证响应状态: {response_validate.status_code}") # Use helper
+            send_status(f"  - 验证响应: {response_validate.status_code}")
             text_res_validate = response_validate.text
-            response_validate.raise_for_status() # Check for HTTP errors
+            response_validate.raise_for_status() # 检查 HTTP 错误
 
-            # 5. Check Result based on Main Action Response (Step 3)
-            step_msg = "步骤 5/5: 检查主操作结果..."
-            send_status(step_msg) # Use helper
-
+            # --- 步骤 5: 检查主操作结果 ---
+            send_status("步骤 5/5: 检查主操作结果...");
             main_action_failed = False
             error_msg_main = ""
             try:
-                res.raise_for_status()
-                # If no HTTP error, check JSON content for "errors" key
-                main_action_failed = '"errors":' in main_action_text
+                res.raise_for_status() # 检查主操作的 HTTP 错误
+                main_action_failed = '"errors":' in main_action_text # 检查响应体是否包含 "errors"
             except requests.exceptions.HTTPError as http_err:
-                 send_status(f"  - 主操作返回 HTTP 错误: {http_err}") # Use helper
-                 main_action_failed = True # Treat HTTP error as failure
-                 error_msg_main = extract_error_msg(main_action_text)
-                 send_status(f"  - HTTP 错误响应体信息: {error_msg_main}") # Use helper
-                 last_error_msg = f"主操作HTTP错误: {http_err} - {error_msg_main}"
-                 # Check for cookie error pattern even in HTTP error responses
-                 combined_texts_for_cookie_check = main_action_text + text_res_validate + error_msg_main + str(http_err)
-                 if re.search(COOKIE_ERROR_PATTERN, combined_texts_for_cookie_check, re.IGNORECASE):
-                     last_error_msg = "Cookie失效或验证失败(HTTP错误)，请更新Cookie。"
-                     send_status(f"❌ 失败: {last_error_msg}") # Use helper
-                     return last_error_msg # Exit immediately
-                 # Continue to retry logic below if it's not a cookie error
+                # 处理主操作的 HTTP 错误
+                send_status(f"  - 主操作 HTTP 错误: {http_err}")
+                main_action_failed = True
+                error_msg_main = extract_error_msg(main_action_text)
+                send_status(f"  - HTTP 错误信息: {error_msg_main}")
+                current_attempt_error = f"主操作HTTP错误: {http_err}" # 记录本次错误
+                # 检查是否是 Cookie 错误
+                combined_texts = main_action_text + text_res_validate + error_msg_main + str(http_err)
+                if re.search(COOKIE_ERROR_PATTERN, combined_texts, re.IGNORECASE):
+                    last_error_msg = "Cookie失效或验证失败(HTTP错误)，请更新。"
+                    send_status(f"❌ 失败: {last_error_msg}")
+                    return last_error_msg # 立刻返回
 
-            if not main_action_failed:
-                # Check if the response *looks* like success
+            # --- 分析主操作响应内容 ---
+            if not main_action_failed: # HTTP 成功且响应体不含 "errors"
                 try:
                     main_action_data = json.loads(main_action_text)
                     success_indicator = False
-                    if mode == 1 and main_action_data.get("data", {}).get("userAuth", {}).get("prereserve", {}).get("save") is not None:
-                        success_indicator = True
-                    elif mode == 2 and main_action_data.get("data", {}).get("userAuth", {}).get("reserve", {}).get("reserveSeat") is not None:
-                         success_indicator = True
+                    # 检查特定的成功标志
+                    if mode == 1 and main_action_data.get("data", {}).get("userAuth", {}).get("prereserve", {}).get("save") is not None: success_indicator = True
+                    elif mode == 2 and main_action_data.get("data", {}).get("userAuth", {}).get("reserve", {}).get("reserveSeat") is not None: success_indicator = True
 
                     if success_indicator:
-                        success_msg = f"✅ {mode_str}成功 (主操作响应状态 {res.status_code}, 内容符合预期)"
+                        success_msg = f"✅ {mode_str}成功 (主操作响应 {res.status_code}, 内容符合预期)"
                         send_status("******************************")
                         send_status(success_msg)
                         send_status("******************************\n")
-                        # Return "成功", the wrapper will send the final WS result
-                        return "成功"
+                        return "成功" # 操作成功，直接返回
                     else:
-                         # Response had no "errors" but didn't match expected success structure
-                         last_error_msg = f"主操作响应码 {res.status_code} 但内容格式非预期成功格式。响应: {main_action_text[:150]}..."
-                         send_status(f"  - 警告: {last_error_msg}") # Use helper
-                         # Treat unexpected format as a failure for retry purposes
+                        # HTTP 成功，无 "errors"，但内容不符合成功格式
+                        current_attempt_error = f"主操作响应码 {res.status_code} 但内容格式非预期成功。响应: {main_action_text[:150]}..."
+                        send_status(f"  - 警告: {current_attempt_error}")
 
                 except json.JSONDecodeError:
-                    last_error_msg = f"主操作响应码 {res.status_code} 但响应非JSON格式: {main_action_text[:150]}..."
-                    send_status(f"❌ 失败: {last_error_msg}") # Use helper
-                    # Treat non-JSON as failure for retry
+                    # HTTP 成功但响应不是 JSON
+                    current_attempt_error = f"主操作响应码 {res.status_code} 但响应非JSON格式: {main_action_text[:150]}..."
+                    send_status(f"❌ 失败: {current_attempt_error}")
 
-            else: # main_action_failed is True (contains "errors" or HTTP error occurred)
-                # If error_msg_main wasn't set during HTTPError handling, extract it now
-                if not error_msg_main:
+            else: # 主操作失败 (HTTP 错误 或 响应体含 "errors")
+                if not error_msg_main: # 如果之前 HTTP 错误处理未提取，则现在提取
                     error_msg_main = extract_error_msg(main_action_text)
-                send_status(f"  - 主操作响应包含错误或HTTP错误，提取信息: {error_msg_main}") # Use helper
+                send_status(f"  - 主操作错误信息: {error_msg_main}")
 
-                # --- Specific Error Checks ---
+                # --- 特定的业务逻辑错误处理 ---
+                if "access denied" in error_msg_main.lower():
+                    send_status("❌ 检测到 'Access Denied!'")
+                    return "Cookie无效或已过期，请更新。" # 返回用户友好的 Cookie 错误
 
-                # --- !!! NEW: Check for "Access Denied!" specifically !!! ---
-                # Check if the extracted error message is exactly "Access Denied!" or contains it
-                # Adjust the condition based on the exact error message format
-                if "access denied" in error_msg_main.lower(): # Case-insensitive check
-                    access_denied_msg = "检测到 'Access Denied!' 错误，这通常表示 Cookie 无效或已过期。"
-                    send_status(f"❌ {access_denied_msg}") # Log specific reason
-                    # Return a specific code or user-friendly message for the wrapper to handle
-                    # Option 1: Return a specific code
-                    # return "COOKIE_INVALID_OR_EXPIRED"
-                    # Option 2: Return the user-friendly message directly (Simpler for this case)
-                    return "Cookie无效或已过期，请检查并更新Cookie后重试。"
-                # --- End of New Check ---
-
-                # --- Existing Specific Error Checks ---
                 if "不在预约时间内" in error_msg_main:
-                    final_error = f"❌ {mode_str}失败: 不在预约/抢座时间段内。"
-                    send_status(final_error) # Use helper
-                    return final_error # Exit immediately, no retry needed
+                    return f"❌ {mode_str}失败: 不在预约/抢座时间段内。"
 
-                if "该座位已经被人预定了" in error_msg_main or "您选择的座位已被预约" in error_msg_main or "已被占座" in error_msg_main:
-                    final_error = f"❌ {mode_str}失败: 该座位 (座位 {seat_number_str}) 已经被人预定了或已被占座。"
-                    send_status(final_error) # Use helper
-                    return SEAT_TAKEN_ERROR_CODE # Return special code
+                seat_taken_errors = ["该座位已经被人预定了", "您选择的座位已被预约", "已被占座"]
+                if any(err in error_msg_main for err in seat_taken_errors):
+                    send_status(f"❌ 座位 ({seat_number_str}) 已被占用。")
+                    return SEAT_TAKEN_ERROR_CODE # 返回特定错误码
 
                 success_keywords = ["您已经预约了座位", "您已经预定了座位", "操作成功", "当前已有有效预约"]
-                is_already_success_msg = any(keyword in error_msg_main for keyword in success_keywords)
-                if is_already_success_msg:
-                     success_msg = f"✅ {mode_str}成功 (检测到确认性消息: {error_msg_main})"
-                     send_status("******************************")
-                     send_status(success_msg)
-                     send_status("******************************\n")
-                     return f"成功 ({error_msg_main})"
+                if any(keyword in error_msg_main for keyword in success_keywords):
+                    send_status("******************************")
+                    send_status(f"✅ {mode_str}成功 (检测到确认性消息: {error_msg_main})")
+                    send_status("******************************\n")
+                    return f"成功 ({error_msg_main})" # 返回成功及消息
 
-                # General failure if no specific case matched (and not Access Denied)
-                last_error_msg = f"主操作错误: {error_msg_main}"
-                # Check for general Cookie errors using the pattern (if not already caught by Access Denied)
-                combined_texts_for_cookie_check = main_action_text + text_res_validate + error_msg_main
-                if re.search(COOKIE_ERROR_PATTERN, combined_texts_for_cookie_check, re.IGNORECASE):
-                     last_error_msg = "Cookie失效或验证失败，请更新Cookie。"
-                     send_status(f"❌ 失败: {last_error_msg}") # Use helper
-                     return last_error_msg # Exit immediately
+                # --- 一般主操作错误 ---
+                current_attempt_error = f"主操作错误: {error_msg_main}"
+                # 再次检查 Cookie 错误模式
+                combined_texts = main_action_text + text_res_validate
+                if re.search(COOKIE_ERROR_PATTERN, combined_texts, re.IGNORECASE):
+                     last_error_msg = "Cookie失效或验证失败，请更新。"
+                     send_status(f"❌ 失败: {last_error_msg}")
+                     return last_error_msg
 
-                # If we reach here, it's a retryable failure for this attempt
-                send_status(f"❌ 第 {attempt} 次尝试失败: {last_error_msg}") # Use helper
+                # 记录一般的主操作错误，准备重试
+                send_status(f"❌ 第 {attempt} 次尝试失败: {current_attempt_error}")
 
 
+        # --- 处理请求过程中的其他异常 ---
         except requests.exceptions.Timeout as e:
-            last_error_msg = f"请求超时 ({e})"
-            send_status(f"❌ 第 {attempt} 次尝试失败: {last_error_msg}") # Use helper
+            current_attempt_error = f"请求超时 ({e})"
+            send_status(f"❌ 第 {attempt} 次尝试失败: {current_attempt_error}")
         except requests.exceptions.RequestException as e:
-            last_error_msg = f"网络请求错误: {e}"
-            send_status(f"❌ 第 {attempt} 次尝试失败: {last_error_msg}") # Use helper
-            # Check for cookie errors indicated by network exceptions
+            current_attempt_error = f"网络请求错误: {e}"
+            send_status(f"❌ 第 {attempt} 次尝试失败: {current_attempt_error}")
+            # 检查网络错误是否由 Cookie 问题引起
             if re.search(COOKIE_ERROR_PATTERN, str(e), re.IGNORECASE):
-                 last_error_msg = "Cookie失效(请求异常)，请更新Cookie。"
-                 send_status("检测到可能的Cookie失效（请求异常）。") # Use helper
-                 send_status(f"❌ 失败: {last_error_msg}") # Use helper
-                 return last_error_msg # Exit immediately
-        except ConnectionError as e: # Propagated from pass_queue() for WebSocket Cookie errors
-             last_error_msg = str(e) # Should already contain "Cookie失效(WebSocket)..."
-             send_status(f"❌ 第 {attempt} 次尝试失败 (来自排队): {last_error_msg}") # Use helper
-             return last_error_msg # Exit immediately
+                last_error_msg = "Cookie失效(请求异常)，请更新。"
+                send_status(f"检测到可能的Cookie失效。失败: {last_error_msg}")
+                return last_error_msg # 立即返回
+        except ConnectionError as e:
+            # 通常是来自 pass_queue 的 WebSocket Cookie 错误
+            last_error_msg = str(e)
+            send_status(f"❌ 第 {attempt} 次尝试失败 (来自排队): {last_error_msg}")
+            return last_error_msg # 立即返回
         except Exception as e:
-            # Catch unexpected errors during the process
-            import traceback
+            # 捕获所有其他未知异常
             error_details = traceback.format_exc()
-            last_error_msg = f"发生未知错误: {type(e).__name__} - {e}"
-            send_status(f"❌ 第 {attempt} 次尝试中失败: {last_error_msg}") # Use helper
-            send_status(f"详细错误追踪: \n{error_details}") # Send traceback details too
-            # Check for cookie errors in generic exceptions too
+            current_attempt_error = f"发生未知错误: {type(e).__name__} - {e}"
+            send_status(f"❌ 第 {attempt} 次尝试中失败: {current_attempt_error}")
+            send_status(f"详细错误追踪: \n{error_details}")
+            # 检查未知异常是否是 Cookie 相关
             if re.search(COOKIE_ERROR_PATTERN, str(e), re.IGNORECASE):
-                 last_error_msg = "Cookie失效(未知异常)，请更新Cookie。"
-                 send_status("检测到可能的Cookie失效（未知异常）。") # Use helper
-                 send_status(f"❌ 失败: {last_error_msg}") # Use helper
-                 return last_error_msg # Exit immediately
+                 last_error_msg = "Cookie失效(未知异常)，请更新。"
+                 send_status(f"检测到可能的Cookie失效。失败: {last_error_msg}")
+                 return last_error_msg # 是 Cookie 错误，直接返回
+            else:
+                 # --- !!! FIX: 非 Cookie 相关的未知异常，终止操作 !!! ---
+                 last_error_msg = current_attempt_error # 更新最终错误信息
+                 send_status("发生不可恢复的未知错误，操作终止。")
+                 return last_error_msg # 返回错误信息，不再重试
 
-        # --- Retry Logic ---
-        # Only reach here if the attempt failed with a retryable error
+        # --- 更新最后错误信息并判断是否重试 ---
+        if current_attempt_error:
+            last_error_msg = current_attempt_error # 保存本次尝试的具体错误
+
+        # 只有在没有成功返回，且尝试次数未满时才重试
         if attempt < MAX_REQUEST_ATTEMPTS:
-            retry_msg = f"等待 {SLEEP_INTERVAL_ON_FAIL} 秒后重试..."
-            send_status(retry_msg) # Use helper
+            send_status(f"等待 {SLEEP_INTERVAL_ON_FAIL} 秒后重试...")
             time.sleep(SLEEP_INTERVAL_ON_FAIL)
-        else:
-            # If it was the last attempt, last_error_msg should hold the error from the last failed attempt
-            pass # The loop will end, and last_error_msg will be returned
+        # else: 最后一次尝试失败，循环结束
 
-    # --- Loop End ---
-    # This part is reached only if all attempts failed without returning earlier
+    # --- 循环结束 ---
+    # 如果循环正常结束（即所有尝试都失败了），返回最后记录的错误
     final_msg = f"\n--- 达到最大尝试次数 ({MAX_REQUEST_ATTEMPTS}) ---"
-    send_status(final_msg) # Use helper
-    send_status(f"最终未能成功，最后记录的错误: {last_error_msg}") # Send the final error context
-    # The wrapper function (`run_seat_operation_task`) will use this returned error message
-    # to send the final 'error' result via WebSocket.
+    send_status(final_msg)
+    send_status(f"最终未能成功，最后记录的错误: {last_error_msg}")
     return last_error_msg
+# --- CLI Functions ---
+def auto_get_cookie_cli() -> Optional[str]:
+    """
+    启动 mitmproxy(如果未运行)，指导用户操作，并监控文件。
+    返回 Cookie 字符串或 None。
+    """
+    # 1. 尝试启动 mitmproxy
+    if not start_mitmproxy():
+        print("无法启动 mitmproxy，自动获取 Cookie 失败。")
+        return None # 返回 None，让主循环提示用户重试或手动输入
 
-# --- Main Execution (Command Line Interface) ---
-# ... (run_cli function remains the same) ...
+    # 2. 显示操作指南 (保持不变)
+    print("\n请按以下步骤操作：")
+    print(f"  1. Mitmproxy 应该已在后台启动。")
+    if MITMPROXY_COMMAND == "mitmweb":
+         print("     (可在 http://127.0.0.1:8081 查看流量)")
+    print(f"  2. 【重要】请现在手动设置系统网络代理为: 127.0.0.1:8080")
+    print(f"     (可使用 set_proxy.bat / set_proxy.sh 脚本)")
+    print(f"  3. 打开【电脑版微信】并访问【图书馆小程序首页】以触发 Cookie 更新。")
+    print(f"  4. 程序将自动检测位于 '{SCRIPT_DIR}' 目录下的 '{COOKIE_FILENAME}' 文件更新。")
+
+    # --- 添加一个确认步骤，等待用户设置好代理 ---
+    input("\n完成代理设置和微信操作后，请按 Enter 键开始监控 Cookie 文件...")
+    print("\n正在等待 Cookie 文件更新...")
+
+    # 3. 监控文件 (保持不变)
+    start_time = time.time(); last_mtime = 0
+    if os.path.exists(COOKIE_FILE_PATH):
+        try: last_mtime = os.stat(COOKIE_FILE_PATH)[stat.ST_MTIME]
+        except OSError: pass
+
+    cookie_content = None
+    while time.time() - start_time < MAX_WAIT_TIME:
+        if os.path.exists(COOKIE_FILE_PATH):
+            try:
+                current_mtime = os.stat(COOKIE_FILE_PATH)[stat.ST_MTIME]
+                if current_mtime > last_mtime:
+                    print(f"\n检测到 '{COOKIE_FILENAME}' 文件更新！正在读取...")
+                    time.sleep(0.5)
+                    with open(COOKIE_FILE_PATH, "r", encoding='utf-8') as f:
+                        cookie_content_read = f.read().strip()
+                    if cookie_content_read and "=" in cookie_content_read:
+                        print("Cookie 读取成功！")
+                        cookie_content = cookie_content_read # 保存读取到的 cookie
+                        break # 找到 cookie，退出监控循环
+                    else:
+                        print(f"警告：文件内容格式似乎不正确 ('{cookie_content_read[:50]}...')，继续等待...")
+                        last_mtime = current_mtime
+            except OSError as e: print(f"\n读取文件时出错: {e}，继续等待...")
+            except Exception as e: print(f"\n处理文件时发生意外错误: {e}"); break # 停止等待
+
+        if cookie_content: # 如果内层循环已找到cookie并break
+             break
+
+        print(".", end="", flush=True); time.sleep(FILE_CHECK_INTERVAL)
+
+    # 4. 结果处理和提示取消代理
+    if cookie_content:
+         print("\n重要提示：现在可以取消系统网络代理设置了 (例如运行 unset_proxy.bat / unset_proxy.sh)。")
+         # 不需要停止 mitmproxy，atexit 会处理
+         return cookie_content
+    else:
+        print("\n等待超时或读取失败。未能自动获取 Cookie。")
+        print("请确认 mitmproxy/代理/微信操作。")
+        # 不需要停止 mitmproxy，atexit 会处理
+        return None
+
 def run_cli():
-    print("欢迎使用图书馆座位预约/抢座脚本 (命令行版)")
-    print("===========================================")
+    """Runs the Command Line Interface version of the tool."""
+    print("欢迎使用 图书馆抢座助手 (命令行版)")
+    print("========================================")
+    if not load_mappings() or not ROOM_ID_TO_NAME:
+        print("错误：加载映射失败，无法继续。"); return
 
-    # --- Load Mappings ---
-    # Loading is done before calling run_cli in __main__
-
-    # --- Main Loop for Re-selection on Seat Taken ---
-    while True: # Loop allows re-selecting room/seat if taken
-
+    while True: # Main loop for different reservation attempts
         # --- Get Mode ---
         mode = 0
         while mode not in [1, 2]:
             try:
                 mode_input = input("\n请选择操作模式 (1: 明日预约, 2: 立即抢座): ").strip()
                 mode = int(mode_input)
-                if mode not in [1, 2]:
-                    print("无效输入，请输入 1 或 2。")
-            except ValueError:
-                print("无效输入，请输入数字 1 或 2。")
+                if mode not in [1, 2]: print("无效输入。")
+            except ValueError: print("无效输入，请输入数字。")
         mode_str = "明日预约" if mode == 1 else "立即抢座"
         print(f"\n已选择模式: {mode_str}")
 
         # --- Get Cookie ---
-        cookie_str = ""
-        while not cookie_str:
-            cookie_str = input("请输入 Cookie: ").strip()
-            if not cookie_str:
-                print("Cookie 不能为空。")
+        cookie_str = ""; obtained_cookie = False
+        while not obtained_cookie:
+            print("\n请选择 Cookie 获取方式:")
+            print("  1: 手动输入 Cookie")
+            print("  2: 自动获取 Cookie (需配合 mitmproxy)")
+            cookie_mode = input("请输入选项 (1 或 2): ").strip()
+            if cookie_mode == '1':
+                while not cookie_str:
+                    cookie_str = input("请输入完整的 Cookie 字符串: ").strip()
+                    if not cookie_str: print("Cookie 不能为空。")
+                obtained_cookie = True
+            elif cookie_mode == '2':
+                cookie_str = auto_get_cookie_cli()
+                if cookie_str: print(f"成功自动获取 Cookie: {cookie_str[:50]}..."); obtained_cookie = True
+                else: print("未能自动获取 Cookie，请重试或选择手动输入。") # Loop back
+            else: print("无效选项。")
 
         # --- Get Execution Time ---
         start_action_dt = None
         if mode == 1:
-            # Mode 1 (Tomorrow): Time is required and must be in the window
             while start_action_dt is None:
-                time_str = input(f"请输入预约执行时间 (HH:MM:SS, 范围 {TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S')}-{TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S')}), 例如 21:48:00: ").strip()
-                if validate_time_format(time_str):
-                    # Pass check_window=True for mode 1
-                    start_action_dt = calculate_execution_dt(time_str, check_window=True)
-                else:
-                    print("时间格式错误，应为 HH:MM:SS。")
-        else:
-            # Mode 2 (Today): Time is optional
-            time_str = input("请输入抢座执行时间 (HH:MM:SS, 留空则立即执行): ").strip()
-            if not time_str:
-                print("未指定时间，将立即执行。")
-                start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1) # Ensure immediate start
-            elif validate_time_format(time_str):
-                # Pass check_window=False (default) for mode 2
-                start_action_dt = calculate_execution_dt(time_str)
-                if start_action_dt is None:
-                     print("请重新输入有效的时间或留空。")
-                     # Loop back to ask for time again
-                     # Corrected logic: stay in a loop until valid time or empty is given for mode 2
-                     while start_action_dt is None:
-                         time_str = input("请重新输入抢座执行时间 (HH:MM:SS, 留空则立即执行): ").strip()
-                         if not time_str:
-                             print("未指定时间，将立即执行。")
-                             start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1)
-                             break # Exit time loop
-                         elif validate_time_format(time_str):
-                              start_action_dt = calculate_execution_dt(time_str)
-                              if start_action_dt is None:
-                                  print("无效时间或已过。") # calculate_execution_dt prints details
-                              else:
-                                   break # Exit time loop
-                         else:
-                             print("时间格式错误，应为 HH:MM:SS。")
+                start_str = TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S')
+                end_str = TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S')
+                time_str = input(f"请输入预约执行时间 (HH:MM:SS, 范围 {start_str}-{end_str}): ").strip()
+                if validate_time_format(time_str): start_action_dt = calculate_execution_dt(time_str, check_window=True)
+                else: print("时间格式错误。")
+        else: # Mode 2
+             time_str = input("请输入抢座执行时间 (HH:MM:SS, 留空则立即执行): ").strip()
+             if not time_str: print("未指定时间，将立即执行。"); start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1)
+             elif validate_time_format(time_str):
+                 start_action_dt = calculate_execution_dt(time_str)
+                 while start_action_dt is None: # Loop if invalid time entered
+                     time_str = input("请重新输入抢座时间 (HH:MM:SS, 留空则立即执行): ").strip()
+                     if not time_str: print("未指定时间，立即执行。"); start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1); break
+                     elif validate_time_format(time_str):
+                          start_action_dt = calculate_execution_dt(time_str)
+                          if start_action_dt is None: print("无效时间或已过。")
+                          else: break # Valid time entered
+                     else: print("时间格式错误。")
+             else: print("时间格式错误。将立即执行。"); start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1)
 
-            else:
-                 print("时间格式错误，应为 HH:MM:SS。将立即执行。")
-                 start_action_dt = datetime.datetime.now() - datetime.timedelta(seconds=1)
-
-
-        # --- NEW: Get Library ID using Name Selection ---
+        # --- Get Library ID ---
         print("\n请选择阅览室:")
-        # Sort rooms by name for easier selection
-        available_rooms = sorted(ROOM_NAME_TO_ID.items(), key=lambda item: item[0]) # List of (name, id) tuples
-        for i, (name, _) in enumerate(available_rooms):
-            print(f"  {i + 1}: {name}")
-
-        lib_id_int = 0
-        chosen_room_name = ""
+        available_rooms = sorted(ROOM_NAME_TO_ID.items(), key=lambda item: item[0]) # Sort by name
+        for i, (name, _) in enumerate(available_rooms): print(f"  {i + 1}: {name}")
+        lib_id_int = 0; chosen_room_name = ""
         while lib_id_int <= 0:
             try:
                 choice = input(f"请输入阅览室序号 (1-{len(available_rooms)}): ").strip()
                 choice_idx = int(choice) - 1
                 if 0 <= choice_idx < len(available_rooms):
-                    chosen_room_name, lib_id_str = available_rooms[choice_idx]
-                    lib_id_int = int(lib_id_str) # Convert to int for API payload
+                    chosen_room_name, lib_id_str = available_rooms[choice_idx]; lib_id_int = int(lib_id_str)
                     print(f"已选择: {chosen_room_name} (ID: {lib_id_int})")
-                else:
-                    print("输入无效，请输入列表中的序号。")
-            except ValueError:
-                print("输入无效，请输入数字序号。")
-            except IndexError:
-                 print("输入序号超出范围。")
+                else: print("序号无效。")
+            except (ValueError, IndexError): print("输入无效或超出范围。")
 
-        # --- NEW: Get Seat Key using Seat Number Input ---
-        seat_key = "" # This will store the found coordinate key (e.g., "44,46")
-        seat_map_for_room = SEAT_MAPPINGS.get(chosen_room_name)
-
+        # --- Get Seat Key ---
+        seat_key = ""; seat_map_for_room = SEAT_MAPPINGS.get(chosen_room_name)
         if not seat_map_for_room:
-             # This case remains the same - if the room has no map loaded at all
-             print(f"\n警告: 未找到阅览室 '{chosen_room_name}' 的座位映射数据。")
-             key_example = "44,43." if mode == 1 else "46,46" # Example might vary
-             seat_key_label = f"座位 Key (例如 {key_example})"
+             print(f"\n警告: 未找到阅览室 '{chosen_room_name}' 的座位映射。")
+             key_example = "44,43." if mode == 1 else "46,46"
              while not seat_key:
-                 seat_key = input(f"请直接输入{seat_key_label}: ").strip()
+                 seat_key = input(f"请直接输入座位 Key (例如 {key_example}): ").strip()
                  if not seat_key: print("座位 Key 不能为空。")
         else:
-            # Ask for seat number and use it as the key to find the coordinate key
             while not seat_key:
-                 # Get seat number input from user
                  seat_number_input = input(f"请输入 '{chosen_room_name}' 的座位号 (例如 127): ").strip()
-                 if not seat_number_input:
-                     print("座位号不能为空。")
-                     continue
-
-                 # Directly use seat number as key to lookup the coordinate key (value)
+                 if not seat_number_input: print("座位号不能为空。"); continue
                  found_coordinate_key = seat_map_for_room.get(seat_number_input)
-
-                 if found_coordinate_key is not None:
-                     seat_key = found_coordinate_key # Assign the found value ("44,46")
-                     print(f"座位号 {seat_number_input} 对应的坐标 Key: {seat_key}")
-                     # Exit the loop since we found it
+                 if found_coordinate_key is not None: seat_key = found_coordinate_key; print(f"座位号 {seat_number_input} -> Key: {seat_key}")
                  else:
-                     print(f"错误: 在 '{chosen_room_name}' 的映射中未找到座位号 '{seat_number_input}' 作为键。请检查输入或座位映射文件。")
-                     # Optionally list available seat numbers (keys)
+                     print(f"错误: 在 '{chosen_room_name}' 未找到座位号 '{seat_number_input}'。")
                      available_keys = list(seat_map_for_room.keys())
-                     if len(available_keys) < 50:
-                         print(f"可用座位号 (根据映射文件): {', '.join(sorted(available_keys))}")
-                     # Loop continues to ask for seat number again
+                     if len(available_keys) < 50: print(f"可用座位号: {', '.join(sorted(available_keys))}")
 
-        # --- Start the Operation ---
-        # *** CRITICAL: Pass the CORRECT seat_key (the coordinate key found) ***
-        final_result = perform_seat_operation(mode, cookie_str, lib_id_int, seat_key, start_action_dt)
+        # --- Start Operation ---
+        final_result = perform_seat_operation(mode, cookie_str, lib_id_int, seat_key, start_action_dt) # No callback needed for CLI
 
         # --- Handle Result ---
-        if final_result == SEAT_TAKEN_ERROR_CODE:
-            print("\n座位已被占用或预约，请重新选择阅览室和座位。\n" + "="*30)
-            # The loop will continue, prompting for mode/cookie/time/room/seat again
+        if final_result == SEAT_TAKEN_ERROR_CODE: print("\n座位已被占用或预约，请重新选择。\n" + "="*40)
         else:
-            # Success or other failure
-            print("\n--- 操作结束 ---")
-            print(f"最终结果: {final_result}")
-            print("-" * 30)
-            try_again = input("是否要执行新的预约/抢座任务? (y/n): ").strip().lower()
-            if try_again != 'y':
-                break # Exit the main loop
-
-# --- Web Dependencies and App Definition ---
-try:
-    from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
-    from fastapi.responses import JSONResponse # HTMLResponse removed, TemplateResponse added
-    from fastapi.templating import Jinja2Templates # Import Jinja2Templates
-    from pydantic import BaseModel, validator, Field
-    import uvicorn
-    import asyncio # For WebSocket status updates and potentially to_thread
-    from typing import Any # Import Any if needed below
-
-    WEB_DEPENDENCIES_MET = True
-    # Define app only if dependencies are met
-    app = FastAPI(title="图书馆座位助手", description="用于预约或抢座图书馆座位")
-    # ... potentially define manager, templates etc. here inside try block ...
-
-    # --- NEW: Setup Jinja2 Templates ---
-    # Make sure TEMPLATES_DIR is defined correctly above
-    if not os.path.isdir(TEMPLATES_DIR):
-         print(f"警告: Templates 目录 '{TEMPLATES_DIR}' 未找到。Web 界面将无法加载。")
-         # Optionally raise an error or handle it differently
-         templates = None # Indicate templates aren't loaded
-    else:
-        templates = Jinja2Templates(directory=TEMPLATES_DIR)
+            print("\n--- 操作结束 ---"); print(f"最终结果: {final_result}"); print("-" * 40)
+            try_again = input("是否要执行新的任务? (y/n): ").strip().lower()
+            if try_again != 'y': break # Exit main CLI loop
 
 
-    # --- NEW: WebSocket Connection Manager ---
-    # ... (ConnectionManager class remains the same) ...
-    class ConnectionManager:
-        def __init__(self):
-            # Stores mapping of client_id to WebSocket connection
-            self.active_connections: Dict[str, WebSocket] = {} # type: ignore
+# --- Web Server Code (Only if dependencies met) ---
+# Global manager instance and templates defined conditionally
+manager = None
+templates = None
 
-        async def connect(self, websocket: WebSocket, client_id: str): # type: ignore
-            await websocket.accept()
-            self.active_connections[client_id] = websocket
-            print(f"WebSocket connected: {client_id}")
-
-        def disconnect(self, client_id: str):
-            if client_id in self.active_connections:
-                # Optional: Clean close before deleting?
-                # try:
-                #    await self.active_connections[client_id].close()
-                # except: pass # Ignore errors on close
-                del self.active_connections[client_id]
-                print(f"WebSocket disconnected: {client_id}")
-
-        async def send_status_update(self, client_id: str, message: str):
-            websocket = self.active_connections.get(client_id)
-            if websocket:
-                try:
-                    await websocket.send_json({"type": "status", "message": message})
-                except Exception as e:
-                    print(f"Error sending WS status message to {client_id}: {e}")
-                    # Consider disconnecting on send error
-                    self.disconnect(client_id)
-
-        async def send_final_result(self, client_id: str, status: str, message: str, error_code: Optional[str] = None):
-             websocket = self.active_connections.get(client_id)
-             if websocket:
-                payload = {"type": "result", "status": status, "message": message}
-                if error_code:
-                    payload["error_code"] = error_code
-                try:
-                    await websocket.send_json(payload)
-                except Exception as e:
-                    print(f"Error sending final WS result to {client_id}: {e}")
-                    self.disconnect(client_id) # Disconnect if final result can't be sent
-
-    manager = ConnectionManager()
-
-except ImportError:
-    # --- Only set the flag and define minimal dummies if absolutely necessary ---
-    WEB_DEPENDENCIES_MET = False
-
-    # Remove re-assignment of BackgroundTasks and others imported above
-    # BackgroundTasks = None # type: ignore <--- REMOVE THIS LINE
-
-    # Keep dummies for things *only* used if dependencies fail, if any.
-    # Most dummies might not be needed if subsequent code checks WEB_DEPENDENCIES_MET
-    FastAPI = None
-    Request = Any # type: ignore
-    BaseModel = None
-    JSONResponse = None
-    HTTPException = None
-    WebSocket = Any # type: ignore
-    WebSocketDisconnect = Any # type: ignore
-    uvicorn = None
-    asyncio = None # type: ignore
-    app = None
-    manager = None # type: ignore # Assuming manager is defined in try block now
-    Field = lambda default, **kwargs: default
-    Jinja2Templates = None
-    templates = None # type: ignore # Assuming templates is defined in try block now
-
-    # Print an error message indicating missing dependencies
-    print("\n❌ 错误：运行 Web 界面需要 FastAPI 相关依赖库，但未能成功导入。")
-    print("请确保已安装: pip install fastapi uvicorn jinja2 pydantic")
-    print("Web 服务器功能将不可用。\n")
-
-
-# --- Define Web Routes ONLY if dependencies are met ---
-if WEB_DEPENDENCIES_MET and app:
+if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were imported AND app was initialized
     print("Web 依赖项已找到。Web 服务器功能已启用。")
 
-    # --- ConnectionManager definition (should be outside try/except or checked) ---
-    # Assuming ConnectionManager needs WebSocket, define it conditionally or ensure WebSocket dummy is sufficient
-    if WebSocket and asyncio: # Check needed base types exist (even if dummies)
-        class ConnectionManager:
-            # ... (rest of ConnectionManager definition) ...
-            manager = ConnectionManager() # Instantiate only if dependencies met
+    # --- Setup Jinja2 Templates ---
+    if not os.path.isdir(TEMPLATES_DIR):
+         print(f"警告: Templates 目录 '{TEMPLATES_DIR}' 未找到。Web 界面将无法加载。")
+         templates = None
     else:
-        # If manager is needed elsewhere, assign a dummy or handle appropriately
-        manager = None
+        try: templates = Jinja2Templates(directory=TEMPLATES_DIR); print("Jinja2Templates 初始化成功。")
+        except Exception as e: print(f"错误: 初始化 Jinja2Templates 失败: {e}"); templates = None
+
+    # --- ConnectionManager definition ---
+    class ConnectionManager:
+        def __init__(self): self.active_connections: Dict[str, WebSocket] = {} # type: ignore
+        async def connect(self, websocket: WebSocket, client_id: str): await websocket.accept(); self.active_connections[client_id] = websocket; print(f"WebSocket connected: {client_id}") # type: ignore
+        def disconnect(self, client_id: str):
+            if client_id in self.active_connections: del self.active_connections[client_id]
+            print(f"WebSocket disconnected: {client_id}")
+        async def _send_json_safe(self, client_id: str, payload: dict):
+            websocket = self.active_connections.get(client_id)
+            if websocket:
+                try: await websocket.send_json(payload)
+                except Exception as e: print(f"Error sending WS ({payload.get('type', 'message')}) to {client_id}: {e}"); self.disconnect(client_id)
+        async def send_status_update(self, client_id: str, message: str): await self._send_json_safe(client_id, {"type": "status", "message": message})
+        async def send_final_result(self, client_id: str, status: str, message: str, error_code: Optional[str] = None):
+            payload = {"type": "result", "status": status, "message": message};
+            if error_code: payload["error_code"] = error_code
+            await self._send_json_safe(client_id, payload)
+        async def send_cookie_update(self, client_id: str, cookie: str): await self._send_json_safe(client_id, {"type": "cookie_update", "cookie": cookie})
+
+    if WebSocket and asyncio: manager = ConnectionManager() # Instantiate manager
+    else: manager = None; print("错误：无法初始化 ConnectionManager (缺少 WebSocket 或 asyncio)")
 
     # --- API Endpoint for Mappings ---
-    # ... (get_mappings endpoint remains the same) ...
     @app.get("/api/mappings")
     async def get_mappings():
-        # Ensure mappings are loaded; try loading if empty
-        if not ROOM_ID_TO_NAME or not ROOM_NAME_TO_ID:
-             print("Web request for mappings found them unloaded, attempting to load...")
-             if not load_mappings():
-                  # Log the error server-side
-                  print("Error: Failed to load mappings for /api/mappings request.")
-                  # Return an error response to the client
-                  raise HTTPException(status_code=500, detail="服务器无法加载阅览室映射数据，请检查服务器日志。")
-
-        # Return rooms (id -> name) sorted by name for dropdown consistency
-        sorted_rooms = dict(sorted(ROOM_ID_TO_NAME.items(), key=lambda item: item[1])) # Sort by name
+        if not ROOM_ID_TO_NAME:
+             if not load_mappings(): raise HTTPException(status_code=500, detail="服务器无法加载阅览室映射数据。")
+        sorted_rooms = dict(sorted(ROOM_ID_TO_NAME.items(), key=lambda item: item[1]))
         return {"rooms": sorted_rooms}
 
-    # --- Pydantic Model for Web Request ---
-    # ... (SeatRequestWeb model remains the same) ...
-    class SeatRequestWeb(BaseModel):
-        mode: int = Field(..., description="操作模式: 1-明日预约, 2-立即抢座")
-        cookieStr: str = Field(..., description="用户 Cookie")
-        timeStr: str = Field("", description="执行时间 (HH:MM:SS), 模式1必填, 模式2可选")
-        libId: int = Field(..., description="阅览室 ID (来自下拉列表)")
-        seatNumber: str = Field(..., description="用户输入的座位号")
-        clientId: str = Field(..., description="WebSocket 客户端 ID for status updates")
-
-        @validator('mode')
-        def mode_must_be_1_or_2(cls, v):
-            if v not in [1, 2]:
-                raise ValueError('模式必须是 1 或 2')
-            return v
-
-        # Combined validator for time based on mode
-        @validator('timeStr')
-        def validate_time_web(cls, v, values):
-            # 'values' contains the already validated fields (like 'mode')
-            mode = values.get('mode')
-            time_str = v.strip() # Use stripped value
-
-            if mode == 1: # Tomorrow reservation
-                if not time_str:
-                    raise ValueError('明日预约模式必须提供执行时间 (HH:MM:SS)')
-                if not validate_time_format(time_str):
-                    raise ValueError('时间格式错误，应为 HH:MM:SS')
-                # Use calculate_execution_dt for window and past time check
-                exec_dt = calculate_execution_dt(time_str, check_window=True)
-                if exec_dt is None:
-                     # calculate_execution_dt prints specific errors, raise a generic one here
-                     raise ValueError(f"无效的预约执行时间 '{time_str}' (请检查格式、是否在预约窗口内且未过时)")
-            elif mode == 2: # Today grab
-                if time_str: # Time is optional for mode 2
-                    if not validate_time_format(time_str):
-                        raise ValueError('时间格式错误，应为 HH:MM:SS')
-                    # Use calculate_execution_dt to check if time is in the past
+    # --- Pydantic Model ---
+    if BaseModel and Field and validator: # Check required Pydantic parts
+        class SeatRequestWeb(BaseModel):
+            mode: int = Field(..., description="操作模式: 1-明日预约, 2-立即抢座")
+            cookieStr: str = Field(..., description="用户 Cookie")
+            timeStr: str = Field("", description="执行时间 (HH:MM:SS)")
+            libId: int = Field(..., description="阅览室 ID")
+            seatNumber: str = Field(..., description="用户输入的座位号")
+            clientId: str = Field(..., description="WebSocket 客户端 ID")
+            @validator('mode')
+            def mode_must_be_1_or_2(cls, v):
+                # 1. Check if None (e.g., if frontend sent null explicitly)
+                if v is None:
+                    raise ValueError('模式字段不能为空')
+                # 2. Check if already int
+                if isinstance(v, int):
+                    if v not in [1, 2]:
+                         raise ValueError('模式必须是 1 或 2')
+                    return v
+                # 3. Try converting if not int (e.g., frontend sent "1")
+                try:
+                    v_int = int(v)
+                    if v_int not in [1, 2]:
+                        raise ValueError('模式必须是 1 或 2')
+                    return v_int # Return the converted integer
+                except (ValueError, TypeError):
+                     raise ValueError('模式必须是有效的整数 1 或 2')
+            @validator('timeStr')
+            def validate_time_web(cls, v, values):
+                mode = values.get('mode'); time_str = v.strip()
+                if mode == 1:
+                    if not time_str: raise ValueError('明日预约模式必须提供执行时间 (HH:MM:SS)')
+                    if not validate_time_format(time_str): raise ValueError('时间格式错误')
+                    exec_dt = calculate_execution_dt(time_str, check_window=True)
+                    if exec_dt is None: raise ValueError(f"预约时间 '{time_str}' 无效或不在窗口内/已过")
+                elif mode == 2 and time_str:
+                    if not validate_time_format(time_str): raise ValueError('时间格式错误')
                     exec_dt = calculate_execution_dt(time_str, check_window=False)
-                    if exec_dt is None:
-                         raise ValueError(f"无效的抢座执行时间 '{time_str}' (请检查格式或时间是否已过)")
+                    if exec_dt is None: raise ValueError(f"抢座时间 '{time_str}' 无效或已过")
+                return time_str
+    else: SeatRequestWeb = None; print("警告：Pydantic 模型未定义 (缺少依赖)")
 
-            return time_str # Return original validated string
+    # --- Background Task Wrapper for Seat Operation ---
+    # Needs BackgroundTasks, manager, perform_seat_operation
+    if BackgroundTasks and manager and callable(perform_seat_operation):
+        def run_seat_operation_task(client_id: str, mode: int, cookie: str, lib_id: int, seat_key: str, start_dt: Optional[datetime.datetime], background_tasks: BackgroundTasks): # type: ignore
+            """Wrapper to run seat operation and send updates via WS."""
+            def ws_status_callback_sync(message: str):
+                if manager: background_tasks.add_task(manager.send_status_update, client_id, message)
 
-    # --- Background Task Wrapper ---
-    # ... (run_seat_operation_task function remains the same) ...
-    def run_seat_operation_task(client_id: str, mode: int, cookie: str, lib_id: int, seat_key: str, start_dt: Optional[datetime.datetime], background_tasks: BackgroundTasks):
-        """Wrapper to run the blocking operation and send status/final result via WebSocket,
-    using BackgroundTasks for status updates."""
-        # Define the async callback function *inside* this sync wrapper
-        # This ensures it can capture the client_id and use the global manager
-        async def ws_status_callback_async(message: str):
-            # This function needs to be async to call manager.send_status_update
-            await manager.send_status_update(client_id, message)
+            print(f"[Task {client_id}] Starting background operation...")
+            final_result = perform_seat_operation(mode, cookie, lib_id, seat_key, start_dt, ws_status_callback_sync)
+            print(f"[Task {client_id}] Background operation finished with result: {final_result}")
 
-        # Create a sync version of the callback that runs the async one
-        # This is needed because perform_seat_operation expects a sync callback
-        # NOTE: This requires an available asyncio event loop in the thread where this runs.
-        # Uvicorn typically provides this for background tasks.
-        def ws_status_callback_sync(message: str):
-            # Use the passed background_tasks object to schedule the async send
-            # manager.send_status_update is an async function
-            background_tasks.add_task(manager.send_status_update, client_id, message)
-            # No need for explicit loop handling or run_coroutine_threadsafe here
+            status_code_ws = "success" if final_result.startswith("成功") else "error"
+            user_message = final_result; error_code_ws = None
+            if final_result == SEAT_TAKEN_ERROR_CODE:
+                status_code_ws = "error"
+                room_name_for_msg = ROOM_ID_TO_NAME.get(str(lib_id), f"ID {lib_id}")
+                seat_num_for_msg = "[未知Key]"
+                if room_name_for_msg in SEAT_MAPPINGS:
+                     reverse_map = {v: k for k, v in SEAT_MAPPINGS[room_name_for_msg].items()}
+                     seat_num_for_msg = reverse_map.get(seat_key, "[未知Key]")
+                user_message = f"该座位 (阅览室: {room_name_for_msg}, 座位号: {seat_num_for_msg}) 已被占用，请重选。"
+                error_code_ws = SEAT_TAKEN_ERROR_CODE
+            if manager: background_tasks.add_task(manager.send_final_result, client_id, status_code_ws, user_message, error_code_ws)
+    else: run_seat_operation_task = None; print("警告：座位操作后台任务包装器未定义 (缺少依赖)")
 
-        print(f"[Task {client_id}] Starting background operation...")
-        # Pass the NEW ws_status_callback_sync to the operation function
-        final_result = perform_seat_operation(
-            mode, cookie, lib_id, seat_key, start_dt, ws_status_callback_sync
-        )
-        print(f"[Task {client_id}] Background operation finished with result: {final_result}")
+    # --- Background Task for Cookie Watching ---
+    # Needs asyncio, os, time, stat, manager, etc.
+    if asyncio and manager:
+        async def watch_cookie_file_task(client_id: str):
+            """
+            Starts mitmproxy IF NEEDED, guides user, monitors cookie file,
+            and sends updates via WS.
+            """
+            # --- 1. 尝试启动 mitmproxy (同步调用) ---
+            # 注意：在异步函数中直接调用可能阻塞事件循环，但启动过程通常很快
+            # 如果启动非常慢，考虑用 asyncio.to_thread (Python 3.9+)
+            mitm_started = start_mitmproxy()
 
-        # --- Determine final status and message (Same as before) ---
-        status_code_ws = "success" if final_result.startswith("成功") else "error"
-        user_message = final_result
-        error_code_ws = None
-        room_name_for_msg = ROOM_ID_TO_NAME.get(str(lib_id), f"ID {lib_id}") # Use helper map
+            # --- 2. 发送指南和状态 ---
+            if not mitm_started:
+                 if manager: await manager.send_status_update(client_id, "❌ 错误：无法启动 mitmproxy 监控进程。")
+                 return # 无法继续
 
-        if final_result == SEAT_TAKEN_ERROR_CODE:
-            status_code_ws = "error" # It's an error state for the user action
-            # Try to find seat number again for message
-            seat_num_for_msg = "[未知Key]"
-            if room_name_for_msg in SEAT_MAPPINGS:
-                reverse_map = {v: k for k, v in SEAT_MAPPINGS[room_name_for_msg].items()}
-                seat_num_for_msg = reverse_map.get(seat_key, "[未知Key]")
-            user_message = f"该座位 (阅览室: {room_name_for_msg}, 座位号: {seat_num_for_msg}) 已经被预定了，请选择其他座位。"
-            error_code_ws = SEAT_TAKEN_ERROR_CODE
-        elif final_result.startswith("成功"):
-            status_code_ws = "success"
-        else: # Any other error message
-            status_code_ws = "error"
+            # 发送操作指南
+            instructions = [
+                "--- 自动获取 Cookie 指南 ---",
+                f"1. Mitmproxy ({MITMPROXY_COMMAND}) 应已在后台启动。",
+                 "   (如果使用 mitmweb, 可在 http://127.0.0.1:8081 查看)",
+                f"2. 【重要】请手动设置系统网络代理为: 127.0.0.1:8080",
+                f"     (可使用 set_proxy.bat / set_proxy.sh 脚本)",
+                f"3. 打开【电脑版微信】并访问【图书馆小程序首页】。",
+                f"4. 程序正在后台监控 '{COOKIE_FILENAME}' 文件更新...",
+                f"(最长等待 {MAX_WAIT_TIME} 秒，完成后请手动取消代理)"
+            ]
+            for instruction in instructions:
+                if manager: await manager.send_status_update(client_id, instruction)
+                await asyncio.sleep(0.1) # 异步函数中使用 asyncio.sleep
 
-        # --- Send final result (Still needs async execution) ---
-        # Using background_tasks for the final send as well is consistent
-        background_tasks.add_task(manager.send_final_result, client_id, status_code_ws, user_message, error_code_ws)
+            # --- 3. 监控文件 ---
+            start_time = time.time(); last_mtime = 0; cookie_found = False
+            if os.path.exists(COOKIE_FILE_PATH):
+                try: last_mtime = os.stat(COOKIE_FILE_PATH)[stat.ST_MTIME]
+                except OSError: pass
 
-        # # Send final result via WebSocket (needs to be done async)
-        # async def send_final_async():
-        #     await manager.send_final_result(client_id, status_code_ws, user_message, error_code_ws)
+            while time.time() - start_time < MAX_WAIT_TIME and not cookie_found:
+                await asyncio.sleep(FILE_CHECK_INTERVAL) # 异步等待
+                if os.path.exists(COOKIE_FILE_PATH):
+                    try:
+                        current_mtime = os.stat(COOKIE_FILE_PATH)[stat.ST_MTIME]
+                        if current_mtime > last_mtime:
+                            if manager: await manager.send_status_update(client_id, f"检测到 '{COOKIE_FILENAME}' 更新，读取中...")
+                            await asyncio.sleep(0.5) # 异步等待
+                            cookie_content = ""; read_error = None
+                            try:
+                                 # 文件 IO 是阻塞的，对于非常大的文件或慢速磁盘，
+                                 # 理想情况下也应该用 asyncio.to_thread，但对于小 cookie 文件通常没问题
+                                 with open(COOKIE_FILE_PATH, "r", encoding='utf-8') as f: cookie_content = f.read().strip()
+                            except Exception as read_err: read_error = read_err
+                            if read_error:
+                                 print(f"Error reading cookie file: {read_error}")
+                                 if manager: await manager.send_status_update(client_id, f"读取文件时出错: {read_error}")
+                                 last_mtime = current_mtime; continue
 
-        # try:
-        #     loop = asyncio.get_running_loop()
-        # except RuntimeError:
-        #     loop = asyncio.new_event_loop()
-        #     asyncio.set_event_loop(loop)
-        # asyncio.run_coroutine_threadsafe(send_final_async(), loop)
+                            if cookie_content and "=" in cookie_content:
+                                if manager:
+                                    await manager.send_status_update(client_id, "Cookie 读取成功！")
+                                    await manager.send_cookie_update(client_id, cookie_content)
+                                    await manager.send_status_update(client_id, "Cookie 已自动填充。")
+                                    await manager.send_status_update(client_id, "提示：可取消系统代理。")
+                                cookie_found = True # 成功获取，退出循环
+                            else:
+                                 if manager: await manager.send_status_update(client_id, f"警告：文件内容格式错误，继续等待...")
+                                 last_mtime = current_mtime
+                    except OSError as e:
+                        if manager: await manager.send_status_update(client_id, f"检查文件状态出错: {e}...")
+                    except Exception as e:
+                        error_details = traceback.format_exc()
+                        print(f"处理文件时意外错误: {e}\n{error_details}")
+                        if manager: await manager.send_status_update(client_id, f"处理文件时意外错误: {e}")
+                        break # 停止监控
 
+            # --- 4. 超时处理 ---
+            if not cookie_found and manager:
+                await manager.send_status_update(client_id, f"等待 {MAX_WAIT_TIME} 秒超时，未能自动获取 Cookie。")
+                await manager.send_status_update(client_id, "请检查操作或手动输入。")
+            # 注意：不需要在这里停止 mitmproxy，atexit 会在主程序退出时处理
 
-    # Assume FastAPI app and other dependencies are defined
+    else: watch_cookie_file_task = None; print("警告：Cookie监控后台任务未定义 (缺少依赖)")
 
-    @app.post("/api/submit_request")
-    async def handle_seat_request(request: SeatRequestWeb, background_tasks: BackgroundTasks): # Type hint needed
-        """
-        Handles seat request, validates, looks up key, and starts background task.
-        Passes the background_tasks object to the task runner.
-        """
-        print(f"\n收到 Web 请求: Client={request.clientId}, Mode={request.mode}, LibID={request.libId}, Input SeatNo='{request.seatNumber}', Time='{request.timeStr}'")
+    # --- API Endpoint for Seat Request ---
+    if SeatRequestWeb and BackgroundTasks and run_seat_operation_task and HTTPException and JSONResponse and manager:
+        @app.post("/api/submit_request")
+        async def handle_seat_request(request: SeatRequestWeb, background_tasks: BackgroundTasks): # type: ignore
+            """Handles seat request, validates, starts background task."""
+            # Print received data with type check for mode
+            print(f"\n收到 Web 请求: Client={request.clientId}, Mode={request.mode} (Type: {type(request.mode)}), LibID={request.libId}, SeatNo='{request.seatNumber}', Time='{request.timeStr}'")
+            if not manager: raise HTTPException(status_code=503, detail="WebSocket管理器未初始化")
 
-        # --- Lookups and validation (Same as before) ---
-        lib_id_str = str(request.libId)
-        room_name = ROOM_ID_TO_NAME.get(lib_id_str)
-        if not room_name:
-            raise HTTPException(status_code=404, detail=f"提供的阅览室 ID ({request.libId}) 无效")
+            lib_id_str = str(request.libId); room_name = ROOM_ID_TO_NAME.get(lib_id_str)
+            if not room_name: raise HTTPException(status_code=404, detail=f"无效阅览室 ID ({request.libId})")
+            seat_map_for_room = SEAT_MAPPINGS.get(room_name)
+            if not seat_map_for_room: raise HTTPException(status_code=404, detail=f"未找到阅览室 '{room_name}' 座位图")
+            seat_number_as_key = request.seatNumber.strip(); found_coordinate_key = seat_map_for_room.get(seat_number_as_key)
 
-        seat_map_for_room = SEAT_MAPPINGS.get(room_name)
-        if not seat_map_for_room:
-            raise HTTPException(status_code=404, detail=f"服务器端未找到阅览室 '{room_name}' 的座位映射数据")
+            if found_coordinate_key is None:
+                raise HTTPException(status_code=404, detail=f"在 '{room_name}' 中未找到座位号 '{seat_number_as_key}'")
+            print(f"查找成功: Room='{room_name}', SeatNo='{seat_number_as_key}' -> Key='{found_coordinate_key}'")
+            start_action_dt_web = None
+            try:
+                if request.mode == 1:
+                    start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=True)
+                    if start_action_dt_web is None: raise ValueError(f"预约时间 '{request.timeStr}' 无效")
+                elif request.mode == 2 and request.timeStr:
+                    start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=False)
+                    if start_action_dt_web is None: raise ValueError(f"抢座时间 '{request.timeStr}' 无效")
+            except ValueError as e: raise HTTPException(status_code=400, detail=str(e))
 
-        seat_number_as_key = request.seatNumber.strip()
-        found_coordinate_key = seat_map_for_room.get(seat_number_as_key)
+            background_tasks.add_task( run_seat_operation_task, request.clientId, request.mode, request.cookieStr, request.libId, found_coordinate_key, start_action_dt_web, background_tasks)
+            print(f"任务已添加: Client={request.clientId}, Key={found_coordinate_key}")
+            return JSONResponse(content={"status": "processing", "message": "请求已提交后台处理，请通过 WebSocket 查看状态。"})
+    else: print("警告：座位请求 API 端点 (/api/submit_request) 未定义 (缺少依赖)")
 
-        print(f"DEBUG (Web): Looking up key '{seat_number_as_key}' in map for '{room_name}'...")
-
-        if found_coordinate_key is None:
-            print(f"错误 (Web): 在阅览室 '{room_name}' (ID: {request.libId}) 的映射中未能找到座位号 '{seat_number_as_key}' 作为键。")
-            available_keys = list(seat_map_for_room.keys())
-            print(f"DEBUG (Web): Available seat numbers (keys) in map for '{room_name}' (sample): {available_keys[:20]}")
-            raise HTTPException(status_code=404, detail=f"在阅览室 '{room_name}' 中未找到座位号 '{seat_number_as_key}'。")
-
-        print(f"查找成功 (Web): Room='{room_name}', Input SeatNo='{seat_number_as_key}' -> Found Coordinate Key='{found_coordinate_key}'")
-
-        start_action_dt_web = None
-        try:
-            if request.mode == 1:
-                start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=True)
-                if start_action_dt_web is None: raise ValueError(f"预约时间 '{request.timeStr}' 无效或已过时。")
-            elif request.mode == 2 and request.timeStr:
-                start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=False)
-                if start_action_dt_web is None: raise ValueError(f"抢座时间 '{request.timeStr}' 无效或已过时。")
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-        # --- MODIFIED Add Task Call ---
-        # Pass the background_tasks object itself as the last argument
-        background_tasks.add_task(
-            run_seat_operation_task,
-            request.clientId,
-            request.mode,
-            request.cookieStr,
-            request.libId,
-            found_coordinate_key,
-            start_action_dt_web,
-            background_tasks # Pass the object here
-        )
-
-        print(f"任务已添加到后台 (Web): Client={request.clientId}, CoordinateKey={found_coordinate_key}")
-        # Return immediate HTTP confirmation (Same as before)
-        return JSONResponse(content={"status": "processing", "message": "请求已提交后台处理，请通过 WebSocket 查看状态更新和最终结果。"})
+    # --- API Endpoint for Auto Cookie Get ---
+    if BackgroundTasks and watch_cookie_file_task and manager and HTTPException and JSONResponse:
+        @app.post("/api/start_auto_cookie_watch/{client_id}")
+        async def start_auto_cookie_watch(client_id: str, background_tasks: BackgroundTasks): # type: ignore
+            """Starts the background task to watch for the cookie file."""
+            print(f"收到自动获取 Cookie 请求: Client={client_id}")
+            if not manager: raise HTTPException(status_code=503, detail="WebSocket管理器未初始化")
+            if client_id not in manager.active_connections: raise HTTPException(status_code=404, detail="客户端 WebSocket 未连接")
+            background_tasks.add_task(watch_cookie_file_task, client_id)
+            print(f"已为 Client={client_id} 添加 Cookie 监控任务。")
+            return JSONResponse(content={"status": "watching", "message": "已启动 Cookie 文件监控，请查看状态区域指南。"})
+    else: print("警告：自动 Cookie 获取 API 端点 (/api/start_auto_cookie_watch) 未定义 (缺少依赖)")
 
     # --- WebSocket Endpoint ---
-    # ... (websocket_endpoint remains the same) ...
-    @app.websocket("/ws/{client_id}")
-    async def websocket_endpoint(websocket: WebSocket, client_id: str): # type: ignore
-        await manager.connect(websocket, client_id)
-        try:
-            while True:
-                # Keep connection alive by waiting for messages (or periodic pings if needed)
-                # We don't expect the client to send anything specific in this setup.
-                data = await websocket.receive_text()
-                # print(f"Received WS message from {client_id}: {data}") # For debugging client pings etc.
-                # Optional: Respond to pings if client sends them
-                # if data == "ping": await websocket.send_text("pong")
-        except WebSocketDisconnect:
-            print(f"WebSocket disconnected by client: {client_id}")
-            manager.disconnect(client_id)
-        except Exception as e:
-            print(f"WebSocket error for {client_id}: {type(e).__name__} - {e}")
-            # Ensure disconnect is called even on other errors
-            manager.disconnect(client_id)
+    if WebSocket and WebSocketDisconnect and manager:
+        @app.websocket("/ws/{client_id}")
+        async def websocket_endpoint(websocket: WebSocket, client_id: str): # type: ignore
+            if not manager: print("错误: WS 管理器未初始化"); return
+            await manager.connect(websocket, client_id)
+            try:
+                while True: await websocket.receive_text() # Keep alive
+            except WebSocketDisconnect: manager.disconnect(client_id)
+            except Exception as e: print(f"WS 错误 for {client_id}: {type(e).__name__}"); manager.disconnect(client_id)
+    else: print("警告：WebSocket 端点 (/ws/{client_id}) 未定义 (缺少依赖)")
 
+    # --- HTML Frontend Endpoint ---
+    if Request and Jinja2Templates and templates and HTTPException:
+        @app.get("/")
+        async def get_index(request: Request): # type: ignore
+             if not templates: raise HTTPException(status_code=500, detail="模板引擎未初始化。")
+             try: mappings_url = str(request.url_for('get_mappings'))
+             except Exception: mappings_url = "/api/mappings" # Fallback
+             context = { "request": request, "mappings_url": mappings_url,
+                         "TOMORROW_RESERVE_WINDOW_START_STR": TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S'),
+                         "TOMORROW_RESERVE_WINDOW_END_STR": TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S'),
+                         "SEAT_TAKEN_ERROR_CODE": SEAT_TAKEN_ERROR_CODE }
+             return templates.TemplateResponse("index.html", context)
+    else: print("警告：主页 HTML 端点 (/) 未定义 (缺少依赖)")
 
-    # --- HTML Frontend (Using Jinja2 Template) ---
-    # --- MODIFIED: Use TemplateResponse ---
-    @app.get("/") # Removed response_class=HTMLResponse
-    async def get_index(request: Request): # type: ignore # Renamed request_http to request, added type hint
-         """Serves the main HTML page using a Jinja2 template."""
-         if not templates:
-             # Handle case where template directory wasn't found during startup
-              raise HTTPException(status_code=500, detail="服务器模板引擎未正确初始化。")
-
-         try:
-            mappings_url = str(request.url_for('get_mappings'))
-         except Exception as e:
-             print(f"Error generating URL for 'get_mappings': {e}")
-             # Fallback or raise error, here we provide a default path
-             mappings_url = "/api/mappings" # Ensure this matches the actual API path
-
-         # Prepare context data for the template
-         context = {
-             "request": request, # Mandatory for Jinja2Templates
-             "mappings_url": mappings_url,
-             "TOMORROW_RESERVE_WINDOW_START_STR": TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S'),
-             "TOMORROW_RESERVE_WINDOW_END_STR": TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S'),
-             "SEAT_TAKEN_ERROR_CODE": SEAT_TAKEN_ERROR_CODE,
-         }
-
-         # Return the rendered template
-         return templates.TemplateResponse("index.html", context)
+# --- End of 'if WEB_DEPENDENCIES_MET and app:' block ---
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
-
     run_web_flag = '--web' in sys.argv
-
     if run_web_flag:
+        print("-" * 50); print("--- Web 服务器模式 ---")
+        if not WEB_DEPENDENCIES_MET: sys.exit(1) # Message already printed
+        if not app: print("\n❌ 错误：FastAPI 应用未能初始化。"); sys.exit(1)
+        if not templates: print(f"\n❌ 错误: Templates 目录 '{TEMPLATES_DIR}' 缺失或初始化失败。"); sys.exit(1)
+        if not manager: print(f"\n❌ 错误: WebSocket 管理器未能初始化。"); sys.exit(1)
+
+        print("加载映射数据...")
+        if not load_mappings() or not ROOM_ID_TO_NAME:
+            print("\n❌ 错误: 加载映射数据失败，服务器无法启动。"); sys.exit(1)
+
+        print("\n✅ Web 依赖项、模板和映射数据均已加载。")
+        try: script_name = os.path.splitext(os.path.basename(__file__))[0]
+        except NameError: script_name = "beta" # Fallback
+        print(f"\n  请运行: uvicorn {script_name}:app --reload --host 0.0.0.0 --port 8000\n")
+        print("(使用 --host 0.0.0.0 允许局域网访问)")
+        print("启动后，在浏览器打开 http://<你的IP地址>:8000 或 http://127.0.0.1:8000")
         print("-" * 50)
-        print("--- Web 服务器模式 ---")
-        if not WEB_DEPENDENCIES_MET:
-            print("\n❌ 错误：运行 Web 界面需要额外的依赖库。")
-            print("请先安装所需依赖:")
-            # Added jinja2
-            print("  pip install fastapi uvicorn websocket-client requests pydantic jinja2")
-            print("-" * 50)
-            sys.exit(1)
-
-        if not app:
-             print("\n❌ 错误：FastAPI 应用未能初始化。")
-             sys.exit(1)
-        # Check if templates were loaded
-        if not templates:
-             print(f"\n❌ 错误: Templates 目录 '{TEMPLATES_DIR}' 不存在或无法访问。Web 服务器无法启动。")
-             sys.exit(1)
-
-        # Load mappings before starting server
-        print("正在加载映射数据以启动 Web 服务器...")
-        if not load_mappings():
-              print("\n❌ 错误: 无法加载映射文件，Web服务器无法启动。请检查 data_process 目录和文件。")
-              sys.exit(1)
-        if not ROOM_ID_TO_NAME:
-             print("\n❌ 错误: 阅览室数据为空，Web服务器无法提供有效服务。")
-             sys.exit(1)
-
-        print("\n✅ Web 界面依赖项已找到、模板已加载且映射数据已加载。")
-        print("请在你的终端中运行以下命令来启动 Web 服务器:")
-        try:
-            # Get the filename of the current script without the extension
-            script_name = os.path.splitext(os.path.basename(__file__))[0]
-        except NameError:
-            # Fallback if run interactively (e.g., in Jupyter or Python console)
-            # Try getting it from sys.argv if possible, otherwise use a placeholder
-            try:
-                script_name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
-                if not script_name or script_name == "-c": # Handle python -c "..." case
-                    script_name = "your_script_filename"
-            except Exception:
-                script_name = "your_script_filename"
-
-
-        # Recommend uvicorn command
-        print(f"\n  uvicorn {script_name}:app --reload --host 0.0.0.0 --port 8000\n")
-        print("(使用 --host 0.0.0.0 允许局域网内其他设备访问，如果只需本机访问，可改为 --host 127.0.0.1)")
-        print(f"(确保此 Python 文件名为 {script_name}.py 且 templates 目录位于同一文件夹下)")
-        print("启动后，请在浏览器中打开 http://<你的IP地址>:8000 或 http://127.0.0.1:8000")
-        print("-" * 50)
-        # The script finishes here; the user needs to run the uvicorn command separately.
+        # Script exits here, user runs uvicorn manually
 
     else: # CLI Mode
-        print("-" * 50)
-        print("--- 命令行界面模式 ---")
-        print("(如果需要 Web 界面，请使用 '--web' 参数运行此脚本)")
-
-        # Load mappings for CLI mode
-        print("正在加载映射数据...")
-        if not load_mappings():
-            print("\n❌ 错误：无法加载映射文件，程序退出。请检查 data_process 目录和文件。")
-            sys.exit(1)
-        if not ROOM_ID_TO_NAME:
-             print("\n❌ 错误：阅览室数据为空，无法执行操作。")
-             sys.exit(1)
-
-        print("-" * 50)
-        try:
-            run_cli() # Start the command-line interface
-        except KeyboardInterrupt:
-             print("\n操作被用户中断。")
-        except Exception as e:
-            print(f"\n❌ 运行命令行界面时发生意外错误: {type(e).__name__} - {e}")
-            import traceback
-            traceback.print_exc() # Print detailed traceback for debugging
-        finally:
-            print("\n脚本执行完毕。")
+        print("-" * 50); print("--- 命令行界面模式 ---")
+        print("(使用 '--web' 参数运行以启动 Web 界面)")
+        try: run_cli() # run_cli handles mapping loading internally now
+        except KeyboardInterrupt: print("\n操作被用户中断。")
+        except Exception as e: print(f"\n❌ 运行 CLI 时发生意外错误: {type(e).__name__} - {e}"); traceback.print_exc()
+        finally: print("\n脚本执行完毕。")
