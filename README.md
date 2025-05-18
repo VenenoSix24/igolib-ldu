@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# igolib-ldu
-=======
 # IgoLib-LDU 图书馆座位预约系统
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -142,4 +139,3 @@ DEFAULT_RESERVE_TIME_STR = "21:48:00"
 ## 🙏 鸣谢
 
 感谢所有为本项目做出贡献的开发者。
->>>>>>> 8735d1d (feat: add initial implementation of the web interface for seat reservation system with responsive design and WebSocket integration)
