@@ -8,10 +8,10 @@ if %errorlevel% neq 0 (
     goto End
 )
 
-:: 清除代理服务器地址（禁用后通常不需要，但更干净）
+:: 可选：清除代理服务器地址（禁用后通常不需要，但更干净）
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /t REG_SZ /d "" /f
 
-:: 清除本地地址绕过设置
+:: 可选：清除本地地址绕过设置
 :: reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyOverride /f
 
 echo Proxy disabled successfully.

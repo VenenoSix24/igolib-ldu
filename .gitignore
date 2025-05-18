@@ -1,0 +1,13 @@
+# 排除需要上传的文件和文件夹
+!bat/
+!data_process/
+!templates/
+!beta.py
+!cookie_extractor.py
+!requirements.txt
+
+# 排除不需要上传的文件和文件夹
+venv
+base_dev.py
+latest_cookie.txt
+New Text Document.txt

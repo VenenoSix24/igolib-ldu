@@ -12,12 +12,12 @@ if %errorlevel% neq 0 (
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f
 if %errorlevel% neq 0 (
     echo ERROR: Failed to set ProxyEnable registry key. Run as administrator?
-    :: 尝试回滚 ProxyServer 设置
+    :: 尝试回滚 ProxyServer 设置（可选）
     reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /t REG_SZ /d "" /f
     goto End
 )
 
-:: 设置不对本地地址使用代理
+:: 可选：设置不对本地地址使用代理 (通常需要)
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyOverride /t REG_SZ /d "<local>" /f
 
 echo Proxy enabled successfully. (127.0.0.1:8080)

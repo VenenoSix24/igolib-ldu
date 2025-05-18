@@ -60,8 +60,8 @@ except ImportError:
     app = None # Explicitly set app to None
 
 # --- Configuration ---
-URL = '这里填写URL'
-WEBSOCKET_URL = 'wss://XXXX/ws?ns=prereserve/queue'
+URL = 'https://libseats.ldu.edu.cn/index.php/graphql/'
+WEBSOCKET_URL = 'wss://libseats.ldu.edu.cn/ws?ns=prereserve/queue'
 MAX_REQUEST_ATTEMPTS = 3 # Example: Set maximum request attempts
 SLEEP_INTERVAL_ON_FAIL = 0.5
 COOKIE_ERROR_PATTERN = r'Connection to remote host was lost|invalid session|请先登录|登陆|验证失败'
@@ -150,30 +150,30 @@ def load_mappings() -> bool:
 # --- Default Payloads ---
 # Using multi-line strings for better readability
 queue_header_base: Dict[str, str] = {
-    'Host': 'XXXX',
+    'Host': 'libseats.ldu.edu.cn',
     'Connection': 'Upgrade', 
     'Pragma': 'no-cache',
     'Cache-Control': 'no-cache',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090c33) XWEB/13603 Flue',
     'Upgrade': 'websocket', 
-    'Origin': 'https://XXXX',
+    'Origin': 'https://libseats.ldu.edu.cn',
     'Sec-WebSocket-Version': '13', 
     'Accept-Encoding': 'gzip, deflate, br',
     'Accept-Language': 'zh-CN,zh;q=0.9', 
     'Cookie': ''
 }
 pre_header_base: Dict[str, str] = {
-    'Host': 'XXXX', 
+    'Host': 'libseats.ldu.edu.cn', 
     'Connection': 'keep-alive',
     'Content-Length': '353',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090c33) XWEB/13603 Flue',
     'Content-Type': 'application/json', 
     'Accept': '*/*', 
-    'Origin': 'https://XXXX',
+    'Origin': 'https://libseats.ldu.edu.cn',
     'Sec-Fetch-Site': 'same-origin', 
     'Sec-Fetch-Mode': 'cors', 
     'Sec-Fetch-Dest': 'empty',
-    'Referer': 'https://XXXX/web/index.html',
+    'Referer': 'https://libseats.ldu.edu.cn/web/index.html',
     'Accept-Encoding': 'gzip, deflate, br', 
     'Accept-Language': 'zh-CN,zh;q=0.9', 
     'Cookie': ''
