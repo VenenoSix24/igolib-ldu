@@ -1,148 +1,109 @@
-# igolib-ldu-web 图书馆座位预约系统
+# 我去抢个座 - Web (igolib_ldu_web)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/版本-v2.2.0-blue.svg" alt="版本" />
-  <img src="https://img.shields.io/badge/Python-3.8+-brightgreen.svg" alt="Python" />
-  <img src="https://img.shields.io/badge/FastAPI-0.115+-orange.svg" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="许可证" />
-</p>
+![版本](https://img.shields.io/badge/版本-3.0.0-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.9+-green.svg)
+![许可证](https://img.shields.io/badge/许可证-MIT-yellow.svg)
 
-<p align="center">
-  <b>一个现代、高效的图书馆座位预约工具 | 专为鲁东大学图书馆设计</b>
-</p>
+一个用于鲁东大学图书馆座位预约和抢座的自动化工具。通过Web界面操作，轻松实现图书馆座位预约。
 
-<div align="center">
+## ✨ 功能特性
 
-[特点](#特点) •
-[快速开始](#快速开始) •
-[使用指南](#使用指南) •
-[Cookie获取](#cookie获取) •
-[高级配置](#高级配置) •
-[常见问题](#常见问题) •
-[贡献](#贡献) •
-[许可证](#许可证)
+- 🔄 **明日预约模式**：在开放时间预约第二天的座位
+- ⚡ **即时抢座模式**：实时抢占当天可用座位
+- 🌐 **Web界面**：友好的用户操作界面，无需编程知识
+- 🕒 **定时执行**：设置精确时间自动执行抢座操作
+- 🗺️ **座位映射**：直观的阅览室和座位号映射
 
-</div>
+## 📋 目录
 
-## ✨ 特点
+- [安装指南](#-安装指南)
+- [使用方法](#-使用方法)
+  - [Web界面](#web界面)
+- [配置说明](#-配置说明)
+- [屏幕截图](#-屏幕截图)
+- [贡献指南](#-贡献指南)
+- [许可证](#-许可证)
 
-- 📚 **双模式操作**：支持明日预约和实时抢座
-- 🚀 **高效预约**：内置排队系统，提高抢座成功率
-- ⏰ **定时执行**：设定精确时间自动执行预约/抢座
-- 💻 **友好界面**：简洁美观的Web界面，响应式设计
-- 🔍 **座位映射**：完整的阅览室座位映射，轻松选择
+## 📦 安装指南
 
-## 🚀 快速开始
+### 环境要求
 
-### 系统要求
-
-- Python 3.8+
-- 网络连接
-- 支持Windows/MacOS/Linux
+- Python 3.9+
+- pip包管理器
 
 ### 安装步骤
 
-1. 克隆仓库:
+1. **克隆或下载项目代码**
 
 ```bash
-git clone https://github.com/VenenoSix24/igolib_ldu_web.git
-cd igolib_ldu_web
+git clone https://github.com/VenenoSix24/igolib-ldu.git
+cd igolib-ldu
 ```
 
-2. 安装依赖:
+2. **创建并激活虚拟环境**（推荐）
+
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
+```
+
+3. **安装依赖包**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. 启动Web服务:
+## 🚀 使用方法
+
+### Web界面
+
+1. **启动Web服务**
 
 ```bash
-uvicorn beta:app --reload --host 0.0.0.0 --port 8000
+python beta.py --web
 ```
 
-4. 在浏览器访问:
+2. **访问Web界面**
 
-```
-http://127.0.0.1:8000
-```
+打开浏览器访问: `http://127.0.0.1:8000`
 
-## 📖 使用指南
+3. **使用流程**
+   - 设置Cookie获取（通过mitmproxy捕获）
+   - 选择阅览室和座位
+   - 设置预约/抢座模式和执行时间
+   - 提交并等待结果
 
-### Web界面操作流程
+## ⚙️ 配置说明
 
-1. **选择操作模式**:
-   - 明日预约 (在规定时间窗口内执行)
-   - 立即抢座 (可选择立即或定时执行)
+系统主要配置位于 `beta.py`文件顶部，主要配置项包括：
 
-2. **填写必要信息**:
-   - 阅览室选择
-   - 座位号输入
-   - Cookie信息填写
-   - 执行时间设置 (可选)
+- `URL`和 `WEBSOCKET_URL`: 服务器接口地址
+- `TOMORROW_RESERVE_WINDOW_START`/`END`: 预约时间窗口
+- `DEFAULT_RESERVE_TIME_STR`: 默认预约执行时间
+- `COOKIE_FILENAME`: Cookie文件保存路径
 
-3. **提交请求**:
-   - 点击"开始执行"按钮
-   - 实时查看操作状态和结果
+座位和阅览室数据存储在 `data_process`目录下：
 
-## 🔑 Cookie获取
+- 阅览室映射: `data_process/room/output/room_mappings.json`
+- 座位映射: `data_process/seat/output/{room_name}.json`
 
-获取Cookie是使用本工具的关键步骤，以下是手动获取Cookie的方法:
+## 📸 屏幕截图
 
-### 使用浏览器开发者工具
+> 占个坑
 
-1. 在微信中打开图书馆预约系统
-2. 按F12或右键选择"检查"打开开发者工具
-3. 切换到"网络(Network)"选项卡
-4. 刷新页面，查找带有Authorization的请求
-5. 复制请求头中的Cookie值
+## 🤝 贡献指南
 
-### 使用抓包工具
+欢迎提交问题报告和功能请求！如果您想贡献代码：
 
-1. 配置并启动抓包软件(如Fiddler、Charles等)
-2. 使用微信访问图书馆系统
-3. 在抓包工具中查找相关请求
-4. 提取请求中的Cookie信息
-
-## ⚙️ 高级配置
-
-在beta.py文件中可以修改以下配置:
-
-```python
-# 抢座最大尝试次数
-MAX_REQUEST_ATTEMPTS = 3
-
-# 预约窗口时间
-TOMORROW_RESERVE_WINDOW_START = datetime.time(21, 48, 0)
-TOMORROW_RESERVE_WINDOW_END = datetime.time(23, 59, 59)
-
-# 默认预约时间
-DEFAULT_RESERVE_TIME_STR = "21:48:00"
-```
-
-## ❓ 常见问题
-
-| 问题 | 解决方案 |
-|------|---------|
-| Cookie无效 | 重新登录获取新Cookie，确保包含完整的Authorization值 |
-| 抢座失败 | 检查时间设置，确保与服务器时间同步；尝试选择其他座位 |
-| 网页连接失败 | 检查网络连接，确保服务正在运行；尝试刷新页面 |
-| 座位被占用 | 更换其他座位号重新尝试 |
-
-## 🤝 贡献
-
-欢迎提交问题和贡献代码，让这个工具变得更好!
-
-1. Fork 本项目
-2. 创建特性分支: `git checkout -b my-new-feature`
-3. 提交更改: `git commit -am '添加新特性'`
-4. 推送到分支: `git push origin my-new-feature`
-5. 提交Pull Request
+1. Fork这个仓库
+2. 创建您的特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交您的更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 打开一个Pull Request
 
 ## 📄 许可证
 
-本项目采用MIT许可证 - 详情请参阅 [LICENSE](LICENSE) 文件
-
----
-
-<p align="center">开发不易，如果这个项目对你有帮助，请给它一个星标 ⭐</p>
+该项目采用MIT许可证 - 详情请参阅LICENSE文件

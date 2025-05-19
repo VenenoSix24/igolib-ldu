@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎 - 我去抢个座</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #ffffff;
+            /* Ensure body background is white */
+            display: flex;
+            /* Use flexbox to center content */
+            align-items: center;
+            /* Vertical centering */
+            justify-content: center;
+            /* Horizontal centering */
+            color: #333;
+            box-sizing: border-box;
+            /* Add box-sizing */
+            flex-direction: column;
+            /* Stack elements vertically */
+            position: relative;
+            /* Allow absolute positioning inside if needed */
+        }
+
+        .content-card {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%;
+            /* Use percentage for responsiveness */
+            width: auto;
+            /* Allow it to shrink */
+            min-width: 300px;
+            /* Optional: prevent it from becoming too narrow */
+            margin: auto;
+            /* Center in any available space */
+            flex-shrink: 0;
+            /* Prevent card from shrinking too much */
+        }
+
+        .icon-primary {
+            color: #4A90E2;
+            /* Primary blue */
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 640px) {
+            .content-card {
+                padding: 1.5rem;
+            }
+
+            .icon-primary {
+                font-size: 2.5rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+                /* Tailwind text-2xl is 1.5rem, this is a bit larger */
+                word-break: break-word;
+                /* Allow long titles to wrap */
+            }
+        }
+
+        /* Dark mode styles for welcome page */
+        html.dark {
+            background-color: #1a202c;
+            /* Ensure html root also has dark background */
+        }
+
+        html.dark body {
+            background-color: #1a202c;
+            /* Tailwind gray-900 for body bg */
+            color: #cbd5e0;
+            /* Tailwind gray-400 for general text */
+        }
+
+        html.dark .content-card {
+            background-color: #2d3748;
+            /* Tailwind gray-800 for card bg */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        html.dark h1 {
+            color: #e2e8f0;
+            /* Tailwind gray-200 for heading */
+        }
+
+        html.dark p,
+        html.dark li {
+            color: #a0aec0;
+            /* Tailwind gray-500 for paragraph/list text */
+        }
+
+        html.dark .icon-primary {
+            color: #63b3ed;
+            /* A lighter blue for dark mode, e.g., Tailwind blue-400 */
+        }
+
+        html.dark .terms-container {
+            background-color: #1f2937;
+            /* Tailwind gray-850 (custom or darker gray-800) */
+        }
+
+        html.dark .terms-container label {
+            color: #cbd5e0;
+            /* Lighter text for label in dark mode */
+        }
+
+        html.dark .terms-container span.text-blue-600 {
+            color: #63b3ed !important;
+            /* Lighter blue for links, ensure it overrides */
+        }
+
+        html.dark .terms-container span.text-blue-600:hover {
+            color: #90cdf4 !important;
+            /* Even lighter blue for link hover */
+        }
+
+        html.dark #agree_button {
+            background-color: #3182ce;
+            /* Tailwind blue-600 for button */
+            color: white;
+        }
+
+        html.dark #agree_button:hover:not(:disabled) {
+            background-color: #2b6cb0;
+            /* Tailwind blue-700 */
+        }
+
+        html.dark #agree_button:disabled {
+            background-color: #4a5568;
+            /* Tailwind gray-600 for disabled button */
+            opacity: 0.7;
+        }
+
+        html.dark .form-checkbox {
+            border-color: #4a5568;
+            /* Darker border for checkbox */
+        }
+
+        html.dark .form-checkbox:checked {
+            background-color: #3182ce;
+            border-color: #3182ce;
+        }
+
+        html.dark #terms_error_message {
+            color: #f87171;
+            /* Tailwind red-400 for better visibility on dark backgrounds */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content-card">
+        <i class="fas fa-university icon-primary"></i>
+        <h1 class="text-3xl font-bold mb-4 text-gray-800">欢迎使用我去抢个座</h1>
+        <p class="text-gray-600 mb-6">
+            本系统旨在帮助您更方便地预约图书馆的座位。请按照指引完成操作。
+        </p>
+        <p class="text-gray-600 mb-2">
+            <i class="fas fa-info-circle text-blue-500 mr-2"></i>简单三步，轻松抢座：
+        </p>
+        <ul class="list-none text-left inline-block text-gray-600 mb-6">
+            <li class="mb-2"><i class="fas fa-check-circle text-green-500 mr-2"></i>点击下方按钮进入配置页面。</li>
+            <li class="mb-2"><i class="fas fa-edit text-green-500 mr-2"></i>填写您的 Cookie 和预约信息。</li>
+            <li class="mb-2"><i class="fas fa-paper-plane text-green-500 mr-2"></i>提交请求并查看实时状态。</li>
+        </ul>
+
+        <div class="terms-container mt-6 mb-4 p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center justify-center">
+                <input type="checkbox" id="terms_agree_checkbox"
+                    class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 align-middle">
+                <label for="terms_agree_checkbox" class="ml-2 text-sm text-gray-700 align-middle">
+                    我已阅读并同意
+                    <span id="show_terms" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">使用条款</span>
+                    和
+                    <span id="show_disclaimer"
+                        class="text-blue-600 hover:text-blue-800 underline cursor-pointer">免责声明</span>。
+                </label>
+            </div>
+            <p id="terms_error_message" class="text-red-500 text-xs mt-2 text-center hidden">请阅读并勾选同意使用条款和免责声明。</p>
+        </div>
+
+        <button id="agree_button"
+            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out opacity-50 cursor-not-allowed"
+            disabled>
+            同意并继续
+        </button>
+
+        <p class="text-sm text-gray-500 mt-6">
+            请确保您已从图书馆官方途径获取了有效的 Cookie。
+        </p>
+    </div>
+
+    <script>
+        const agreeCheckbox = document.getElementById('terms_agree_checkbox');
+        const agreeButton = document.getElementById('agree_button');
+        const termsErrorMessage = document.getElementById('terms_error_message');
+        const showTermsLink = document.getElementById('show_terms');
+        const showDisclaimerLink = document.getElementById('show_disclaimer');
+
+        agreeCheckbox.addEventListener('change', function () {
+            if (this.checked) {
+                agreeButton.disabled = false;
+                agreeButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                agreeButton.classList.add('hover:bg-blue-700');
+                termsErrorMessage.classList.add('hidden');
+            } else {
+                agreeButton.disabled = true;
+                agreeButton.classList.add('opacity-50', 'cursor-not-allowed');
+                agreeButton.classList.remove('hover:bg-blue-700');
+            }
+        });
+
+        agreeButton.addEventListener('click', function () {
+            if (!agreeCheckbox.checked) {
+                termsErrorMessage.classList.remove('hidden');
+                // Simple shake animation for error message
+                termsErrorMessage.classList.add('animate-shake');
+                setTimeout(() => termsErrorMessage.classList.remove('animate-shake'), 500);
+                return; // Stop further action
+            }
+            // If checked, proceed to next page (handled by index.html's navigateToPage)
+            if (window.parent && typeof window.parent.navigateToSpecificPage === 'function') {
+                window.parent.navigateToSpecificPage(1); // Navigate to page_config.html (index 1)
+            } else {
+                console.error('navigateToSpecificPage function not found on parent window.');
+                alert('无法导航到下一页，请检查控制台获取更多信息。');
+            }
+        });
+
+        showTermsLink.addEventListener('click', function () {
+            alert('使用条款:\n\n1. 本程序仅为辅助工具，旨在简化图书馆座位预约流程。\n2. 用户需自行承担使用本程序可能带来的所有风险，包括但不限于预约失败、账号异常等。\n3. 请勿滥用本程序，遵守图书馆相关规定及预约系统的使用协议。\n4. 开发者不对任何因使用本程序造成的直接或间接损失负责。\n5. ... (更多条款内容) ...');
+        });
+
+        showDisclaimerLink.addEventListener('click', function () {
+            alert('免责声明:\n\n1. 本程序为开源的非官方工具，与图书馆官方无任何关联。\n2. 所有操作均在用户本地设备上或通过用户授权的代理执行，开发者不收集、不存储任何用户个人信息（如 Cookie）。\n3. 请确保您通过合法途径获取并使用 Cookie，并对您的 Cookie 安全负责。\n4. 使用本程序即表示您理解并同意以上所有条款。\n5. ... (更多免责内容) ...');
+        });
+
+        // Add a simple shake animation CSS for the error message
+        const styleSheet = document.createElement("style")
+        styleSheet.type = "text/css"
+        styleSheet.innerText = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                50% { transform: translateX(5px); }
+                75% { transform: translateX(-5px); }
+            }
+            .animate-shake {
+                animation: shake 0.3s ease-in-out;
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // Function to set theme (called by parent)
+        window.setAppTheme = function (theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        };
+
+        // Get initial theme from parent on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.parent && typeof window.parent.getCurrentTheme === 'function') {
+                const currentTheme = window.parent.getCurrentTheme();
+                window.setAppTheme(currentTheme);
+            }
+        });
+    </script>
+</body>
+
+</html>

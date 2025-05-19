@@ -2,908 +2,488 @@
 <html lang="zh-CN">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>我去抢个座 - Web版</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我去抢个座</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
 
-  <!-- !!! 添加 Toastify CSS !!! -->
-  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f2f5;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
 
-  <style>
-    /* --- Base Variables (Light Mode) --- */
-    :root {
-      --bg-color: #f8f9fa;
-      --text-color: #343a40;
-      --heading-color: #212529;
-      --label-color: #495057;
-      --form-bg: #ffffff;
-      --input-bg: #fff;
-      --input-border: #ced4da;
-      --input-focus-border: #86b7fe;
-      --input-focus-shadow: rgba(13, 110, 253, 0.25);
-      --button-bg: #0d6efd;
-      --button-hover-bg: #0b5ed7;
-      --button-active-bg: #0a58ca;
-      --button-disabled-bg: #adb5bd;
-      --button-text: white;
-      --result-bg: #eef2f7;
-      --result-border: #dee2e6;
-      --result-text: #343a40;
-      --spinner-color: #0d6efd;
-      --link-color: #0d6efd;
-      --small-text-color: #6c757d;
-      --success-bg: #d1e7dd;
-      --success-border: #198754;
-      --success-text: #0f5132;
-      --error-bg: #f8d7da;
-      --error-border: #dc3545;
-      --error-text: #842029;
-      --info-bg: #cff4fc;
-      --info-border: #0dcaf0;
-      --info-text: #055160;
-      --processing-bg: #fff3cd;
-      /* Use info bg for processing message bg */
-      --processing-border: #ffc107;
-      --processing-text: #664d03;
-      /* Use info text for processing message text */
-      --shadow-color: rgba(0, 0, 0, 0.08);
-      --auto-get-button-bg: #ffc107;
-      /* Yellow */
-      --auto-get-button-text: #343a40;
-      /* Dark text on yellow */
-      --auto-get-button-hover-bg: #e0a800;
-      /* Darker yellow */
-      --cookie-highlight-bg: #d1e7dd;
-      /* Light green for success highlight */
-    }
+        /* Dark mode styles for body */
+        html.dark body {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
 
-    /* --- Dark Mode Overrides --- */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-color: #1a1a1a;
-        /* Even darker background */
-        --text-color: #e0e0e0;
-        --heading-color: #f8f9fa;
-        --label-color: #adb5bd;
-        --form-bg: #2c2c2c;
-        /* Dark form background */
-        --input-bg: #3a3a3a;
-        --input-border: #555;
-        --input-focus-border: #4a90e2;
-        --input-focus-shadow: rgba(74, 144, 226, 0.3);
-        --button-bg: #2a71d8;
-        /* Adjusted blue */
-        --button-hover-bg: #3b82f6;
-        --button-active-bg: #1d4ed8;
-        --button-disabled-bg: #555;
-        --result-bg: #2c2c2c;
-        --result-border: #555;
-        --result-text: #e0e0e0;
-        --spinner-color: #4a90e2;
-        --link-color: #60a5fa;
-        --small-text-color: #9ca3af;
-        --success-bg: #113b21;
-        /* Darker success */
-        --success-border: #2f6f40;
-        --success-text: #a7f3d0;
-        /* Lighter green */
-        --error-bg: #4a2327;
-        --error-border: #fca5a5;
-        /* Lighter red border */
-        --error-text: #fecaca;
-        /* Lighter red */
-        --info-bg: #1c3a47;
-        --info-border: #38bdf8;
-        /* Lighter cyan border */
-        --info-text: #a5f3fc;
-        /* Lighter cyan */
-        --processing-bg: #1c3a47;
-        /* Use info bg */
-        --processing-border: #fbbf24;
-        /* Lighter yellow border */
-        --processing-text: #a5f3fc;
-        /* Use info text */
-        --shadow-color: rgba(255, 255, 255, 0.05);
-        --auto-get-button-bg: #b8860b;
-        --auto-get-button-text: #ffffff;
-        --auto-get-button-hover-bg: #daa520;
-        --cookie-highlight-bg: #113b21;
-        /* Dark green for success highlight */
-      }
+        .app-header {
+            background-color: #ffffff;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            z-index: 1000;
+            position: sticky;
+            top: 0;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+        }
 
-      /* Specific override for select arrow in dark mode */
-      select {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e0e0e0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-      }
+        html.dark .app-header {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+        }
 
-      input::placeholder {
-        color: #777;
-      }
+        #theme_toggle_button {
+            background: none;
+            border: 1px solid transparent;
+            color: #4A90E2;
+            padding: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: color 0.3s ease, background-color 0.3s ease;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-      /* Hide scrollbar track in dark mode for Webkit */
-      ::-webkit-scrollbar-track {
-        background: var(--form-bg);
-      }
+        html.dark #theme_toggle_button {
+            color: #f6e05e;
+        }
 
-      ::-webkit-scrollbar-thumb {
-        background-color: #555;
-      }
+        #theme_toggle_button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
 
-      ::-webkit-scrollbar-thumb:hover {
-        background-color: #777;
-      }
-    }
+        html.dark #theme_toggle_button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
 
-    /* Global Reset & Box Sizing */
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+        .main-content {
+            display: flex;
+            flex-grow: 1;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
+            overflow: hidden;
+        }
 
-    /* Hide scrollbar for Webkit browsers (Chrome, Safari, Edge) */
-    body::-webkit-scrollbar {
-      display: none;
-    }
+        iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+        }
 
-    #result::-webkit-scrollbar {
-      display: none;
-    }
+        .nav-controls-container {
+            background-color: #ffffff;
+            padding: 0.75rem;
+            width: 100%;
+            box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            position: sticky;
+            bottom: 0;
+            flex-shrink: 0;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
 
-    /* Hide scrollbar for Firefox */
-    body {
-      scrollbar-width: none;
-      /* Firefox */
-    }
+        html.dark .nav-controls-container {
+            background-color: #2d3748;
+            box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.25);
+        }
 
-    #result {
-      scrollbar-width: none;
-      /* Firefox */
-    }
+        .nav-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
 
-    /* Hide scrollbar for IE/Edge (older versions) */
-    body {
-      -ms-overflow-style: none;
-      /* IE and Edge */
-    }
+        .nav-button {
+            background-color: #4A90E2;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: none;
+            cursor: pointer;
+        }
 
-    #result {
-      -ms-overflow-style: none;
-      /* IE and Edge */
-    }
+        .nav-button:hover {
+            background-color: #357ABD;
+        }
 
+        .nav-button:disabled {
+            background-color: #d1d5db;
+            cursor: not-allowed;
+        }
 
-    /* Body Styling */
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.6;
-      padding: 20px;
-      max-width: 700px;
-      margin: 30px auto;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      transition: background-color 0.3s, color 0.3s;
-    }
+        html.dark .nav-button:disabled {
+            background-color: #4a5568;
+            color: #a0aec0;
+        }
 
-    /* Headings */
-    h1,
-    h2 {
-      color: var(--heading-color);
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
+        .app-footer {
+            background-color: #f8f9fa;
+            /* 更浅的背景色，更现代的风格 */
+            color: #4A5568;
+            /* Tailwind gray-700 for text */
+            padding: 0.75rem 1rem;
+            /* Reduced padding */
+            text-align: center;
+            font-size: 0.875rem;
+            /* Adjusted font size */
+            border-top: 1px solid #E2E8F0;
+            /* Tailwind gray-300 for border */
+            width: 100%;
+            z-index: 900;
+            margin-top: 0;
+            transition: background-color 0.3s ease, color 0.3s ease, border-top-color 0.3s ease;
+            height: auto;
+            display: none;
+            /* Hidden by default, will be controlled by JS */
+        }
 
-    h1 {
-      font-size: 1.8rem;
-      font-weight: 600;
-    }
+        html.dark .app-footer {
+            background-color: #1a202c;
+            /* 更深的暗色调，更符合暗色主题 */
+            color: #A0AEC0;
+            /* Tailwind gray-400 for dark mode text */
+            border-top-color: #2D3748;
+            /* Tailwind gray-700 for dark mode border */
+        }
 
-    h2 {
-      font-size: 1.3rem;
-      font-weight: 500;
-      margin-top: 2.5rem;
-    }
+        .footer-content a,
+        .footer-content .footer-icon-link {
+            color: #3182CE;
+            /* 更亮的蓝色链接 - Tailwind blue-600 */
+            text-decoration: none;
+            margin: 0 0.5rem;
+            transition: color 0.2s ease-in-out;
+        }
 
-    /* Form Styling */
-    form {
-      background-color: var(--form-bg);
-      padding: 30px 35px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px var(--shadow-color);
-      border: 1px solid var(--input-border);
-      transition: background-color 0.3s, border-color 0.3s;
-    }
+        html.dark .footer-content a,
+        html.dark .footer-content .footer-icon-link {
+            color: #4299E1;
+            /* 更亮的深色模式链接 - Tailwind blue-500 */
+        }
 
-    /* Labels */
-    label {
-      display: block;
-      margin-top: 1.2rem;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: var(--label-color);
-      font-size: 0.95rem;
-    }
+        .footer-content a:hover,
+        .footer-content .footer-icon-link:hover {
+            color: #2C5282;
+            /* 更深的蓝色悬停状态 - Tailwind blue-800 */
+            text-decoration: none;
+        }
 
-    /* Input Fields & Select */
-    input[type=text],
-    input[type=number],
-    select {
-      width: 100%;
-      padding: 12px 15px;
-      margin-top: 5px;
-      border: 1px solid var(--input-border);
-      border-radius: 6px;
-      font-size: 1rem;
-      color: var(--text-color);
-      background-color: var(--input-bg);
-      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-color 0.3s, color 0.3s;
-    }
+        html.dark .footer-content a:hover,
+        html.dark .footer-content .footer-icon-link:hover {
+            color: #63B3ED;
+            /* 更亮的深色模式悬停状态 - Tailwind blue-400 */
+        }
 
-    /* Select Specific Styling */
-    select {
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      background-size: 16px 12px;
-      padding-right: 2.5rem;
-    }
+        .footer-links span {
+            margin: 0 0.25rem;
+            color: #CBD5E0;
+            /* 更浅的分隔符颜色 - Tailwind gray-300 */
+        }
 
-    /* Focus State */
-    input:focus,
-    select:focus {
-      border-color: var(--input-focus-border);
-      outline: 0;
-      box-shadow: 0 0 0 0.25rem var(--input-focus-shadow);
-    }
+        html.dark .footer-links span {
+            color: #4A5568;
+            /* 更深的深色模式分隔符 - Tailwind gray-600 */
+        }
 
-    /* Placeholders */
-    input::placeholder {
-      color: #adb5bd;
-      opacity: 1;
-    }
+        .footer-icon-link .fa-lg {
+            font-size: 1.25rem;
+            /* 稍微增大图标尺寸 */
+            vertical-align: middle;
+            transition: transform 0.2s ease-in-out;
+        }
 
-    /* Button Styling */
-    button {
-      display: block;
-      width: 100%;
-      padding: 12px 25px;
-      cursor: pointer;
-      background-color: var(--button-bg);
-      color: var(--button-text);
-      border: none;
-      border-radius: 6px;
-      font-size: 1.1rem;
-      font-weight: 500;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
+        .footer-icon-link:hover .fa-lg {
+            transform: translateY(-2px);
+            /* 悬停时图标轻微上移，增加互动感 */
+        }
 
-    button:hover:not(:disabled) {
-      background-color: var(--button-hover-bg);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
+        /* 针对欢迎页和状态页的特殊样式，使内容区域占满整个高度 */
+        body.full-height-content {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-    button:active:not(:disabled) {
-      background-color: var(--button-active-bg);
-      transform: translateY(0px);
-    }
+        body.full-height-content .main-content {
+            flex: 1;
+            overflow: hidden;
+        }
 
-    button:disabled {
-      background-color: var(--button-disabled-bg);
-      cursor: not-allowed;
-      opacity: 0.7;
-      box-shadow: none;
-    }
-
-    /* Specific button styles */
-    #autoCookieBtn {
-      background-color: var(--auto-get-button-bg);
-      color: var(--auto-get-button-text);
-      margin-top: 15px;
-      margin-bottom: 5px;
-    }
-
-    #autoCookieBtn:hover:not(:disabled) {
-      background-color: var(--auto-get-button-hover-bg);
-    }
-
-    #submitBtn {
-      margin-top: 30px;
-    }
-
-    /* Result Area Styling */
-    #result {
-      margin-top: 25px;
-      padding: 15px 20px;
-      border: 1px solid var(--result-border);
-      min-height: 100px;
-      max-height: 400px;
-      /* Keep max-height */
-      overflow-y: auto;
-      /* Keep auto scroll if you might revert hiding */
-      background-color: var(--result-bg);
-      color: var(--result-text);
-      border-radius: 8px;
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      word-wrap: break-word;
-      transition: border-color 0.3s ease, background-color 0.3s;
-    }
-
-    #result p {
-      margin: 5px 0;
-      padding: 5px 8px;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      display: flex;
-      align-items: flex-start;
-    }
-
-    /* State styling */
-    #result.success {
-      border-color: var(--success-border);
-    }
-
-    #result.error {
-      border-color: var(--error-border);
-    }
-
-    #result.info {
-      border-color: var(--info-border);
-    }
-
-    #result.processing {
-      border-color: var(--processing-border);
-    }
-
-    /* Specific message type styling */
-    #result p.error-message,
-    #result.error p:last-child {
-      color: var(--error-text);
-      background-color: var(--error-bg);
-      border-left: 4px solid var(--error-border);
-      padding-left: 12px;
-    }
-
-    #result p.success-message,
-    #result.success p:last-child {
-      color: var(--success-text);
-      background-color: var(--success-bg);
-      border-left: 4px solid var(--success-border);
-      padding-left: 12px;
-    }
-
-    #result p.disconnected-message {
-      color: var(--small-text-color);
-      font-style: italic;
-      background-color: transparent;
-      border-left: none;
-      padding-left: 8px;
-    }
-
-    #result p.info-message {
-      color: var(--info-text);
-      background-color: var(--info-bg);
-      border-left: 4px solid var(--info-border);
-      padding-left: 12px;
-    }
-
-    /* Highlight cookie success */
-    #result p.success-message:containing('Cookie 已成功获取并填充！') {
-      font-weight: bold;
-    }
-
-    /* Example using pseudo-selector (might not work in all browsers) */
-
-    /* Spinner Styling */
-    .spinner {
-      border: 3px solid rgba(0, 0, 0, 0.1);
-      width: 1em;
-      height: 1em;
-      border-radius: 50%;
-      border-left-color: var(--spinner-color);
-      margin-right: 10px;
-      display: inline-block;
-      vertical-align: -0.125em;
-      flex-shrink: 0;
-      animation: spin 1s linear infinite;
-      margin-top: 0.1em;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* Small Text Hint */
-    small {
-      color: var(--small-text-color);
-      display: block;
-      margin-top: 5px;
-      font-size: 0.875em;
-      line-height: 1.4;
-    }
-
-    /* --- Styles for Time Selection Section --- */
-    #timeSelectionSection {
-      margin-top: 1.2rem; /* Replaces label's top margin */
-    }
-
-    #time_label_main {
-       display: block; /* Ensure it takes full width like other labels */
-       margin-bottom: 0.5rem; /* Consistent bottom margin */
-       font-weight: 500; /* Consistent font weight */
-       color: var(--label-color);
-       font-size: 0.95rem;
-    }
-
-    #mode1TimeOptions,
-    #mode2TimeInput {
-      margin-top: 5px; /* Spacing below the main label */
-    }
-
-    /* Initially hide mode 1 options, JS will control this */
-    #mode1TimeOptions {
-        display: none;
-    }
-
-    #mode1TimeOptions > div { /* Style direct children divs for spacing */
-       margin-bottom: 8px;
-    }
-    #mode1TimeOptions > div:last-child { /* Remove margin from last element in group */
-        margin-bottom: 0;
-    }
-
-
-    /* Style labels associated with radio buttons */
-    #mode1TimeOptions label[for^="timeOption"] {
-      font-weight: normal; /* Override default label weight */
-      display: inline; /* Allow label next to radio */
-      margin-top: 0; /* Override default label margin */
-      margin-bottom: 0;
-      font-size: 1rem; /* Match input font size */
-      color: var(--text-color); /* Use standard text color */
-    }
-
-    #customTimeDiv {
-      display: none; /* Initially hidden, JS controls this */
-      margin-left: 25px; /* Indent the custom input */
-      margin-top: 5px;
-    }
-
-    /* Style the hints within time sections */
-    #time_hint_mode1 {
-       display: block; /* Ensure hint takes full width */
-       margin-left: 5px;
-       margin-top: 8px;
-       /* Use the standard small text style */
-       color: var(--small-text-color);
-       font-size: 0.875em;
-       line-height: 1.4;
-    }
-
-     #time_hint_mode2 {
-       display: block; /* Ensure hint takes full width */
-       /* Use the standard small text style */
-       color: var(--small-text-color);
-       font-size: 0.875em;
-       line-height: 1.4;
-       margin-top: 5px; /* Add margin like other small hints */
-    }
-
-    /* Ensure radio buttons align better with text */
-    input[type="radio"] {
-        vertical-align: middle;
-        margin-right: 4px;
-    }
-
-  </style>
-
-  <!-- !!! 添加 Toastify JS !!! -->
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
+        body.full-height-content iframe {
+            height: 100%;
+            border: none;
+            overflow: auto;
+        }
+    </style>
 </head>
 
 <body>
-  <h1>我去抢个座 v2.1.1 📚</h1>
-  <form id="seatForm">
-    <label for="mode">操作模式:</label>
-    <select id="mode" name="mode" required onchange="updateWebForm()">
-      <option value="1">明日预约 ({{ TOMORROW_RESERVE_WINDOW_START_STR }} - {{ TOMORROW_RESERVE_WINDOW_END_STR }})</option>
-      <option value="2" selected>立即抢座 (当前时间)</option>
-    </select>
+    <header class="app-header">
+        <span class="app-title">我去抢个座 V3.0</span>
+        <button id="theme_toggle_button" title="切换主题">
+            <i class="fas fa-moon"></i>
+        </button>
+    </header>
 
-    <button type="button" id="autoCookieBtn">自动获取 Cookie (需配合电脑操作 >实验性<)</button>
-
-    <label for="cookieStr">Cookie (可手动输入或自动获取):</label>
-    <input type="text" id="cookieStr" name="cookieStr" required placeholder="在此粘贴 Cookie 或点击上方按钮自动获取">
-
-
-    <label for="libId">阅览室:</label>
-    <select id="libId" name="libId" required>
-      <option value="" disabled selected>正在加载阅览室...</option>
-    </select>
-
-    <!-- <label for="timeStr" id="time_label">抢座执行时间 (留空则立即执行):</label>
-    <input type="text" id="timeStr" name="timeStr" pattern="\d{2}:\d{2}:\d{2}" placeholder="HH:MM:SS">
-    <small id="time_hint">预约模式需在指定时间窗口内。</small> -->
-  
-  <!-- 时间选择区域 -->
-  <div id="timeSelectionSection">
-    <label id="time_label_main">抢座执行时间:</label> <!-- 主标签 (样式由CSS控制) -->
-  
-    <!-- 模式 1: 明日预约的时间选项 (display 由 JS 控制) -->
-    <div id="mode1TimeOptions">
-      <div>
-        <input type="radio" id="timeOptionDefault" name="timeOption" value="default" checked onchange="updateWebForm()">
-        <label for="timeOptionDefault"> 使用默认时间 (21:48:00)</label> <!-- 移除内联样式 -->
-      </div>
-      <div>
-        <input type="radio" id="timeOptionCustom" name="timeOption" value="custom" onchange="updateWebForm()">
-        <label for="timeOptionCustom"> 自定义时间:</label> <!-- 移除内联样式 -->
-      </div>
-      <!-- 自定义时间输入框 (display 和 margin 由 CSS/JS 控制) -->
-      <div id="customTimeDiv">
-        <input type="text" id="timeStr" name="timeStr" pattern="\d{2}:\d{2}:\d{2}" placeholder="HH:MM:SS">
-      </div>
-      <small id="time_hint_mode1">需在指定时间窗口内 ({{ TOMORROW_RESERVE_WINDOW_START_STR }} - {{ TOMORROW_RESERVE_WINDOW_END_STR
-        }})。</small> <!-- 移除内联样式 -->
+    <div class="main-content">
+        <iframe id="page_frame" src="page_welcome.html" title="Page Content"></iframe>
     </div>
-  
-    <!-- 模式 2: 立即抢座的时间输入 (display 由 JS 控制) -->
-    <div id="mode2TimeInput">
-      <input type="text" id="timeStrMode2" name="timeStrMode2" pattern="\d{2}:\d{2}:\d{2}" placeholder="HH:MM:SS (留空则立即)">
-      <small id="time_hint_mode2">如果指定时间，必须是未来的时间。</small> <!-- 移除内联样式 -->
-    </div>
-  </div>
 
-    <label for="seatNumber" id="seat_label">座位号:</label>
-    <input type="text" id="seatNumber" name="seatNumber" required placeholder="例如 127">
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p class="mb-2">&copy; 2025 我去抢个座. 保留所有权利.</p>
+            <p class="footer-links">
+                <a href="#">关于我们</a>
+                <span>|</span>
+                <a href="#">隐私策略</a>
+                <span>|</span>
+                <a href="mailto:3405395460@qq.com" class="footer-icon-link" title="联系作者">
+                    <i class="fas fa-envelope fa-lg text-blue-500"></i>
+                </a>
+                <span>|</span>
+                <a href="https://github.com/VenenoSix24" target="_blank" class="footer-icon-link" title="GitHub">
+                    <i class="fab fa-github fa-lg text-gray-700"></i>
+                </a>
+                <span>|</span>
+                <a href="https://kawaii.776624.xyz" target="_blank" class="footer-icon-link" title="博客">
+                    <i class="fas fa-blog fa-lg text-green-600"></i>
+                </a>
+            </p>
+        </div>
+    </footer>
 
-    <button type="submit" id="submitBtn" disabled>连接中...</button>
-  </form>
+    <script>
+        const pages = ['page_welcome.html', 'page_config.html', 'page_status.html'];
+        let currentPageIndex = 0;
+        let currentClientId = null;
 
-  <h2>操作状态与结果:</h2>
-  <div id="result" class="info">等待连接状态更新通道...</div>
+        const iframe = document.getElementById('page_frame');
+        const themeToggleButton = document.getElementById('theme_toggle_button');
+        const themeIcon = themeToggleButton.querySelector('i');
 
-  <script>
-    // --- Get DOM Elements ---
-    const modeSelect = document.getElementById('mode');
-    const cookieInput = document.getElementById('cookieStr');
-    const roomSelect = document.getElementById('libId');
-    const timeLabel = document.getElementById('time_label');
-    const timeInput = document.getElementById('timeStr');
-    const timeHint = document.getElementById('time_hint');
-    const seatLabel = document.getElementById('seat_label');
-    const seatNumberInput = document.getElementById('seatNumber');
-    const seatForm = document.getElementById('seatForm');
-    const resultDiv = document.getElementById('result');
-    const submitButton = document.getElementById('submitBtn');
-    const autoCookieButton = document.getElementById('autoCookieBtn');
+        const THEME_STORAGE_KEY = 'igarss_theme';
+        const THEMES = ['system', 'light', 'dark'];
 
-    let websocket = null;
-    const clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-    let wsReady = false;
-    let wsConnectionAttempted = false;
-    let reconnectAttempts = 0;
-    const MAX_RECONNECT_ATTEMPTS = 5;
-    let reconnectTimeoutId = null;
-    let isManualDisconnect = false;
-    let isCookieAcquisitionComplete = false;
-
-    // --- Helper function to add messages ---
-    function addResultMessage(message, type = 'info', includeSpinner = false) {
-      const line = document.createElement('p');
-      if (type === 'error') line.classList.add('error-message');
-      else if (type === 'disconnected') line.classList.add('disconnected-message');
-      else if (type === 'success') line.classList.add('success-message');
-      else if (type === 'info') line.classList.add('info-message');
-      if (includeSpinner && type !== 'disconnected' && type !== 'error' && type !== 'success') {
-        const spinnerDiv = document.createElement('div'); spinnerDiv.className = 'spinner'; line.appendChild(spinnerDiv);
-      }
-      line.appendChild(document.createTextNode(message));
-      resultDiv.appendChild(line);
-      resultDiv.scrollTop = resultDiv.scrollHeight;
-    }
-
-    // --- WebSocket Setup with Reconnect Logic ---
-    function connectWebSocket() {
-      if (wsConnectionAttempted) return;
-      wsConnectionAttempted = true; isManualDisconnect = false;
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/${clientId}`;
-      console.log(`Attempting WS connection (Attempt ${reconnectAttempts + 1})...`, wsUrl);
-      if (reconnectAttempts === 0 && resultDiv.textContent.includes('等待连接')) resultDiv.innerHTML = '';
-      if (!resultDiv.querySelector('p:last-child')?.textContent.includes('正在连接')) addResultMessage('正在连接状态更新通道...', 'info', true);
-      resultDiv.className = 'info'; submitButton.textContent = '连接中...'; submitButton.disabled = true; autoCookieButton.disabled = true;
-      if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId); reconnectTimeoutId = null;
-      try {
-        websocket = new WebSocket(wsUrl);
-        websocket.onopen = () => {
-          console.log('WS Connected'); wsReady = true; wsConnectionAttempted = false; reconnectAttempts = 0;
-          const statusMessages = resultDiv.querySelectorAll('p'); statusMessages.forEach(p => { if (p.textContent.includes('正在连接') || p.textContent.includes('已断开')) p.remove(); });
-          addResultMessage('✅ 通道已连接。', 'info'); resultDiv.className = 'info';
-          if (!resultDiv.classList.contains('processing')) { submitButton.textContent = '开始执行'; submitButton.disabled = false; autoCookieButton.disabled = false; }
-        };
-        websocket.onmessage = (event) => {
-          console.log('WS Message:', event.data); wsConnectionAttempted = false;
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'status') {
-              addResultMessage(data.message, 'info', true); resultDiv.className = 'processing';
-              if (submitButton.textContent.includes('获取Cookie中') || submitButton.textContent.includes('提交中') || submitButton.textContent.includes('处理中')) { submitButton.disabled = true; autoCookieButton.disabled = true; }
-            } else if (data.type === 'result') {
-              const spinners = resultDiv.getElementsByClassName('spinner'); while (spinners.length > 0) spinners[0].parentNode.removeChild(spinners[0]);
-              const finalLine = document.createElement('p'); finalLine.style.fontWeight = 'bold'; finalLine.textContent = (data.status === 'success' ? '✅ ' : '❌ ') + data.message; resultDiv.appendChild(finalLine); resultDiv.className = data.status === 'success' ? 'success' : 'error'; resultDiv.scrollTop = resultDiv.scrollHeight;
-              submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; // Re-enable after result
-              if (data.error_code === '{{ SEAT_TAKEN_ERROR_CODE }}') {
-                seatNumberInput.style.borderColor = 'var(--error-border)'; seatNumberInput.focus();
-                addResultMessage('提示：该座位已被占用，请选择其他座位后重试。', 'error');
-                resultDiv.scrollTop = resultDiv.scrollHeight;
-              } else { seatNumberInput.style.borderColor = ''; seatNumberInput.style.boxShadow = ''; }
-              // --- !!! 2. 添加 Result Toast 通知 !!! ---
-              const toastDuration = data.status === 'success' ? 5000 : 8000; // 成功短一点，失败长一点
-              const toastText = (data.status === 'success' ? '✅ 操作成功' : '❌ 操作失败') + (data.message.length < 50 ? `: ${data.message}` : ''); // 如果消息短就附加上
-              const toastStyle = data.status === 'success' ?
-                { background: "var(--success-bg)", color: "var(--success-text)", borderLeft: "5px solid var(--success-border)" } :
-                { background: "var(--error-bg)", color: "var(--error-text)", borderLeft: "5px solid var(--error-border)" };
-
-              Toastify({
-                text: toastText,
-                duration: toastDuration,
-                close: false, // 无关闭按钮
-                gravity: "top", // 顶部显示
-                position: "right", // 右上角
-                stopOnFocus: true,
-                style: {
-                  ...toastStyle, // 应用成功或失败的样式
-                  borderRadius: "8px",
-                  boxShadow: "0 3px 6px rgba(0,0,0,0.16)"
-                }
-              }).showToast();
-            } else if (data.type === 'cookie_update') {
-              console.log("Received cookie update:", data.cookie); cookieInput.value = data.cookie;
-              cookieInput.style.backgroundColor = 'var(--cookie-highlight-bg)'; setTimeout(() => { cookieInput.style.backgroundColor = ''; }, 1500);
-              const spinners = resultDiv.getElementsByClassName('spinner'); while (spinners.length > 0) spinners[0].parentNode.removeChild(spinners[0]);
-              const waitingMessages = resultDiv.querySelectorAll('p'); waitingMessages.forEach(p => { if (p.textContent.includes('监控') || p.textContent.includes('等待')) p.remove(); });
-              addResultMessage('✅ Cookie 已成功获取并填充！', 'success'); resultDiv.className = 'success';
-              submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; // Re-enable after cookie update
-
-              // --- !!! 使用 Toastify 提示取消代理 !!! ---
-              Toastify({
-                text: "✅ Cookie 已获取！\n请运行 unset_proxy.bat 关闭代理",
-                duration: 8000,
-                close: false,
-                gravity: "top",
-                position: "right", // 改为右上角
-                stopOnFocus: true,
-                style: {
-                  background: "var(--success-bg)", // 使用 Success 背景色
-                  color: "var(--success-text)", // 使用 Success 文本色
-                  borderRadius: "8px",
-                  boxShadow: "0 3px 6px rgba(0,0,0,0.16)",
-                  borderLeft: "5px solid var(--success-border)" // 左侧颜色条
-                }
-              }).showToast();
-
+        function getCurrentTheme() {
+            const preference = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+            if (preference === 'system') {
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
-          } catch (e) { console.error('Error parsing WS message:', e); addResultMessage('处理 WebSocket 消息出错: ' + event.data, 'error'); resultDiv.className = 'error'; }
-        };
-        websocket.onerror = (error) => { console.error('WS Error:', error); wsConnectionAttempted = false; };
-        websocket.onclose = (event) => {
-          console.log('WS Closed:', event.code, event.reason, `Manual: ${isManualDisconnect}`); wsReady = false; wsConnectionAttempted = false;
-          if (!isManualDisconnect) {
-            const statusMessages = resultDiv.querySelectorAll('p'); statusMessages.forEach(p => { if (p.textContent.includes('已断开') || p.textContent.includes('正在连接')) p.remove(); });
-            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-              reconnectAttempts++; const delay = Math.pow(2, reconnectAttempts - 1) * 1000;
-              console.log(`WS Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delay / 1000}s`);
-              addResultMessage(`🔌 通道已断开。尝试重连 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`, 'disconnected');
-              submitButton.disabled = true; autoCookieButton.disabled = true; submitButton.textContent = '重新连接中...'; resultDiv.className = 'error';
-              if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId); reconnectTimeoutId = setTimeout(connectWebSocket, delay);
+            return preference;
+        }
+
+        function applyTheme(newTheme) {
+            let effectiveTheme = newTheme;
+            if (newTheme === 'system') {
+                effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            if (effectiveTheme === 'dark') {
+                document.documentElement.classList.add('dark');
             } else {
-              console.log(`WS Max reconnect attempts reached.`);
-              addResultMessage(`❌ 通道连接失败。已达最大重连次数，请刷新页面。`, 'error');
-              submitButton.disabled = true; autoCookieButton.disabled = true; submitButton.textContent = '连接失败'; resultDiv.className = 'error';
+                document.documentElement.classList.remove('dark');
             }
-          } else console.log("WS closed intentionally.");
-        };
-      } catch (e) { console.error("Failed to create WebSocket:", e); wsConnectionAttempted = false; resultDiv.innerHTML = ''; addResultMessage('❌ 创建 WebSocket 失败。', 'error'); resultDiv.className = 'error'; submitButton.textContent = '连接失败'; submitButton.disabled = true; autoCookieButton.disabled = true; }
-    }
-    function disconnectWebSocket() { if (websocket) { console.log("Manually closing WS."); isManualDisconnect = true; websocket.close(); } if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId); reconnectTimeoutId = null; wsReady = false; wsConnectionAttempted = false; reconnectAttempts = 0; }
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { console.log("Page visible."); if (!websocket || (websocket.readyState !== WebSocket.OPEN && websocket.readyState !== WebSocket.CONNECTING)) { console.log("WS reconnect on visibility."); reconnectAttempts = 0; if (reconnectTimeoutId) clearTimeout(reconnectTimeoutId); connectWebSocket(); } else console.log("WS connected on visibility."); } else console.log("Page hidden."); });
 
-    // --- Form Logic ---
-    function updateWebForm() {
-      const mode = modeSelect.value;
-      const timeLabelMain = document.getElementById('time_label_main');
-      const mode1OptionsDiv = document.getElementById('mode1TimeOptions');
-      const mode2InputDiv = document.getElementById('mode2TimeInput');
-      const customTimeDiv = document.getElementById('customTimeDiv');
-      const timeInputCustom = document.getElementById('timeStr'); // 自定义时间输入框
-      const timeInputMode2 = document.getElementById('timeStrMode2'); // 模式2时间输入框
-      const timeOptionDefault = document.getElementById('timeOptionDefault');
-      const timeOptionCustom = document.getElementById('timeOptionCustom');
-      const timeHintMode1 = document.getElementById('time_hint_mode1');
-      const timeHintMode2 = document.getElementById('time_hint_mode2');
+            if (newTheme === 'system') {
+                themeIcon.className = 'fas fa-circle-half-stroke';
+                themeToggleButton.title = '主题：跟随系统 (点击切换到浅色模式)';
+            } else if (newTheme === 'light') {
+                themeIcon.className = 'fas fa-moon';
+                themeToggleButton.title = '主题：浅色模式 (点击切换到深色模式)';
+            } else {
+                themeIcon.className = 'fas fa-sun';
+                themeToggleButton.title = '主题：深色模式 (点击切换到跟随系统)';
+            }
 
-      seatLabel.textContent = '座位号:'; seatNumberInput.placeholder = '例如 127';
-
-      if (mode === '1') { // 明日预约模式
-        timeLabelMain.textContent = '预约执行时间:'; // 更新主标签
-        mode1OptionsDiv.style.display = 'block'; // 显示模式1的选项
-        mode2InputDiv.style.display = 'none';   // 隐藏模式2的输入
-        timeHintMode1.style.display = 'block';  // 显示模式1提示
-
-        // 根据选中的单选按钮决定是否显示自定义输入框和设置必填
-        if (timeOptionCustom.checked) {
-          customTimeDiv.style.display = 'block';
-          timeInputCustom.required = true; // 自定义时间必填
-          timeInputMode2.required = false; // 模式2输入框永不为必填
-        } else { // 默认时间被选中
-          customTimeDiv.style.display = 'none';
-          timeInputCustom.required = false; // 默认时间无需输入，所以不必填
-          timeInputMode2.required = false;
+            if (iframe.contentWindow && typeof iframe.contentWindow.setAppTheme === 'function') {
+                iframe.contentWindow.setAppTheme(effectiveTheme);
+            } else {
+                console.warn("Attempted to set theme on iframe, but setAppTheme function not found or iframe not ready.");
+            }
         }
 
-      } else { // 模式 2: 立即抢座模式
-        timeLabelMain.textContent = '抢座执行时间 (可选):'; // 更新主标签
-        mode1OptionsDiv.style.display = 'none'; // 隐藏模式1的选项
-        mode2InputDiv.style.display = 'block';  // 显示模式2的输入
-        timeHintMode2.style.display = 'block';  // 显示模式2提示
+        function cycleThemePreference() {
+            const currentPreference = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+            let currentPreferenceIndex = THEMES.indexOf(currentPreference);
+            let nextPreferenceIndex = (currentPreferenceIndex + 1) % THEMES.length;
+            const nextPreference = THEMES[nextPreferenceIndex];
 
-        timeInputCustom.required = false; // 自定义时间输入框在模式2下不必填
-        timeInputMode2.required = false; // 模式2的时间是可选的
-      }
-
-      // 清除座位号的错误样式 (这部分保留)
-      seatNumberInput.style.borderColor = '';
-      seatNumberInput.style.boxShadow = '';
-    }
-    // --- Load Room Mappings ---
-    async function loadRooms() {
-      submitButton.disabled = true; submitButton.textContent = '加载数据...'; autoCookieButton.disabled = true; roomSelect.innerHTML = '<option value="" disabled selected>正在加载阅览室...</option>';
-      try {
-        const response = await fetch('{{ mappings_url }}');
-        if (!response.ok) { const errorText = await response.text(); throw new Error(`HTTP ${response.status}: ${errorText || '服务器错误'}`); }
-        const data = await response.json();
-        if (!data.rooms || typeof data.rooms !== 'object' || Object.keys(data.rooms).length === 0) throw new Error("阅览室列表为空或格式错误。");
-        roomSelect.innerHTML = '<option value="" disabled selected>请选择阅览室</option>';
-        for (const libId in data.rooms) { const option = document.createElement('option'); option.value = libId; option.textContent = data.rooms[libId]; roomSelect.appendChild(option); }
-        connectWebSocket();
-      } catch (error) { console.error('Error loading rooms:', error); resultDiv.innerHTML = ''; addResultMessage(`❌ 加载阅览室失败: ${error.message} 请刷新。`, 'error'); resultDiv.className = 'error'; submitButton.textContent = '加载失败'; submitButton.disabled = true; autoCookieButton.disabled = true; roomSelect.innerHTML = '<option value="" disabled selected>加载失败</option>'; }
-    }
-
-    // --- Auto Cookie Button Listener ---
-    autoCookieButton.addEventListener('click', async () => {
-      if (!wsReady || !websocket || websocket.readyState !== WebSocket.OPEN) { addResultMessage('❌ WebSocket 未连接，无法开始。', 'error'); resultDiv.className = 'error'; connectWebSocket(); return; }
-      resultDiv.innerHTML = ''; addResultMessage('正在请求启动 Cookie 监控...', 'info', true); resultDiv.className = 'processing';
-      submitButton.disabled = true; autoCookieButton.disabled = true; submitButton.textContent = '获取Cookie中...'; // Specific text
-      try {
-        const response = await fetch(`/api/start_auto_cookie_watch/${clientId}`, { method: 'POST' });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || `HTTP Error ${response.status}`);
-        console.log("Cookie watch started:", data.message); // Wait for WS instructions
-
-         // --- !!! 使用 Toastify 提示设置代理 !!! ---
-        Toastify({
-          text: "⚙️ 请运行 set_proxy.bat 开启代理，并操作微信",
-          duration: 7000,
-          close: false,
-          gravity: "top",
-          position: "right", // 改为右上角
-          stopOnFocus: true,
-          style: {
-            background: "var(--info-bg)", // 使用 Info 背景色
-            color: "var(--info-text)", // 使用 Info 文本色
-            borderRadius: "8px", // 添加圆角
-            boxShadow: "0 3px 6px rgba(0,0,0,0.16)", // 添加细微阴影
-            borderLeft: "5px solid var(--info-border)" // 左侧颜色条
-          }
-        }).showToast();
-
-      } catch (error) {
-        console.error('启动自动 Cookie 获取失败:', error); resultDiv.innerHTML = ''; addResultMessage(`❌ 启动自动获取失败: ${error.message}`, 'error'); resultDiv.className = 'error';
-        submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; // Re-enable on error
-      }
-    });
-
-    // --- Form Submission ---
-    seatForm.addEventListener('submit', async function (event) {
-      event.preventDefault();
-      seatNumberInput.style.borderColor = ''; seatNumberInput.style.boxShadow = '';
-      resultDiv.innerHTML = ''; resultDiv.className = 'processing'; addResultMessage('正在验证并提交请求...', 'processing', true);
-      submitButton.disabled = true; autoCookieButton.disabled = true; submitButton.textContent = '提交中...'; // Specific text
-
-      if (!wsReady || !websocket || websocket.readyState !== WebSocket.OPEN) { resultDiv.innerHTML = ''; addResultMessage('❌ WebSocket 未连接，请等待重连或刷新。', 'error'); resultDiv.className = 'error'; submitButton.textContent = '通道断开'; if (!wsConnectionAttempted) { reconnectAttempts = 0; connectWebSocket(); } return; }
-
-      const modeValue = modeSelect.value;
-      const parsedMode = parseInt(modeValue);
-      console.log("Mode string:", modeValue, "Parsed:", parsedMode);
-
-      // --- NaN Check for Mode ---
-      if (isNaN(parsedMode)) {
-        console.error("Mode is NaN."); resultDiv.innerHTML = ''; addResultMessage('❌ 内部错误：无法解析操作模式。', 'error'); resultDiv.className = 'error';
-        submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; return;
-      }
-
-      // const data = { mode: parsedMode, cookieStr: cookieInput.value.trim(), libId: parseInt(roomSelect.value), timeStr: timeInput.value.trim(), seatNumber: seatNumberInput.value.trim(), clientId: clientId };
-
-      // console.log("Submitting data:", JSON.stringify(data));
-
-      // --- 获取正确的时间字符串 ---
-      let timeStrValue = ""; // 初始化时间字符串
-      const timeInputCustom = document.getElementById('timeStr'); // 自定义时间输入框
-      const timeInputMode2 = document.getElementById('timeStrMode2'); // 模式2时间输入框
-      const timeOptionDefault = document.getElementById('timeOptionDefault');
-      const timeOptionCustom = document.getElementById('timeOptionCustom');
-
-      if (parsedMode === 1) { // 明日预约模式
-        if (timeOptionDefault.checked) {
-          timeStrValue = "21:48:00"; // 使用硬编码的默认时间
-          console.log("Mode 1: Using default time:", timeStrValue);
-        } else if (timeOptionCustom.checked) {
-          timeStrValue = timeInputCustom.value.trim(); // 使用自定义输入框的值
-          console.log("Mode 1: Using custom time:", timeStrValue);
-        } else {
-          // 以防万一，虽然不太可能发生
-          console.error("Mode 1: No time option selected!");
-          addResultMessage('❌ 内部错误：未选择预约时间选项。', 'error');
-          submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; return;
+            localStorage.setItem(THEME_STORAGE_KEY, nextPreference);
+            applyTheme(nextPreference);
         }
-      } else if (parsedMode === 2) { // 立即抢座模式
-        timeStrValue = timeInputMode2.value.trim(); // 使用模式2输入框的值
-        console.log("Mode 2: Using time input:", timeStrValue);
-      }
-      // --- End: 获取正确的时间字符串 ---
 
-      // 使用获取到的 timeStrValue 构建 data 对象
-      const data = {
-        mode: parsedMode,
-        cookieStr: cookieInput.value.trim(),
-        libId: parseInt(roomSelect.value),
-        timeStr: timeStrValue, // <--- 使用这里计算出的 timeStrValue
-        seatNumber: seatNumberInput.value.trim(),
-        clientId: clientId
-      };
-      console.log("Submitting data:", JSON.stringify(data)); // 这行保留，用于调试
+        function loadInitialTheme() {
+            const savedPreference = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+            applyTheme(savedPreference);
+        }
 
-      let validationError = null;
-      if (!data.cookieStr) validationError = 'Cookie 不能为空。';
-      else if (isNaN(data.libId) || data.libId <= 0) validationError = '请选择阅览室。';
-      else if (!data.seatNumber || !/^\d+$/.test(data.seatNumber)) validationError = '座位号不能为空且必须为数字。';
-      else if (data.mode === 1 && !data.timeStr) validationError = '明日预约模式必须指定执行时间 (HH:MM:SS)。';
-      else if (data.timeStr && !/^\d{2}:\d{2}:\d{2}$/.test(data.timeStr)) validationError = '时间格式错误 HH:MM:SS。';
-      else if (data.mode !== 1 && data.mode !== 2) validationError = '操作模式选择无效。';
+        themeToggleButton.addEventListener('click', cycleThemePreference);
 
-      if (validationError) { resultDiv.innerHTML = ''; addResultMessage(`❌ 输入错误: ${validationError}`, 'error'); resultDiv.className = 'error'; submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; return; }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            const currentPreference = localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+            if (currentPreference === 'system') {
+                applyTheme('system');
+            }
+        });
 
-      try {
-        const response = await fetch('/api/submit_request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-        const responseData = await response.json();
-        if (!response.ok) { const errorDetail = responseData?.detail || responseData?.message || `HTTP Error ${response.status}`; throw new Error(errorDetail); }
-        console.log("HTTP Submission successful:", responseData);
-        submitButton.textContent = '处理中...'; // Change text after successful POST, keep disabled
-      } catch (error) {
-        console.error('提交请求失败:', error); resultDiv.innerHTML = ''; addResultMessage(`提交请求失败: ${error.message}`, 'error'); resultDiv.className = 'error';
-        submitButton.disabled = false; autoCookieButton.disabled = false; submitButton.textContent = '开始执行'; // Re-enable on API call failure
-      }
-    });
+        function loadPage(index) {
+            if (index < 0 || index >= pages.length) return;
 
-    // --- Initial Page Load ---
-    updateWebForm();
-    loadRooms();
+            let targetPagePath = pages[index];
+            let absoluteTargetPagePath = targetPagePath;
 
-  </script>
+            iframe.onload = null;
+
+            if (targetPagePath === 'page_status.html' && currentClientId) {
+                absoluteTargetPagePath += '?clientId=' + encodeURIComponent(currentClientId);
+            } else if (targetPagePath === 'page_status.html' && !currentClientId) {
+                console.warn("Client ID not set for status page. It might not display logs correctly.");
+            }
+
+            iframe.src = absoluteTargetPagePath;
+
+            if (targetPagePath === 'page_welcome.html' || targetPagePath === 'page_status.html') {
+                document.querySelector('.app-footer').style.display = 'none';
+                iframe.style.height = '100%';
+                document.body.classList.add('full-height-content');
+            } else {
+                document.querySelector('.app-footer').style.display = 'block';
+                document.body.classList.remove('full-height-content');
+            }
+
+            iframe.onload = () => {
+                console.log(`iframe content ${targetPagePath} loaded.`);
+
+                if (targetPagePath !== 'page_welcome.html' && targetPagePath !== 'page_status.html') {
+                    resizeIframeToFitContent(iframe);
+                }
+            };
+
+            const baseTargetPage = targetPagePath.split('?')[0];
+            currentPageIndex = pages.findIndex(p => p === baseTargetPage);
+        }
+
+        function navigatePage(direction) {
+            const prospectiveIndex = currentPageIndex + direction;
+            if (prospectiveIndex < 0 || prospectiveIndex >= pages.length) return;
+
+            if (currentPageIndex === 0 && direction === 1) {
+                const welcomePageCheckbox = iframe.contentWindow.document.getElementById('terms_agree_checkbox');
+                if (welcomePageCheckbox && !welcomePageCheckbox.checked) {
+                    const termsErrorMessage = iframe.contentWindow.document.getElementById('terms_error_message');
+                    if (termsErrorMessage) {
+                        termsErrorMessage.classList.remove('hidden');
+                        if (typeof iframe.contentWindow.shakeElement === 'function') {
+                            iframe.contentWindow.shakeElement(termsErrorMessage);
+                        } else if (termsErrorMessage.classList.contains('animate-shake')) {
+                            termsErrorMessage.classList.remove('animate-shake');
+                            void termsErrorMessage.offsetWidth;
+                            termsErrorMessage.classList.add('animate-shake');
+                        } else {
+                            // If no animation, just show message
+                        }
+                    } else {
+                        alert("请先阅读并同意使用条款和免责声明。");
+                    }
+                    return;
+                }
+            }
+
+            if (pages[currentPageIndex] === 'page_config.html' && pages[prospectiveIndex] === 'page_status.html' && direction === 1 && !currentClientId) {
+                alert("请先在配置页面提交请求以生成任务 ID，然后才能查看状态。");
+                return;
+            }
+            loadPage(prospectiveIndex);
+        }
+
+        window.notifySubmissionSuccess = function (clientId) {
+            currentClientId = clientId;
+            const statusPageIndex = pages.indexOf('page_status.html');
+            if (statusPageIndex !== -1) {
+                loadPage(statusPageIndex);
+            } else {
+                console.error("Status page not found in page list for navigation.");
+            }
+        }
+
+        window.navigateToSpecificPage = function (pageIndex) {
+            loadPage(pageIndex);
+        }
+
+        function resizeIframeToFitContent(iframeElement) {
+            try {
+                // This function is now only used for the config page
+                if (iframeElement && iframeElement.contentWindow && iframeElement.contentWindow.document.body) {
+                    setTimeout(() => {
+                        const bodyElement = iframeElement.contentWindow.document.body;
+
+                        // Simple calculation for config page
+                        const scrollHeight = bodyElement.scrollHeight;
+                        const newHeight = scrollHeight + 30; // Add small padding
+
+                        iframeElement.style.height = newHeight + 'px';
+                        console.log(`Resized config page iframe to ${newHeight}px`);
+                    }, 100);
+                }
+            } catch (e) {
+                console.error("Error resizing iframe: ", e);
+                iframeElement.style.height = '600px'; // Fallback height
+            }
+        }
+
+        // Initialize layout and footer visibility based on the initial page
+        document.addEventListener('DOMContentLoaded', () => {
+            const footer = document.querySelector('.app-footer');
+            const initialPage = pages[currentPageIndex];
+
+            if (initialPage === 'page_welcome.html' || initialPage === 'page_status.html') {
+                if (footer) footer.style.display = 'none';
+                document.body.classList.add('full-height-content');
+                iframe.style.height = '100%';
+            } else {
+                if (footer) footer.style.display = 'block';
+                document.body.classList.remove('full-height-content');
+                // Config page will use dynamic height calculation
+            }
+        });
+
+        loadInitialTheme();
+        loadPage(currentPageIndex);
+    </script>
 </body>
 
 </html>

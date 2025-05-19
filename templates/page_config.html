@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>预约配置 - 我去抢个座</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    html,
+    body {
+      /* height: 100%; */
+      /* Body height will be auto */
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #ffffff;
+      /* Default for html, body will have its own */
+    }
+
+    html {
+      height: 100%;
+      /* HTML element fills the iframe */
+    }
+
+    body {
+      height: auto;
+      /* Override height from any potential html,body rule */
+      /* overflow-y: auto; */
+      /* Removed, scrolling handled by index.html's main-content */
+
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 1rem;
+      padding-bottom: 5rem;
+      /* This should now create space correctly */
+      background-color: #ffffff;
+      /* Explicit light mode background for body */
+      margin: 0;
+      /* ensure no default margin */
+    }
+
+    .config-form-container {
+      background-color: #ffffff;
+      padding: 1.5rem 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 700px;
+      /* Max width for the form */
+      margin-top: 1rem;
+      /* Reduced top margin */
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      border: 1px solid #D1D5DB;
+      /* Gray-300 */
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      width: 100%;
+      transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+      background-color: #f9fafb;
+      /* Lighter background for inputs */
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: #4A90E2;
+      /* Primary blue */
+      box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.25);
+      outline: none;
+      background-color: #ffffff;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #374151;
+      /* Gray-700 */
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .submit-button {
+      background-color: #28a745;
+      /* Green for submit */
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: bold;
+      width: 100%;
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+    }
+
+    .submit-button:hover {
+      background-color: #218838;
+      /* Darker green */
+    }
+
+    .submit-button:disabled {
+      background-color: #d1d5db;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      color: #DC2626;
+      /* Red-600 */
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      body {
+        padding: 0.5rem;
+      }
+
+      .config-form-container {
+        margin-top: 0.5rem;
+        padding: 1rem 1.5rem;
+      }
+    }
+
+    .input-icon-wrapper {
+      position: relative;
+    }
+
+    .input-icon-wrapper .fa-question-circle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      /* Gray-400 */
+      cursor: help;
+    }
+
+    /* Styles for the new mode switch */
+    .mode-switch-container {
+      display: flex;
+      position: relative;
+      background-color: #e5e7eb;
+      /* gray-200 */
+      border-radius: 8px;
+      /* Square corners */
+      padding: 0.25rem;
+      /* p-1 */
+    }
+
+    .mode-switch-option {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem 0.75rem;
+      /* py-2 px-3 */
+      border-radius: 8px;
+      /* Square corners */
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.3s ease-in-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      /* text-sm */
+      line-height: 1.25rem;
+      color: #4b5563;
+      /* gray-600 default */
+    }
+
+    @media (min-width: 640px) {
+
+      /* sm: */
+      .mode-switch-option {
+        font-size: 1rem;
+        /* text-base */
+        line-height: 1.5rem;
+        padding: 0.5rem 1rem;
+        /* py-2 px-4 */
+      }
+    }
+
+
+    .mode-switch-option .fas {
+      margin-right: 0.25rem;
+      /* mr-1 */
+    }
+
+    @media (min-width: 640px) {
+
+      /* sm: */
+      .mode-switch-option .fas {
+        margin-right: 0.5rem;
+        /* sm:mr-2 */
+      }
+    }
+
+    .mode-switch-slider {
+      position: absolute;
+      top: 0.25rem;
+      /* top-1 */
+      left: 0.25rem;
+      /* left-1 */
+      bottom: 0.25rem;
+      /* bottom-1 */
+      /* height will be auto due to top/bottom settings */
+      width: calc(50% - 0.25rem);
+      /* Adjusts for padding, assuming 2 options */
+      background-color: #3b82f6;
+      /* blue-600 */
+      border-radius: 8px;
+      /* Square corners */
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      /* shadow-md */
+      transition: transform 0.3s ease-in-out;
+      z-index: 5;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    /* Icon colors for mode switch */
+    .mode-switch-option .fas.icon-selected {
+      color: white;
+    }
+
+    .mode-switch-option .fas.icon-unselected {
+      color: #6b7280;
+      /* Tailwind gray-500 */
+    }
+
+    /* Hover effects for form elements */
+    .form-input:hover,
+    .form-select:hover,
+    .form-textarea:hover {
+      border-color: #9CA3AF;
+      /* gray-400 for a subtle hover */
+    }
+
+    /* Fieldset and Legend styling */
+    fieldset {
+      border: 1px solid #e5e7eb;
+      /* gray-200 */
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    legend {
+      font-size: 1.125rem;
+      /* text-lg */
+      font-weight: 600;
+      color: #1f2937;
+      /* gray-800 */
+      padding: 0 0.5rem;
+      /* margin-left: 0.5rem; Removed to let flex alignment handle it with padding */
+      display: flex;
+      align-items: center;
+    }
+
+    legend .fas {
+      margin-right: 0.5rem;
+      color: #4A90E2;
+      /* Primary blue, or adjust per section */
+    }
+
+    /* Library loading spinner */
+    .loader-spinner {
+      display: none;
+      /* Hidden by default */
+      border: 3px solid #f3f3f3;
+      /* Light grey */
+      border-top: 3px solid #4A90E2;
+      /* Blue */
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin-left: 0.75rem;
+      /* Space from select, increased slightly */
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Mode switch text color classes */
+    .mode-switch-option.text-selected {
+      color: white !important;
+      font-weight: 600;
+      /* semibold */
+    }
+
+    .mode-switch-option.text-unselected {
+      color: #4b5563 !important;
+      /* gray-600 */
+      font-weight: 400;
+      /* normal */
+    }
+
+    /* --- Dark Mode Styles for Config Page --- */
+    html.dark {
+      background-color: #1a202c;
+      /* Ensure html root also has dark background */
+    }
+
+    html.dark body {
+      background-color: #1a202c;
+      /* Tailwind gray-900 */
+      color: #cbd5e0;
+      /* Tailwind gray-400 */
+    }
+
+    html.dark .config-form-container {
+      background-color: #2d3748;
+      /* Tailwind gray-800 */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    html.dark .text-gray-800 {
+      /* For main heading */
+      color: #e2e8f0;
+      /* Tailwind gray-200 */
+    }
+
+    html.dark .text-gray-500 {
+      /* For sub-headings and placeholder text */
+      color: #a0aec0;
+      /* Tailwind gray-500 */
+    }
+
+    html.dark fieldset {
+      border-color: #4a5568;
+      /* Tailwind gray-600 */
+    }
+
+    html.dark legend {
+      color: #e2e8f0;
+      /* Tailwind gray-200 */
+    }
+
+    html.dark legend .fas {
+      color: #63b3ed;
+      /* Tailwind blue-400, consistent with welcome page */
+    }
+
+    html.dark .form-label {
+      color: #cbd5e0;
+      /* Tailwind gray-400 */
+    }
+
+    html.dark .form-input,
+    html.dark .form-select,
+    html.dark .form-textarea {
+      background-color: #1f2937;
+      /* Darker input background */
+      border-color: #4a5568;
+      /* Tailwind gray-600 for borders */
+      color: #e2e8f0;
+      /* Light text for input */
+    }
+
+    html.dark .form-input::placeholder,
+    html.dark .form-textarea::placeholder {
+      color: #718096;
+      /* Tailwind gray-500 for placeholders */
+    }
+
+    html.dark .form-input:focus,
+    html.dark .form-select:focus,
+    html.dark .form-textarea:focus {
+      background-color: #2d3748;
+      border-color: #63b3ed;
+      /* Lighter blue for focus */
+      box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.3);
+      /* Lighter blue shadow */
+    }
+
+    html.dark .input-icon-wrapper .fa-question-circle {
+      color: #a0aec0;
+      /* Tailwind gray-500 */
+    }
+
+    html.dark #clear_time_button {
+      color: #a0aec0;
+    }
+
+    html.dark #clear_time_button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #cbd5e0;
+    }
+
+    html.dark .mode-switch-container {
+      background-color: #1f2937;
+      /* Darker background for switch */
+    }
+
+    /* html.dark .mode-switch-option.text-unselected is already covered by its specific class */
+    /* html.dark .mode-switch-option .fas.icon-unselected is already covered by its specific class */
+    html.dark .mode-switch-slider {
+      background-color: #3182ce;
+      /* Tailwind blue-600, consistent with welcome button */
+    }
+
+    html.dark .submit-button {
+      background-color: #2f855a;
+      /* Tailwind green-600 */
+    }
+
+    html.dark .submit-button:hover {
+      background-color: #276749;
+      /* Tailwind green-700 */
+    }
+
+    html.dark .submit-button:disabled {
+      background-color: #4a5568;
+      /* Tailwind gray-600 */
+      opacity: 0.7;
+    }
+
+    html.dark .error-message {
+      color: #f56565;
+      /* Tailwind red-500 */
+    }
+
+    html.dark .loader-spinner {
+      border-top-color: #63b3ed;
+      /* Lighter blue for spinner */
+    }
+
+    html.dark select option {
+      /* Styling for options inside select */
+      background-color: #2d3748;
+      /* Dark background for dropdown options */
+      color: #e2e8f0;
+      /* Light text for options */
+    }
+
+    /* Style for the time input's calendar picker icon in dark mode */
+    html.dark input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+    }
+
+    /* For Firefox, the styling is different and often not possible for the icon directly */
+    /* Consider a more robust custom solution if cross-browser consistency is critical for this icon */
+
+    /* Text alignment for specific inputs */
+    #seat_number {
+      /* Seat number text centered */
+      text-align: left;
+    }
+
+    #lib_id {
+      /* Library select: selected text centered */
+      text-align: left;
+      /* General centering for the select box */
+      text-align-last: left;
+      /* Specifically for the selected option's displayed text */
+    }
+
+    #lib_id option {
+      /* Dropdown options remain left-aligned */
+      text-align: left;
+    }
+
+    /* #time_str (execution time) will use default text alignment (left) */
+  </style>
+</head>
+
+<body>
+  <div class="config-form-container">
+    <div class="text-center mb-6">
+      <i class="fas fa-cog text-3xl text-blue-600 mb-2"></i>
+      <h1 class="text-2xl font-bold text-gray-800">配置预约参数</h1>
+      <p class="text-gray-500">请仔细填写以下信息以完成预约。</p>
+    </div>
+
+    <form id="config_form" class="space-y-6">
+      <fieldset>
+        <legend><i class="fas fa-sliders-h"></i>操作模式</legend>
+        <div class="mode-switch-container mt-3"> <!-- Added mt-3 for spacing from legend -->
+          <input type="radio" name="mode" value="1" id="mode_tomorrow" class="sr-only" checked>
+          <input type="radio" name="mode" value="2" id="mode_instant" class="sr-only">
+
+          <label for="mode_tomorrow" id="label_mode_tomorrow" class="mode-switch-option">
+            <i class="fas fa-calendar-alt"></i>明日预约
+          </label>
+          <label for="mode_instant" id="label_mode_instant" class="mode-switch-option">
+            <i class="fas fa-bolt"></i>立即抢座
+          </label>
+
+          <div class="mode-switch-slider"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><i class="fas fa-key"></i>身份凭证</legend>
+        <div class="mt-3"> <!-- Added mt-3 for spacing from legend -->
+          <label for="cookie_str" class="form-label flex items-center"><i
+              class="fas fa-cookie-bite mr-2 text-yellow-600"></i>Cookie:</label>
+          <div class="input-icon-wrapper">
+            <textarea id="cookie_str" name="cookieStr" class="form-textarea py-3" placeholder="请在此处粘贴完整的 Cookie 字符串"
+              required style="line-height: 1.5rem; overflow-y: hidden; resize: none;"></textarea>
+            <i class="fas fa-question-circle" title="请从图书馆微信小程序或相关官方途径获取最新的 Cookie 信息。确保包含所有必要字段。"></i>
+          </div>
+          <p id="cookie_error" class="error-message hidden"></p>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><i class="fas fa-calendar-check"></i>预约详情</legend>
+        <div id="time_input_container" class="mt-3"> <!-- Added mt-3 for spacing from legend -->
+          <label for="time_str" class="form-label flex items-center"><i class="fas fa-clock mr-2 text-blue-500"></i>执行时间
+            (HH:MM:SS):</label>
+          <div class="input-icon-wrapper flex items-center relative">
+            <input type="time" id="time_str" name="timeStr" class="form-input flex-grow w-auto"
+              placeholder="例如: 19:48:00" step="1" required style="padding-right: 2.5rem;">
+            <button type="button" id="clear_time_button"
+              class="absolute right-0 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 focus:outline-none rounded-full hover:bg-gray-100 transition-colors mr-2"
+              title="清除时间"
+              style="height: calc(100% - 4px); display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-times-circle text-md"></i>
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">明日预约窗口: {{TOMORROW_RESERVE_WINDOW_START_STR | default('19:48:00')}} -
+            {{TOMORROW_RESERVE_WINDOW_END_STR | default('23:59:59')}}. 提示：明日预约模式下时间必填；立即抢座模式下可留空或指定时间。</p>
+          <p id="time_error" class="error-message hidden"></p>
+        </div>
+
+        <div class="mt-4">
+          <label for="lib_id" class="form-label flex items-center"><i
+              class="fas fa-university mr-2 text-indigo-500"></i>阅览室:</label>
+          <div class="flex items-center">
+            <select id="lib_id" name="libId" class="form-select flex-grow" required>
+              <option value="" disabled selected>请选择阅览室</option>
+            </select>
+            <span id="lib_loader_spinner" class="loader-spinner"></span>
+          </div>
+          <p id="lib_id_error" class="error-message hidden"></p>
+        </div>
+
+        <div class="mt-4">
+          <label for="seat_number" class="form-label flex items-center"><i
+              class="fas fa-chair mr-2 text-green-500"></i>座位号:</label>
+          <input type="text" id="seat_number" name="seatNumber" class="form-input" placeholder="例如: 101 (通常为座位上贴的数字标签)"
+            required>
+          <p id="seat_number_error" class="error-message hidden"></p>
+        </div>
+      </fieldset>
+
+      <div id="ws_status_indicator" class="mb-4 text-sm text-gray-600 text-center"></div>
+
+      <button type="submit" id="submit_button" class="submit-button">
+        <i class="fas fa-paper-plane mr-2"></i>提交请求
+      </button>
+      <div id="form_general_error" class="error-message text-center mt-4 hidden"></div>
+    </form>
+  </div>
+
+  <script>
+    const API_URL = '/api';
+
+    const form = document.getElementById('config_form');
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
+    const timeInputContainer = document.getElementById('time_input_container');
+    const timeStrInput = document.getElementById('time_str');
+    const libIdSelect = document.getElementById('lib_id');
+    const cookieStrInput = document.getElementById('cookie_str');
+    const seatNumberInput = document.getElementById('seat_number');
+    const submitButton = document.getElementById('submit_button');
+    const formGeneralError = document.getElementById('form_general_error');
+
+    const cookieError = document.getElementById('cookie_error');
+    const timeError = document.getElementById('time_error');
+    const libIdError = document.getElementById('lib_id_error');
+    const seatNumberError = document.getElementById('seat_number_error');
+
+    // Mode Switch Elements
+    const modeTomorrowRadio = document.getElementById('mode_tomorrow');
+    const modeInstantRadio = document.getElementById('mode_instant');
+    const labelModeTomorrow = document.getElementById('label_mode_tomorrow');
+    const labelModeInstant = document.getElementById('label_mode_instant');
+    const modeSlider = document.querySelector('.mode-switch-slider');
+
+    // Time Clear Button Element
+    const clearTimeButton = document.getElementById('clear_time_button');
+
+    // Library Loader Spinner
+    const libLoaderSpinner = document.getElementById('lib_loader_spinner');
+
+    // localStorage key
+    const LOCAL_STORAGE_KEY = 'igarss_configFormData';
+
+    // These will be replaced by Jinja2 if served as a TemplateResponse
+    // Default values for static serving or if Jinja2 variables are not passed
+    const TOMORROW_RESERVE_WINDOW_START_STR = "{{ TOMORROW_RESERVE_WINDOW_START_STR | default('19:48:00') }}";
+    const TOMORROW_RESERVE_WINDOW_END_STR = "{{ TOMORROW_RESERVE_WINDOW_END_STR | default('23:59:59') }}";
+
+    // Update placeholder/title attributes with actual window times
+    document.addEventListener('DOMContentLoaded', () => {
+      const timeHintPara = timeInputContainer.querySelector('.text-xs.text-gray-500.mt-1');
+      if (timeHintPara) {
+        timeHintPara.textContent = `明日预约窗口: ${TOMORROW_RESERVE_WINDOW_START_STR} - ${TOMORROW_RESERVE_WINDOW_END_STR}. 提示：明日预约模式下时间必填；立即抢座模式下可留空或指定时间。`;
+      }
+
+      const iconTomorrow = labelModeTomorrow.querySelector('.fas');
+      const iconInstant = labelModeInstant.querySelector('.fas');
+
+      // Initialize mode switch label colors, font weight. Icon classes will be set by updateModeSwitchVisuals.
+      // labelModeTomorrow.classList.add('text-gray-600', 'font-normal'); 
+      // labelModeInstant.classList.add('text-gray-600', 'font-normal'); 
+      // Apply new text classes for initialization
+      if (modeTomorrowRadio.checked) {
+        labelModeTomorrow.classList.add('text-selected');
+        labelModeInstant.classList.add('text-unselected');
+        if (iconTomorrow) iconTomorrow.className = 'fas fa-calendar-alt icon-selected';
+        if (iconInstant) iconInstant.className = 'fas fa-bolt icon-unselected';
+      } else {
+        labelModeInstant.classList.add('text-selected');
+        labelModeTomorrow.classList.add('text-unselected');
+        if (iconInstant) iconInstant.className = 'fas fa-bolt icon-selected';
+        if (iconTomorrow) iconTomorrow.className = 'fas fa-calendar-alt icon-unselected';
+      }
+
+      updateModeSwitchVisuals();
+
+      // --- Form Persistence & Theme Initialization --- 
+      loadFormDataFromLocalStorage(); // Load general form data first (except libId which needs options)
+
+      if (libLoaderSpinner) libLoaderSpinner.style.display = 'inline-block';
+      loadLibraries(); // This will populate libIdSelect and then call applySavedLibId in its finally block
+
+      // Auto-resize textarea for cookie input
+      autoResizeTextarea(cookieStrInput);
+
+      // Check WebSocket status
+      checkWebSocketStatus();
+
+      // Get initial theme from parent AFTER other DOM setup
+      if (window.parent && typeof window.parent.getCurrentTheme === 'function') {
+        const currentTheme = window.parent.getCurrentTheme();
+        if (window.setAppTheme) window.setAppTheme(currentTheme);
+      } else {
+        console.warn("Could not get initial theme from parent for page_config.html on DOMContentLoaded");
+      }
+    });
+
+    function autoResizeTextarea(textarea) {
+      if (!textarea) return;
+      textarea.style.height = 'auto'; // Reset height
+      textarea.style.height = textarea.scrollHeight + 'px'; // Set to scroll height
+    }
+
+    function checkWebSocketStatus() {
+      const wsStatusIndicator = document.getElementById('ws_status_indicator');
+      if (!wsStatusIndicator) return;
+
+      wsStatusIndicator.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>正在检测 WebSocket 服务状态...';
+
+      // Determine WebSocket protocol (ws or wss)
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = wsProtocol + "//" + window.location.host + "/ws_test_connection"; // Hypothetical endpoint
+
+      let ws;
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (e) {
+        console.error("WebSocket instantiation failed:", e);
+        wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败 (无法创建)。';
+        return;
+      }
+
+      ws.onopen = function () {
+        wsStatusIndicator.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i>WebSocket 服务连接正常。';
+        ws.close(); // Close the test connection
+      };
+
+      ws.onerror = function (event) {
+        console.error("WebSocket Error: ", event);
+        wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败。';
+      };
+
+      ws.onclose = function (event) {
+        // This will also be called after a successful open and close
+        // We only want to show error if it didn't open successfully first.
+        if (!event.wasClean) { // `wasClean` is false if error occurred
+          console.warn('WebSocket connection closed uncleanly.', event);
+          // To avoid overwriting a more specific error from onerror or instantiation failure:
+          if (wsStatusIndicator.innerHTML.includes('正在检测')) {
+            wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务无法建立连接。';
+          }
+        }
+      };
+    }
+
+    function saveFormDataToLocalStorage() {
+      const formData = {
+        mode: document.querySelector('input[name="mode"]:checked').value,
+        cookieStr: cookieStrInput.value,
+        timeStr: timeStrInput.value,
+        libId: libIdSelect.value,
+        seatNumber: seatNumberInput.value
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(formData));
+    }
+
+    function loadFormDataFromLocalStorage() {
+      const savedDataString = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedDataString) {
+        try {
+          const savedData = JSON.parse(savedDataString);
+
+          // Set mode
+          if (savedData.mode === '1') {
+            modeTomorrowRadio.checked = true;
+          } else if (savedData.mode === '2') {
+            modeInstantRadio.checked = true;
+          }
+          // Important: After setting radio, update visuals like slider and text color
+          updateModeSwitchVisuals();
+
+          cookieStrInput.value = savedData.cookieStr || '';
+          timeStrInput.value = savedData.timeStr || '';
+          // For libId, ensure it's set after libraries are loaded if it depends on dynamic options
+          // We will call applySavedLibId separately after loadLibraries completes.
+          seatNumberInput.value = savedData.seatNumber || '';
+
+        } catch (e) {
+          console.error("Error parsing saved form data from localStorage:", e);
+          localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear corrupted data
+        }
+      }
+    }
+
+    function applySavedLibId() {
+      const savedDataString = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedDataString) {
+        try {
+          const savedData = JSON.parse(savedDataString);
+          if (savedData.libId && libIdSelect.options.length > 1) { // Ensure options are loaded
+            // Check if the saved libId exists in the current options
+            let optionExists = false;
+            for (let i = 0; i < libIdSelect.options.length; i++) {
+              if (libIdSelect.options[i].value === savedData.libId) {
+                optionExists = true;
+                break;
+              }
+            }
+            if (optionExists) {
+              libIdSelect.value = savedData.libId;
+            } else {
+              console.warn(`Saved Lib ID ${savedData.libId} not found in current options.`);
+            }
+          }
+        } catch (e) {
+          console.error("Error applying saved Lib ID:", e);
+        }
+      }
+    }
+
+    function generateClientId() {
+      return 'client-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15);
+    }
+
+    function toggleTimeInput() {
+      const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+      if (selectedMode === '1') { // Tomorrow reservation
+        timeStrInput.required = true;
+        timeStrInput.placeholder = "例如: 19:48:00";
+      } else { // Instant booking
+        timeStrInput.required = false;
+        timeStrInput.placeholder = "留空则立即执行, 或输入 HH:MM:SS";
+      }
+    }
+
+    function updateModeSwitchVisuals() {
+      const iconTomorrow = labelModeTomorrow.querySelector('.fas');
+      const iconInstant = labelModeInstant.querySelector('.fas');
+
+      if (modeTomorrowRadio.checked) {
+        modeSlider.style.transform = 'translateX(0%)';
+
+        // labelModeTomorrow.classList.add('text-white', 'font-semibold');
+        // labelModeTomorrow.classList.remove('text-gray-600', 'font-normal');
+        labelModeTomorrow.classList.add('text-selected');
+        labelModeTomorrow.classList.remove('text-unselected');
+        if (iconTomorrow) {
+          iconTomorrow.classList.add('icon-selected');
+          iconTomorrow.classList.remove('icon-unselected');
+        }
+
+        // labelModeInstant.classList.add('text-gray-600', 'font-normal');
+        // labelModeInstant.classList.remove('text-white', 'font-semibold');
+        labelModeInstant.classList.add('text-unselected');
+        labelModeInstant.classList.remove('text-selected');
+        if (iconInstant) {
+          iconInstant.classList.add('icon-unselected');
+          iconInstant.classList.remove('icon-selected');
+        }
+      } else { // Instant mode selected
+        modeSlider.style.transform = 'translateX(100%)';
+
+        labelModeInstant.classList.add('text-selected');
+        labelModeInstant.classList.remove('text-unselected');
+        if (iconInstant) {
+          iconInstant.classList.add('icon-selected');
+          iconInstant.classList.remove('icon-unselected');
+        }
+
+        // labelModeTomorrow.classList.add('text-gray-600', 'font-normal');
+        // labelModeTomorrow.classList.remove('text-white', 'font-semibold');
+        labelModeTomorrow.classList.add('text-unselected');
+        labelModeTomorrow.classList.remove('text-selected');
+        if (iconTomorrow) {
+          iconTomorrow.classList.add('icon-unselected');
+          iconTomorrow.classList.remove('icon-selected');
+        }
+      }
+      toggleTimeInput();
+    }
+
+    async function loadLibraries() {
+      try {
+        const response = await fetch(`${API_URL}/mappings`);
+        if (!response.ok) {
+          let errorDetail = `HTTP error! status: ${response.status}`;
+          try { const errData = await response.json(); errorDetail = errData.detail || errorDetail; } catch (e) { }
+          throw new Error(errorDetail);
+        }
+        const data = await response.json();
+
+        libIdSelect.innerHTML = '<option value="" disabled selected>请选择阅览室</option>'; // Reset before populating
+        if (data.rooms && Object.keys(data.rooms).length > 0) {
+          for (const [id, name] of Object.entries(data.rooms)) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = name;
+            libIdSelect.appendChild(option);
+          }
+        } else {
+          libIdError.textContent = '未加载到阅览室数据，或数据为空。';
+          libIdError.classList.remove('hidden');
+        }
+      } catch (error) {
+        console.error('Failed to load libraries:', error);
+        libIdSelect.innerHTML = '<option value="" disabled selected>加载阅览室失败</option>';
+        libIdError.textContent = `无法加载阅览室列表: ${error.message}`;
+        libIdError.classList.remove('hidden');
+      } finally {
+        if (libLoaderSpinner) libLoaderSpinner.style.display = 'none';
+        // After libraries are loaded and select is populated, try to apply saved libId
+        applySavedLibId();
+        // Also, ensure that if libId was just set from localStorage, we save again to capture it if not already event-triggered.
+        // However, individual event listeners should handle this better.
+      }
+    }
+
+    function validateTimeFormat(timeStr) {
+      return /^\d{2}:\d{2}(:\d{2})?$/.test(timeStr);
+    }
+
+    function validateForm() {
+      let isValid = true;
+      [cookieError, timeError, libIdError, seatNumberError, formGeneralError].forEach(el => { el.textContent = ''; el.classList.add('hidden'); });
+
+      if (!cookieStrInput.value.trim()) {
+        cookieError.textContent = 'Cookie 不能为空。';
+        cookieError.classList.remove('hidden');
+        isValid = false;
+      }
+
+      const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+      if (selectedMode === '1') {
+        if (!timeStrInput.value.trim()) {
+          timeError.textContent = '明日预约模式必须填写执行时间。';
+          timeError.classList.remove('hidden');
+          isValid = false;
+        } else if (!validateTimeFormat(timeStrInput.value.trim())) {
+          timeError.textContent = '时间格式必须为 HH:MM 或 HH:MM:SS。';
+          timeError.classList.remove('hidden');
+          isValid = false;
+        }
+      } else if (timeStrInput.value.trim() && !validateTimeFormat(timeStrInput.value.trim())) {
+        timeError.textContent = '时间格式必须为 HH:MM 或 HH:MM:SS，或留空。';
+        timeError.classList.remove('hidden');
+        isValid = false;
+      }
+
+      if (!libIdSelect.value) {
+        libIdError.textContent = '请选择一个阅览室。';
+        libIdError.classList.remove('hidden');
+        isValid = false;
+      }
+
+      if (!seatNumberInput.value.trim()) {
+        seatNumberError.textContent = '座位号不能为空。';
+        seatNumberError.classList.remove('hidden');
+        isValid = false;
+      }
+      return isValid;
+    }
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (!validateForm()) return;
+
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>处理中...';
+      formGeneralError.classList.add('hidden');
+
+      // Show spinner for library loading during form submission as well, if needed, though it might be confusing.
+      // For now, only on initial load.
+      if (libLoaderSpinner && libIdSelect.value === "") { // If lib not selected, maybe show spinner - better to handle in loadLibraries
+        // libLoaderSpinner.style.display = 'inline-block'; 
+      }
+
+      const formData = new FormData(form);
+      const data = {
+        mode: parseInt(formData.get('mode')),
+        cookieStr: formData.get('cookieStr'),
+        timeStr: formData.get('timeStr').trim(),
+        libId: parseInt(formData.get('libId')),
+        seatNumber: formData.get('seatNumber'),
+        clientId: generateClientId()
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/submit_request`, { // Corrected URL
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) { // Reverted to original error handling
+          const errorData = await response.json().catch(() => ({ detail: '请求失败，无法解析错误信息。' }));
+          throw new Error(errorData.detail || `HTTP error ${response.status}`);
+        }
+
+        // Reverted to original success handling (notify parent)
+        if (window.parent && typeof window.parent.notifySubmissionSuccess === 'function') {
+          window.parent.notifySubmissionSuccess(data.clientId);
+        } else {
+          alert('提交成功! Client ID: ' + data.clientId + '. 由于无法与主页面通信，请手动在导航栏点击"下一步"查看状态。');
+        }
+
+      } catch (error) {
+        console.error('Submission failed:', error);
+        formGeneralError.textContent = `提交失败: ${error.message}`;
+        formGeneralError.classList.remove('hidden');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>提交请求';
+      }
+    });
+
+    // modeRadios.forEach(radio => radio.addEventListener('change', toggleTimeInput)); 
+
+    // Event listeners for new mode switch
+    modeTomorrowRadio.addEventListener('change', () => { updateModeSwitchVisuals(); saveFormDataToLocalStorage(); });
+    modeInstantRadio.addEventListener('change', () => { updateModeSwitchVisuals(); saveFormDataToLocalStorage(); });
+
+    // Event listeners for other inputs to save data
+    cookieStrInput.addEventListener('input', () => {
+      saveFormDataToLocalStorage();
+      autoResizeTextarea(cookieStrInput); // Auto-resize on input
+    });
+    timeStrInput.addEventListener('input', saveFormDataToLocalStorage);
+    libIdSelect.addEventListener('change', saveFormDataToLocalStorage);
+    seatNumberInput.addEventListener('input', saveFormDataToLocalStorage);
+
+    // Event listener for the clear time button
+    if (clearTimeButton) { // Check if element exists before adding listener
+      clearTimeButton.addEventListener('click', () => {
+        timeStrInput.value = '';
+        // Optionally, you might want to trigger a change or input event if other logic depends on it
+        // timeStrInput.dispatchEvent(new Event('input')); 
+      });
+    }
+
+    // Function to set theme (called by parent or on initial load)
+    window.setAppTheme = function (theme) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+  </script>
+</body>
+
+</html>

@@ -1173,6 +1173,14 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                 while True: await websocket.receive_text() # Keep alive
             except WebSocketDisconnect: manager.disconnect(client_id)
             except Exception as e: print(f"WS 错误 for {client_id}: {type(e).__name__}"); manager.disconnect(client_id)
+
+        @app.websocket("/ws_test_connection")
+        async def websocket_test_endpoint(websocket: WebSocket):
+            await websocket.accept()
+            print("Test WebSocket connection accepted and immediately closed by server.")
+            # You can optionally send a message back to the client before closing if needed
+            # await websocket.send_text("Connection test successful") 
+            await websocket.close(code=1000)
     else: print("警告：WebSocket 端点 (/ws/{client_id}) 未定义 (缺少依赖)")
 
     # --- HTML Frontend Endpoint ---
@@ -1187,6 +1195,29 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                          "TOMORROW_RESERVE_WINDOW_END_STR": TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S'),
                          "SEAT_TAKEN_ERROR_CODE": SEAT_TAKEN_ERROR_CODE }
              return templates.TemplateResponse("index.html", context)
+
+        @app.get("/page_welcome.html")
+        async def get_page_welcome(request: Request): # type: ignore
+            if not templates: raise HTTPException(status_code=500, detail="模板引擎未初始化。")
+            return templates.TemplateResponse("page_welcome.html", {"request": request})
+
+        @app.get("/page_config.html")
+        async def get_page_config(request: Request): # type: ignore
+            if not templates: raise HTTPException(status_code=500, detail="模板引擎未初始化。")
+            # Pass necessary context for Jinja2 variables in page_config.html
+            context = {
+                "request": request,
+                "TOMORROW_RESERVE_WINDOW_START_STR": TOMORROW_RESERVE_WINDOW_START.strftime('%H:%M:%S'),
+                "TOMORROW_RESERVE_WINDOW_END_STR": TOMORROW_RESERVE_WINDOW_END.strftime('%H:%M:%S'),
+                "SEAT_TAKEN_ERROR_CODE": SEAT_TAKEN_ERROR_CODE  # Though not directly used in page_config.html, good to be consistent
+            }
+            return templates.TemplateResponse("page_config.html", context)
+
+        @app.get("/page_status.html")
+        async def get_page_status(request: Request): # type: ignore
+            if not templates: raise HTTPException(status_code=500, detail="模板引擎未初始化。")
+            return templates.TemplateResponse("page_status.html", {"request": request})
+
     else: print("警告：主页 HTML 端点 (/) 未定义 (缺少依赖)")
 
 # --- End of 'if WEB_DEPENDENCIES_MET and app:' block ---

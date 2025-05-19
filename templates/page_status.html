@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>操作状态 - 图书馆抢座系统</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #ffffff;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      color: #333;
+      overflow-y: auto;
+      /* Allow scrolling if content overflows */
+      box-sizing: border-box;
+    }
+
+    .status-container {
+      background-color: #ffffff;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 800px;
+      /* Wider for logs */
+      margin-top: 1rem;
+      /* Reduced top margin */
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      /* Allow container to grow and fill space */
+      min-height: 620px;
+      /* Important for flex children to not overflow parent */
+    }
+
+    .log-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      flex-shrink: 0;
+      /* Prevent header from shrinking */
+    }
+
+    #status_log_area {
+      background-color: #f9fafb;
+      /* Gray-50 for log background */
+      border: 1px solid #e5e7eb;
+      /* Gray-200 */
+      border-radius: 8px;
+      padding: 1rem;
+      height: 55vh;
+      /* Fixed height relative to viewport height */
+      /* min-height: 200px; Retained as a fallback, but height:40vh should dominate */
+      overflow-y: auto;
+      font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: #1f2937;
+      /* Gray-800 */
+      /* flex-grow: 1; Removed */
+      min-height: 200px;
+      /* Minimum height for the log area */
+    }
+
+    .log-entry {
+      padding: 0.35rem 0.5rem;
+      border-bottom: 1px dashed #e5e7eb;
+      display: flex;
+      /* For aligning timestamp and message */
+      word-break: break-all;
+      /* Prevent long strings from breaking layout */
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-status {
+      color: #4b5563;
+      /* Gray-600 */
+    }
+
+    .log-success {
+      color: #10B981;
+      /* Green-500 */
+      font-weight: bold;
+    }
+
+    .log-error {
+      color: #EF4444;
+      /* Red-500 */
+      font-weight: bold;
+    }
+
+    .log-warning {
+      color: #F59E0B;
+      /* Amber-500 */
+      font-weight: 600;
+      /* Slightly bolder for warnings */
+    }
+
+    .log-timestamp {
+      color: #6b7280;
+      /* Gray-500 */
+      font-size: 0.75rem;
+      margin-right: 0.75rem;
+      white-space: nowrap;
+      /* Prevent timestamp from wrapping */
+      flex-shrink: 0;
+      /* Prevent timestamp from shrinking */
+    }
+
+    .log-message-content {
+      flex-grow: 1;
+    }
+
+    .centered-message-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      height: 100%;
+      /* Take full height of its parent if log area is hidden */
+      flex-grow: 1;
+    }
+
+    .centered-message {
+      font-size: 1.125rem;
+      color: #4b5563;
+      /* Gray-600 */
+      padding: 2rem;
+    }
+
+    #initial_message_area.hidden,
+    #status_log_area.hidden {
+      display: none !important;
+      /* Ensure hidden means display none */
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 0.5rem;
+      }
+
+      .status-container {
+        margin-top: 0.5rem;
+        padding: 1rem;
+      }
+
+      .log-entry {
+        padding: 0.25rem;
+      }
+
+      .log-timestamp {
+        font-size: 0.7rem;
+        margin-right: 0.5rem;
+      }
+
+      #status_log_area {
+        font-size: 0.8rem;
+      }
+    }
+
+    /* --- Dark Mode Styles for Status Page --- */
+    html.dark {
+      background-color: #1a202c;
+      /* Ensure html root also has dark background */
+    }
+
+    html.dark body {
+      background-color: #1a202c;
+      /* Tailwind gray-900 */
+      color: #cbd5e0;
+      /* Tailwind gray-400 for general text */
+    }
+
+    html.dark .status-container {
+      background-color: #2d3748;
+      /* Tailwind gray-800 */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    html.dark .log-header h1 {
+      /* Assuming h1 is text-gray-800 equivalent */
+      color: #e2e8f0;
+      /* Tailwind gray-200 */
+    }
+
+    html.dark .log-header p {
+      /* Assuming p is text-gray-500 equivalent */
+      color: #a0aec0;
+      /* Tailwind gray-500 */
+    }
+
+    html.dark #status_log_area {
+      background-color: #1f2937;
+      /* Darker log background */
+      border-color: #4a5568;
+      /* Tailwind gray-600 */
+      color: #cbd5e0;
+      /* Tailwind gray-400 for log text */
+    }
+
+    html.dark .log-entry {
+      border-bottom-color: #4a5568;
+      /* Darker border for log entries */
+    }
+
+    html.dark .log-status {
+      color: #a0aec0;
+      /* Tailwind gray-500 for status messages */
+    }
+
+    html.dark .log-success {
+      color: #48bb78;
+      /* Tailwind green-400 (lighter green) */
+    }
+
+    html.dark .log-error {
+      color: #f56565;
+      /* Tailwind red-400 (lighter red) */
+    }
+
+    html.dark .log-warning {
+      color: #f6e05e;
+      /* Tailwind yellow-400 (lighter yellow) */
+    }
+
+    html.dark .log-timestamp {
+      color: #718096;
+      /* Tailwind gray-500 */
+    }
+
+    html.dark .centered-message {
+      color: #a0aec0;
+      /* Tailwind gray-500 */
+    }
+
+    html.dark .centered-message .fas {
+      color: #63b3ed;
+      /* Tailwind blue-400 */
+    }
+
+    html.dark .log-header .fas {
+      color: #63b3ed;
+      /* Tailwind blue-400 for header icon */
+    }
+
+    .actions-container {
+      margin-top: 1.5rem;
+      /* Space above the button */
+      text-align: center;
+      /* Center the button */
+      flex-shrink: 0;
+      /* Prevent this container from shrinking */
+    }
+
+    .back-button {
+      background-color: #007bff;
+      /* Blue */
+      color: white;
+      padding: 0.6rem 1.2rem;
+      /* Slightly smaller than main submit */
+      border-radius: 8px;
+      font-weight: 600;
+      /* Semibold */
+      transition: background-color 0.3s ease;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      /* To align icon and text */
+      align-items: center;
+    }
+
+    .back-button:hover {
+      background-color: #0056b3;
+      /* Darker blue */
+    }
+
+    html.dark .back-button {
+      background-color: #3182ce;
+      /* Tailwind blue-600 */
+    }
+
+    html.dark .back-button:hover {
+      background-color: #2b6cb0;
+      /* Tailwind blue-700 */
+    }
+  </style>
+</head>
+
+<body>
+  <div class="status-container" id="statusContainerMain">
+    <div class="log-header">
+      <i class="fas fa-tasks text-3xl text-blue-600 mb-2"></i>
+      <h1 class="text-2xl font-bold text-gray-800">操作状态</h1>
+      <p class="text-gray-500">实时查看您的预约/抢座请求处理进度。</p>
+    </div>
+    <div id="status_log_area" class="hidden">
+      <!-- Log messages will be appended here -->
+    </div>
+    <div id="initial_message_area" class="centered-message-container">
+      <div class="centered-message">
+        <i class="fas fa-info-circle text-2xl text-blue-500 mb-3"></i>
+        <p>请先在"配置预约参数"页面提交请求。</p>
+        <p>提交后，这里的状态将会自动更新。</p>
+      </div>
+    </div>
+
+    <div class="actions-container">
+      <button id="back_to_config_button" class="back-button">
+        <i class="fas fa-arrow-left mr-2"></i>返回配置页
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const logArea = document.getElementById('status_log_area');
+    const initialMessageContainer = document.getElementById('initial_message_area');
+    const statusContainerMain = document.getElementById('statusContainerMain');
+    const backToConfigButton = document.getElementById('back_to_config_button');
+    let socket = null;
+
+    function getCurrentTimestamp() {
+      return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+
+    function addLogEntry(message, type = 'status') {
+      const entry = document.createElement('div');
+      entry.classList.add('log-entry');
+
+      const timestampSpan = document.createElement('span');
+      timestampSpan.classList.add('log-timestamp');
+      timestampSpan.textContent = `[${getCurrentTimestamp()}]`;
+
+      const messageSpan = document.createElement('span');
+      messageSpan.classList.add('log-message-content'); // Class for message content
+      messageSpan.textContent = message;
+
+      switch (type) {
+        case 'success':
+          messageSpan.classList.add('log-success');
+          break;
+        case 'error':
+          messageSpan.classList.add('log-error');
+          break;
+        case 'warning':
+          messageSpan.classList.add('log-warning');
+          break;
+        default:
+          messageSpan.classList.add('log-status');
+      }
+
+      entry.appendChild(timestampSpan);
+      entry.appendChild(messageSpan);
+      logArea.appendChild(entry);
+      logArea.scrollTop = logArea.scrollHeight; // Auto-scroll to bottom
+    }
+
+    function connectWebSocket(clientId) {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; // Corrected https check
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/${clientId}`;
+
+      addLogEntry(`尝试连接到 WebSocket: ${wsUrl}`, 'status');
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = function (event) {
+        addLogEntry('WebSocket 连接成功。', 'success');
+      };
+
+      socket.onmessage = function (event) {
+        try {
+          const data = JSON.parse(event.data);
+          let message = data.message || '收到未知格式消息';
+          let type = 'status';
+
+          if (data.type === 'status') {
+            type = 'status';
+            if (message.toLowerCase().includes('错误') ||
+              message.toLowerCase().includes('失败') ||
+              message.toLowerCase().includes('超时') ||
+              message.toLowerCase().includes('无效') ||
+              message.toLowerCase().includes('err')) {
+              type = 'error';
+            } else if (message.toLowerCase().includes('警告') || message.toLowerCase().includes('warn')) {
+              type = 'warning';
+            } else if (message.toLowerCase().includes('成功') || message.toLowerCase().includes('ok')) {
+              type = 'success';
+            }
+          } else if (data.type === 'result') {
+            if (data.status === 'success') {
+              type = 'success';
+            } else {
+              type = 'error';
+            }
+            message = `[最终结果] ${message}`;
+            if (data.error_code) {
+              message += ` (错误码: ${data.error_code})`;
+            }
+            // Make sure to stop spinner or show completion in UI if any
+          } else if (data.type === 'cookie_update') {
+            type = 'success'; // Or a specific type for cookie updates
+            message = `[系统] ${message}`;
+            // We are not using auto cookie update in this version, but good to handle.
+          }
+          addLogEntry(message, type);
+        } catch (e) {
+          console.error("Error parsing WebSocket message:", e);
+          addLogEntry(`无法解析服务器消息: ${event.data}`, 'error');
+        }
+      };
+
+      socket.onerror = function (event) {
+        console.error('WebSocket Error:', event);
+        addLogEntry('WebSocket 连接发生错误。请检查网络和服务器状态。', 'error');
+      };
+
+      socket.onclose = function (event) {
+        let reason = event.reason ? ` 原因: ${event.reason}` : '';
+        let codeMsg = event.wasClean ? ` (Code: ${event.code})` : ` (Code: ${event.code}, unclean closure)`;
+        addLogEntry(`WebSocket 连接已关闭${codeMsg}${reason}。`, 'warning');
+        socket = null; // Reset socket variable
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientId = urlParams.get('clientId');
+
+      if (clientId) {
+        initialMessageContainer.classList.add('hidden');
+        logArea.classList.remove('hidden');
+        statusContainerMain.classList.remove('justify-center'); // Ensure log takes full width when active
+        connectWebSocket(clientId);
+      } else {
+        logArea.classList.add('hidden');
+        initialMessageContainer.classList.remove('hidden');
+        statusContainerMain.classList.add('justify-center'); // Center initial message when no logs
+        addLogEntry('错误：未提供 Client ID，无法连接到 WebSocket 获取状态。请确保从配置页面正确跳转。如果您是直接访问此页面，请返回配置并提交请求。 ', 'error');
+      }
+
+      // Get initial theme from parent
+      if (window.parent && typeof window.parent.getCurrentTheme === 'function') {
+        const currentTheme = window.parent.getCurrentTheme();
+        if (window.setAppTheme) window.setAppTheme(currentTheme);
+      }
+    });
+
+    // Function to set theme (called by parent or on initial load)
+    window.setAppTheme = function (theme) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    window.addEventListener('beforeunload', () => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        console.log("Closing WebSocket connection before page unload.");
+        socket.close(1000, "Page unloaded"); // Graceful closure
+      }
+    });
+
+    if (backToConfigButton) {
+      backToConfigButton.addEventListener('click', () => {
+        if (window.parent && typeof window.parent.navigateToSpecificPage === 'function') {
+          window.parent.navigateToSpecificPage(1); // Navigate to page_config.html (index 1)
+        }
+      });
+    }
+  </script>
+</body>
+
+</html>
