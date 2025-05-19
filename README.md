@@ -1,39 +1,52 @@
-# igolib-ldu 图书馆座位预约系统
+# igolib-ldu-web 图书馆座位预约系统
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.8+-brightgreen.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-orange.svg)
+<p align="center">
+  <img src="https://img.shields.io/badge/版本-v2.2.0-blue.svg" alt="版本" />
+  <img src="https://img.shields.io/badge/Python-3.8+-brightgreen.svg" alt="Python" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115+-orange.svg" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="许可证" />
+</p>
 
-IgoLib-LDU 是一个方便快捷的图书馆座位预约工具，专为鲁东大学图书馆设计。本工具支持明日座位预约和当日实时抢座功能，提供Web界面和命令行两种使用方式，满足不同用户的需求。
+<p align="center">
+  <b>一个现代、高效的图书馆座位预约工具 | 专为鲁东大学图书馆设计</b>
+</p>
 
-## ✨ 功能特点
+<div align="center">
 
-- 🌟 **双模式支持**：明日预约模式和实时抢座模式
-- 🔄 **自动排队**：内置排队系统，提高抢座成功率
-- 🕒 **定时执行**：支持设定准确时间执行预约/抢座操作
-- 🔍 **Cookie获取**：提供多种Cookie获取方式
-  - 自动提取模式 (使用mitmproxy)
-  - 手动填写模式
-- 🖥️ **多平台界面**：
-  - 美观易用的Web界面
-  - 简洁高效的命令行界面
-- 🏢 **完整座位映射**：准确选择座位，无需记忆复杂座位代码
+[特点](#特点) •
+[快速开始](#快速开始) •
+[使用指南](#使用指南) •
+[Cookie获取](#cookie获取) •
+[高级配置](#高级配置) •
+[常见问题](#常见问题) •
+[贡献](#贡献) •
+[许可证](#许可证)
 
-## 📋 系统要求
+</div>
+
+## ✨ 特点
+
+- 📚 **双模式操作**：支持明日预约和实时抢座
+- 🚀 **高效预约**：内置排队系统，提高抢座成功率
+- ⏰ **定时执行**：设定精确时间自动执行预约/抢座
+- 💻 **友好界面**：简洁美观的Web界面，响应式设计
+- 🔍 **座位映射**：完整的阅览室座位映射，轻松选择
+
+## 🚀 快速开始
+
+### 系统要求
 
 - Python 3.8+
 - 网络连接
 - 支持Windows/MacOS/Linux
 
-## 🚀 快速开始
-
-### 安装
+### 安装步骤
 
 1. 克隆仓库:
 
 ```bash
-git clone https://github.com/VenenoSix24/igolib_ldu.git
-cd igolib_ldu
+git clone https://github.com/VenenoSix24/igolib_ldu_web.git
+cd igolib_ldu_web
 ```
 
 2. 安装依赖:
@@ -42,57 +55,58 @@ cd igolib_ldu
 pip install -r requirements.txt
 ```
 
-### 使用方法
-
-#### Web界面 (推荐)
-
-1. 启动Web服务器:
+3. 启动Web服务:
 
 ```bash
 uvicorn beta:app --reload --host 0.0.0.0 --port 8000
 ```
 
-2. 访问以下地址:
+4. 在浏览器访问:
 
 ```
 http://127.0.0.1:8000
 ```
 
-3. 在Web界面中:
-   - 选择操作模式 (预约/抢座)
-   - 选择阅览室和座位
-   - 设置执行时间
-   - 填写或自动获取Cookie
-   - 点击提交
+## 📖 使用指南
 
-#### 命令行模式
+### Web界面操作流程
 
-```bash
-python beta.py
-```
+1. **选择操作模式**:
+   - 明日预约 (在规定时间窗口内执行)
+   - 立即抢座 (可选择立即或定时执行)
 
-按照终端提示操作即可完成预约/抢座。
+2. **填写必要信息**:
+   - 阅览室选择
+   - 座位号输入
+   - Cookie信息填写
+   - 执行时间设置 (可选)
 
-### Cookie获取
+3. **提交请求**:
+   - 点击"开始执行"按钮
+   - 实时查看操作状态和结果
 
-#### 自动获取 (推荐)
+## 🔑 Cookie获取
 
-1. 在Web界面点击"启动Cookie获取器"
-2. 按照提示设置系统代理
-3. 使用微信登录图书馆系统
-4. Cookie将自动保存并填充
+获取Cookie是使用本工具的关键步骤，以下是手动获取Cookie的方法:
 
-#### 手动获取
+### 使用浏览器开发者工具
 
-1. 下载并打开抓包软件
-2. 使用微信访问图书馆网站
-3. 登录您的账号
-4. 打开抓包软件，寻找带有Authorization的请求
-5. 复制Cookie值
+1. 在微信中打开图书馆预约系统
+2. 按F12或右键选择"检查"打开开发者工具
+3. 切换到"网络(Network)"选项卡
+4. 刷新页面，查找带有Authorization的请求
+5. 复制请求头中的Cookie值
 
-## 🔧 高级配置
+### 使用抓包工具
 
-可在beta.py文件中修改以下配置:
+1. 配置并启动抓包软件(如Fiddler、Charles等)
+2. 使用微信访问图书馆系统
+3. 在抓包工具中查找相关请求
+4. 提取请求中的Cookie信息
+
+## ⚙️ 高级配置
+
+在beta.py文件中可以修改以下配置:
 
 ```python
 # 抢座最大尝试次数
@@ -106,29 +120,22 @@ TOMORROW_RESERVE_WINDOW_END = datetime.time(23, 59, 59)
 DEFAULT_RESERVE_TIME_STR = "21:48:00"
 ```
 
-## 📸 截图
+## ❓ 常见问题
 
-(应用截图)
+| 问题 | 解决方案 |
+|------|---------|
+| Cookie无效 | 重新登录获取新Cookie，确保包含完整的Authorization值 |
+| 抢座失败 | 检查时间设置，确保与服务器时间同步；尝试选择其他座位 |
+| 网页连接失败 | 检查网络连接，确保服务正在运行；尝试刷新页面 |
+| 座位被占用 | 更换其他座位号重新尝试 |
 
-## 📝 注意事项
+## 🤝 贡献
 
-- 本工具仅用于学习和研究目的
-- 请勿频繁使用，以免对图书馆系统造成压力
-- 请遵循图书馆相关规定使用座位
-
-## 🔍 故障排除
-
-**问题**: Cookie无效
-**解决方案**: 重新登录获取新Cookie，确保包含完整的Authorization值
-
-**问题**: 抢座失败
-**解决方案**: 检查时间设置，确保与服务器时间同步；尝试选择其他座位
-
-## 📚 参与贡献
+欢迎提交问题和贡献代码，让这个工具变得更好!
 
 1. Fork 本项目
 2. 创建特性分支: `git checkout -b my-new-feature`
-3. 提交更改: `git commit -am 'Add some feature'`
+3. 提交更改: `git commit -am '添加新特性'`
 4. 推送到分支: `git push origin my-new-feature`
 5. 提交Pull Request
 
@@ -136,6 +143,6 @@ DEFAULT_RESERVE_TIME_STR = "21:48:00"
 
 本项目采用MIT许可证 - 详情请参阅 [LICENSE](LICENSE) 文件
 
-## 🙏 鸣谢
+---
 
-感谢所有为本项目做出贡献的开发者。
+<p align="center">开发不易，如果这个项目对你有帮助，请给它一个星标 ⭐</p>
