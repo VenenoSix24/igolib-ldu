@@ -1,4 +1,4 @@
-# IgoLib-LDU 图书馆座位预约系统
+# igolib-ldu 图书馆座位预约系统
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.8+-brightgreen.svg)
