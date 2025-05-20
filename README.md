@@ -63,7 +63,7 @@ pip install -r requirements.txt
 1. **启动Web服务**
 
 ```bash
-python beta.py --web
+uvicorn beta:app --reload --host 0.0.0.0 --port 8000
 ```
 
 2. **访问Web界面**
@@ -71,7 +71,7 @@ python beta.py --web
 打开浏览器访问: `http://127.0.0.1:8000`
 
 3. **使用流程**
-   - 设置Cookie获取（通过mitmproxy捕获）
+   - 设置Cookie获取
    - 选择阅览室和座位
    - 设置预约/抢座模式和执行时间
    - 提交并等待结果
