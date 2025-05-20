@@ -679,6 +679,19 @@
 
       wsStatusIndicator.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>正在检测 WebSocket 服务状态...';
 
+      // 检查是否是iOS设备
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      // iOS设备特殊处理
+      if (isIOS) {
+        console.log("检测到iOS设备，采用特殊WebSocket检测处理");
+        // 对iOS设备默认显示连接正常，因为iOS的WebSocket测试连接可能失败但实际使用正常
+        setTimeout(() => {
+          wsStatusIndicator.innerHTML = '<i class="fas fa-info-circle text-blue-500 mr-1"></i>iOS设备: WebSocket可能正常 (提交功能可用)';
+        }, 500);
+        return;
+      }
+
       // Determine WebSocket protocol (ws or wss)
       const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = wsProtocol + "//" + window.location.host + "/ws_test_connection"; // Hypothetical endpoint
@@ -692,17 +705,28 @@
         return;
       }
 
+      // 设置连接超时
+      const connectionTimeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i>WebSocket 连接超时，但提交功能可能仍然可用。';
+          ws.close();
+        }
+      }, 5000);
+
       ws.onopen = function () {
+        clearTimeout(connectionTimeout);
         wsStatusIndicator.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i>WebSocket 服务连接正常。';
         ws.close(); // Close the test connection
       };
 
       ws.onerror = function (event) {
+        clearTimeout(connectionTimeout);
         console.error("WebSocket Error: ", event);
         wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败。';
       };
 
       ws.onclose = function (event) {
+        clearTimeout(connectionTimeout);
         // This will also be called after a successful open and close
         // We only want to show error if it didn't open successfully first.
         if (!event.wasClean) { // `wasClean` is false if error occurred

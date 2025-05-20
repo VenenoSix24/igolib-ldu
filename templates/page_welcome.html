@@ -15,20 +15,23 @@
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: #ffffff;
-            /* Ensure body background is white */
             display: flex;
-            /* Use flexbox to center content */
-            align-items: center;
-            /* Vertical centering */
+            align-items: flex-start;
+            /* 改为flex-start而非center，防止垂直居中导致的裁剪 */
             justify-content: center;
-            /* Horizontal centering */
             color: #333;
             box-sizing: border-box;
-            /* Add box-sizing */
             flex-direction: column;
-            /* Stack elements vertically */
             position: relative;
-            /* Allow absolute positioning inside if needed */
+            overflow-y: auto;
+            /* 允许内容溢出时滚动 */
+        }
+
+        body {
+            padding: 1.5rem 1rem;
+            /* 添加适当内边距 */
+            width: 100%;
+            min-height: 100%;
         }
 
         .content-card {
@@ -38,15 +41,13 @@
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             text-align: center;
             max-width: 90%;
-            /* Use percentage for responsiveness */
             width: auto;
-            /* Allow it to shrink */
             min-width: 300px;
-            /* Optional: prevent it from becoming too narrow */
             margin: auto;
-            /* Center in any available space */
             flex-shrink: 0;
-            /* Prevent card from shrinking too much */
+            margin-top: auto;
+            /* 让卡片在可用空间中上下居中 */
+            margin-bottom: auto;
         }
 
         .icon-primary {
@@ -60,6 +61,18 @@
         @media (max-width: 640px) {
             .content-card {
                 padding: 1.5rem;
+                max-width: 95%;
+                /* 在小屏幕上增加宽度利用率 */
+                margin-top: 0.5rem;
+                /* 小屏幕上减小上边距 */
+                margin-bottom: 0.5rem;
+            }
+
+            body {
+                padding: 1rem 0.5rem;
+                /* 小屏幕上减小内边距 */
+                justify-content: flex-start;
+                /* 在小屏幕上从顶部开始布局 */
             }
 
             .icon-primary {
@@ -68,9 +81,34 @@
 
             h1 {
                 font-size: 1.75rem;
-                /* Tailwind text-2xl is 1.5rem, this is a bit larger */
                 word-break: break-word;
-                /* Allow long titles to wrap */
+            }
+        }
+
+        /* 特小屏幕的额外调整 */
+        @media (max-height: 600px) {
+            .content-card {
+                padding: 1rem;
+            }
+
+            body {
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+
+            .icon-primary {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem !important;
+            }
+
+            p,
+            ul {
+                margin-bottom: 0.5rem !important;
             }
         }
 
