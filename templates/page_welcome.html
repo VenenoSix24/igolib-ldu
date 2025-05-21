@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>欢迎 - 我去抢个座</title>
+    <link rel="shortcut icon" href="/static/images/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/static/images/favicon/site.webmanifest">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -43,18 +48,99 @@
             max-width: 90%;
             width: auto;
             min-width: 300px;
-            margin: auto;
+            margin: 2rem auto;  /* Updated margin */
             flex-shrink: 0;
-            margin-top: auto;
-            /* 让卡片在可用空间中上下居中 */
-            margin-bottom: auto;
+            position: relative;  /* Add this */
+            overflow: hidden;    /* Add this */
+        }
+
+        /* Add a subtle gradient background effect */
+        .content-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4A90E2, #63B3ED);
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        /* Add hover effect for the card */
+        .content-card:hover {
+            transform: translateY(-2px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
         }
 
         .icon-primary {
             color: #4A90E2;
-            /* Primary blue */
             font-size: 3rem;
             margin-bottom: 1rem;
+            animation: float 6s ease-in-out infinite;  /* Add floating animation */
+        }
+
+        /* Add floating animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Add animation for list items */
+        .list-item-animate {
+            opacity: 0;
+            transform: translateX(-20px);
+            animation: slideIn 0.5s ease forwards;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Update button styles */
+        #agree_button {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        #agree_button:hover:not(:disabled) {
+            transform: scale(1.02);
+        }
+
+        #agree_button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        #agree_button:hover::after {
+            animation: ripple 1s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(40, 40);
+                opacity: 0;
+            }
         }
 
         /* Responsive adjustments for smaller screens */
@@ -212,9 +298,15 @@
             <i class="fas fa-info-circle text-blue-500 mr-2"></i>简单三步，轻松抢座：
         </p>
         <ul class="list-none text-left inline-block text-gray-600 mb-6">
-            <li class="mb-2"><i class="fas fa-check-circle text-green-500 mr-2"></i>点击下方按钮进入配置页面。</li>
-            <li class="mb-2"><i class="fas fa-edit text-green-500 mr-2"></i>填写您的 Cookie 和预约信息。</li>
-            <li class="mb-2"><i class="fas fa-paper-plane text-green-500 mr-2"></i>提交请求并查看实时状态。</li>
+            <li class="mb-2 list-item-animate" style="animation-delay: 0.1s">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i>点击下方按钮进入配置页面。
+            </li>
+            <li class="mb-2 list-item-animate" style="animation-delay: 0.2s">
+                <i class="fas fa-edit text-green-500 mr-2"></i>填写您的 Cookie 和预约信息。
+            </li>
+            <li class="mb-2 list-item-animate" style="animation-delay: 0.3s">
+                <i class="fas fa-paper-plane text-green-500 mr-2"></i>提交请求并查看实时状态。
+            </li>
         </ul>
 
         <div class="terms-container mt-6 mb-4 p-3 bg-gray-50 rounded-lg">
@@ -223,13 +315,13 @@
                     class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 align-middle">
                 <label for="terms_agree_checkbox" class="ml-2 text-sm text-gray-700 align-middle">
                     我已阅读并同意
-                    <span id="show_terms" class="text-blue-600 hover:text-blue-800 underline cursor-pointer">使用条款</span>
+                    <span id="show_terms" class="text-blue-600 hover:text-blue-800 underline cursor-pointer" tabindex="0" role="button" aria-label="查看使用条款">使用条款</span>
                     和
                     <span id="show_disclaimer"
-                        class="text-blue-600 hover:text-blue-800 underline cursor-pointer">免责声明</span>。
+                        class="text-blue-600 hover:text-blue-800 underline cursor-pointer" tabindex="0" role="button" aria-label="查看免责声明">免责声明</span>。
                 </label>
             </div>
-            <p id="terms_error_message" class="text-red-500 text-xs mt-2 text-center hidden">请阅读并勾选同意使用条款和免责声明。</p>
+            <p id="terms_error_message" class="text-red-500 text-xs mt-2 text-center hidden" role="alert">请阅读并勾选同意使用条款和免责声明。</p>
         </div>
 
         <button id="agree_button"
@@ -283,9 +375,23 @@
         showTermsLink.addEventListener('click', function () {
             alert('使用条款:\n\n1. 本程序仅为辅助工具，旨在简化图书馆座位预约流程。\n2. 用户需自行承担使用本程序可能带来的所有风险，包括但不限于预约失败、账号异常等。\n3. 请勿滥用本程序，遵守图书馆相关规定及预约系统的使用协议。\n4. 开发者不对任何因使用本程序造成的直接或间接损失负责。\n5. ... (更多条款内容) ...');
         });
+        
+        showTermsLink.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
+        });
 
         showDisclaimerLink.addEventListener('click', function () {
             alert('免责声明:\n\n1. 本程序为开源的非官方工具，与图书馆官方无任何关联。\n2. 所有操作均在用户本地设备上或通过用户授权的代理执行，开发者不收集、不存储任何用户个人信息（如 Cookie）。\n3. 请确保您通过合法途径获取并使用 Cookie，并对您的 Cookie 安全负责。\n4. 使用本程序即表示您理解并同意以上所有条款。\n5. ... (更多免责内容) ...');
+        });
+        
+        showDisclaimerLink.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.click();
+            }
         });
 
         // Add a simple shake animation CSS for the error message

@@ -5,6 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我去抢个座</title>
+    <link rel="shortcut icon" href="/static/images/favicon/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/static/images/favicon/site.webmanifest">
+    <!-- Preload critical resources -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Actual CSS links -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -253,7 +263,7 @@
 
 <body>
     <header class="app-header">
-        <span class="app-title">我去抢个座 V3.0</span>
+        <span class="app-title">我去抢个座 V3.0.5</span>
         <button id="theme_toggle_button" title="切换主题">
             <i class="fas fa-moon"></i>
         </button>
@@ -360,38 +370,105 @@
             }
         });
 
+        function resizeIframeToFitContent(iframeElement) {
+            try {
+                // This function is now only used for the config page
+                if (iframeElement && iframeElement.contentWindow && iframeElement.contentWindow.document.body) {
+                    const bodyElement = iframeElement.contentWindow.document.body;
+                    
+                    // Create a ResizeObserver to watch for content changes
+                    if (window.ResizeObserver) {
+                        const resizeObserver = new ResizeObserver(entries => {
+                            // Get the new content height
+                            const scrollHeight = bodyElement.scrollHeight;
+                            const newHeight = scrollHeight + 30; // Add small padding
+                            
+                            // Set the iframe height
+                            iframeElement.style.height = newHeight + 'px';
+                        });
+                        
+                        // Start observing the body element
+                        resizeObserver.observe(bodyElement);
+                        
+                        // Store the observer to disconnect it later when page changes
+                        iframeElement._resizeObserver = resizeObserver;
+                    } else {
+                        // Fallback for browsers without ResizeObserver
+                        setTimeout(() => {
+                            const scrollHeight = bodyElement.scrollHeight;
+                            const newHeight = scrollHeight + 30; // Add small padding
+                            iframeElement.style.height = newHeight + 'px';
+                        }, 100);
+                    }
+                }
+            } catch (e) {
+                console.error("Error resizing iframe: ", e);
+                iframeElement.style.height = '600px'; // Fallback height
+            }
+        }
+
         function loadPage(index) {
             if (index < 0 || index >= pages.length) return;
 
             let targetPagePath = pages[index];
             let absoluteTargetPagePath = targetPagePath;
 
-            iframe.onload = null;
+            // Disconnect previous ResizeObserver if exists
+            if (iframe._resizeObserver) {
+                iframe._resizeObserver.disconnect();
+                iframe._resizeObserver = null;
+            }
+            
+            // Create a promise to handle iframe loading
+            const iframeLoadPromise = new Promise((resolve) => {
+                iframe.onload = () => {
+                    console.log(`iframe content ${targetPagePath} loaded.`);
+                    resolve();
+                };
+            });
 
+            // Set the iframe src after setting up the load promise
             if (targetPagePath === 'page_status.html' && currentClientId) {
                 absoluteTargetPagePath += '?clientId=' + encodeURIComponent(currentClientId);
-            } else if (targetPagePath === 'page_status.html' && !currentClientId) {
-                console.warn("Client ID not set for status page. It might not display logs correctly.");
             }
-
             iframe.src = absoluteTargetPagePath;
 
-            if (targetPagePath === 'page_welcome.html' || targetPagePath === 'page_status.html') {
-                document.querySelector('.app-footer').style.display = 'none';
-                iframe.style.height = '100%';
-                document.body.classList.add('full-height-content');
-            } else {
-                document.querySelector('.app-footer').style.display = 'block';
-                document.body.classList.remove('full-height-content');
-            }
+            // Handle page-specific setup after iframe loads
+            iframeLoadPromise.then(() => {
+                // Try to set theme with retries
+                let retryCount = 0;
+                const maxRetries = 5;
+                const retryInterval = 100;
 
-            iframe.onload = () => {
-                console.log(`iframe content ${targetPagePath} loaded.`);
+                function attemptThemeSet() {
+                    if (iframe.contentWindow && typeof iframe.contentWindow.setAppTheme === 'function') {
+                        const currentTheme = getCurrentTheme();
+                        iframe.contentWindow.setAppTheme(currentTheme);
+                        return true;
+                    }
+                    return false;
+                }
 
-                if (targetPagePath !== 'page_welcome.html' && targetPagePath !== 'page_status.html') {
+                function retryThemeSet() {
+                    if (!attemptThemeSet() && retryCount < maxRetries) {
+                        retryCount++;
+                        setTimeout(retryThemeSet, retryInterval);
+                    }
+                }
+
+                retryThemeSet();
+
+                // Update page layout
+                if (targetPagePath === 'page_welcome.html' || targetPagePath === 'page_status.html') {
+                    document.querySelector('.app-footer').style.display = 'none';
+                    iframe.style.height = '100%';
+                    document.body.classList.add('full-height-content');
+                } else {
+                    document.querySelector('.app-footer').style.display = 'block';
+                    document.body.classList.remove('full-height-content');
                     resizeIframeToFitContent(iframe);
                 }
-            };
+            });
 
             const baseTargetPage = targetPagePath.split('?')[0];
             currentPageIndex = pages.findIndex(p => p === baseTargetPage);
@@ -442,27 +519,6 @@
 
         window.navigateToSpecificPage = function (pageIndex) {
             loadPage(pageIndex);
-        }
-
-        function resizeIframeToFitContent(iframeElement) {
-            try {
-                // This function is now only used for the config page
-                if (iframeElement && iframeElement.contentWindow && iframeElement.contentWindow.document.body) {
-                    setTimeout(() => {
-                        const bodyElement = iframeElement.contentWindow.document.body;
-
-                        // Simple calculation for config page
-                        const scrollHeight = bodyElement.scrollHeight;
-                        const newHeight = scrollHeight + 30; // Add small padding
-
-                        iframeElement.style.height = newHeight + 'px';
-                        console.log(`Resized config page iframe to ${newHeight}px`);
-                    }, 100);
-                }
-            } catch (e) {
-                console.error("Error resizing iframe: ", e);
-                iframeElement.style.height = '600px'; // Fallback height
-            }
         }
 
         // Initialize layout and footer visibility based on the initial page

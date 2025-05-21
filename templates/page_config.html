@@ -5,6 +5,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>预约配置 - 我去抢个座</title>
+  <link rel="shortcut icon" href="/static/images/favicon/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/images/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/static/images/favicon/site.webmanifest">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
@@ -737,6 +742,47 @@
         font-size: 0.8rem;
       }
     }
+
+    /* Submission overlay */
+    .submission-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    
+    .submission-spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #4A90E2;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    
+    .submission-message {
+      color: white;
+      font-size: 1.25rem;
+      text-align: center;
+      max-width: 80%;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    
+    /* Dark mode styles */
+    html.dark .submission-spinner {
+      border-color: #1f2937;
+      border-top-color: #3182ce;
+    }
   </style>
 </head>
 
@@ -773,10 +819,10 @@
               class="fas fa-cookie-bite mr-2 text-yellow-600"></i>Cookie:</label>
           <div class="input-icon-wrapper">
             <textarea id="cookie_str" name="cookieStr" class="form-textarea py-3" placeholder="请在此处粘贴完整的 Cookie 字符串"
-              required style="line-height: 1.5rem; overflow-y: hidden; resize: none;"></textarea>
-            <i class="fas fa-question-circle" title="请从图书馆微信小程序或相关官方途径获取最新的 Cookie 信息。确保包含所有必要字段。"></i>
+              required style="line-height: 1.5rem; overflow-y: hidden; resize: none;" aria-describedby="cookie_error"></textarea>
+            <i class="fas fa-question-circle" title="请从图书馆微信小程序或相关官方途径获取最新的 Cookie 信息。确保包含所有必要字段。" aria-hidden="true"></i>
           </div>
-          <p id="cookie_error" class="error-message hidden"></p>
+          <p id="cookie_error" class="error-message hidden" role="alert"></p>
         </div>
       </fieldset>
 
@@ -815,30 +861,36 @@
           <label for="lib_id" class="form-label flex items-center"><i
               class="fas fa-university mr-2 text-indigo-500"></i>阅览室:</label>
           <div class="flex items-center">
-            <select id="lib_id" name="libId" class="form-select flex-grow" required>
+            <select id="lib_id" name="libId" class="form-select flex-grow" required aria-describedby="lib_id_error">
               <option value="" disabled selected>请选择阅览室</option>
             </select>
-            <span id="lib_loader_spinner" class="loader-spinner"></span>
+            <span id="lib_loader_spinner" class="loader-spinner" aria-hidden="true"></span>
           </div>
-          <p id="lib_id_error" class="error-message hidden"></p>
+          <p id="lib_id_error" class="error-message hidden" role="alert"></p>
         </div>
 
         <div class="mt-4">
           <label for="seat_number" class="form-label flex items-center"><i
               class="fas fa-chair mr-2 text-green-500"></i>座位号:</label>
           <input type="text" id="seat_number" name="seatNumber" class="form-input" placeholder="例如: 101 (通常为座位上贴的数字标签)"
-            required>
-          <p id="seat_number_error" class="error-message hidden"></p>
+            required aria-describedby="seat_number_error">
+          <p id="seat_number_error" class="error-message hidden" role="alert"></p>
         </div>
       </fieldset>
 
-      <div id="ws_status_indicator" class="mb-4 text-sm text-gray-600 text-center"></div>
+      <div id="ws_status_indicator" class="mb-4 text-sm text-gray-600 text-center" role="status" aria-live="polite"></div>
 
       <button type="submit" id="submit_button" class="submit-button">
-        <i class="fas fa-paper-plane mr-2"></i>提交请求
+        <i class="fas fa-paper-plane mr-2" aria-hidden="true"></i>提交请求
       </button>
-      <div id="form_general_error" class="error-message text-center mt-4 hidden"></div>
+      <div id="form_general_error" class="error-message text-center mt-4 hidden" role="alert"></div>
     </form>
+  </div>
+  
+  <!-- Submission overlay -->
+  <div class="submission-overlay" id="submission_overlay">
+    <div class="submission-spinner"></div>
+    <div class="submission-message">处理中，请稍候...</div>
   </div>
 
   <script>
@@ -908,7 +960,7 @@
         labelModeInstant.classList.add('text-unselected');
         if (iconTomorrow) iconTomorrow.className = 'fas fa-calendar-alt icon-selected';
         if (iconInstant) iconInstant.className = 'fas fa-bolt icon-unselected';
-      } else {
+      } else { // Instant mode selected
         labelModeInstant.classList.add('text-selected');
         labelModeTomorrow.classList.add('text-unselected');
         if (iconInstant) iconInstant.className = 'fas fa-bolt icon-selected';
@@ -935,19 +987,6 @@
         if (window.setAppTheme) window.setAppTheme(currentTheme);
       } else {
         console.warn("Could not get initial theme from parent for page_config.html on DOMContentLoaded");
-      }
-
-      const footer = document.querySelector('.app-footer');
-      const initialPage = pages[currentPageIndex];
-
-      if (initialPage === 'page_welcome.html' || initialPage === 'page_status.html') {
-        if (footer) footer.style.display = 'none';
-        document.body.classList.add('full-height-content');
-        iframe.style.height = '100%';
-      } else {
-        if (footer) footer.style.display = 'block';
-        document.body.classList.remove('full-height-content');
-        // Config page will use dynamic height calculation
       }
 
       // 初始化执行时间选项UI
@@ -992,71 +1031,79 @@
       textarea.style.height = textarea.scrollHeight + 'px'; // Set to scroll height
     }
 
+    // Initialize WebSocket variable
+    let socket = null;
+
     function checkWebSocketStatus() {
-      const wsStatusIndicator = document.getElementById('ws_status_indicator');
-      if (!wsStatusIndicator) return;
+        const wsStatusIndicator = document.getElementById('ws_status_indicator');
+        if (!wsStatusIndicator) return;
 
-      wsStatusIndicator.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>正在检测 WebSocket 服务状态...';
+        wsStatusIndicator.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>正在检测 WebSocket 服务状态...';
 
-      // 检查是否是iOS设备
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        // 检查是否是iOS设备
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-      // iOS设备特殊处理
-      if (isIOS) {
-        console.log("检测到iOS设备，采用特殊WebSocket检测处理");
-        // 对iOS设备默认显示连接正常，因为iOS的WebSocket测试连接可能失败但实际使用正常
-        setTimeout(() => {
-          wsStatusIndicator.innerHTML = '<i class="fas fa-info-circle text-blue-500 mr-1"></i>iOS设备: WebSocket可能正常 (提交功能可用)';
-        }, 500);
-        return;
-      }
-
-      // Determine WebSocket protocol (ws or wss)
-      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = wsProtocol + "//" + window.location.host + "/ws_test_connection"; // Hypothetical endpoint
-
-      let ws;
-      try {
-        ws = new WebSocket(wsUrl);
-      } catch (e) {
-        console.error("WebSocket instantiation failed:", e);
-        wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败 (无法创建)。';
-        return;
-      }
-
-      // 设置连接超时
-      const connectionTimeout = setTimeout(() => {
-        if (ws.readyState !== WebSocket.OPEN) {
-          wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i>WebSocket 连接超时，但提交功能可能仍然可用。';
-          ws.close();
+        // iOS设备特殊处理
+        if (isIOS) {
+            console.log("检测到iOS设备，采用特殊WebSocket检测处理");
+            setTimeout(() => {
+                wsStatusIndicator.innerHTML = '<i class="fas fa-info-circle text-blue-500 mr-1"></i>iOS设备: WebSocket可能正常 (提交功能可用)';
+            }, 500);
+            return;
         }
-      }, 5000);
 
-      ws.onopen = function () {
-        clearTimeout(connectionTimeout);
-        wsStatusIndicator.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i>WebSocket 服务连接正常。';
-        ws.close(); // Close the test connection
-      };
+        // Determine WebSocket protocol (ws or wss)
+        const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = wsProtocol + "//" + window.location.host + "/ws_test_connection";
 
-      ws.onerror = function (event) {
-        clearTimeout(connectionTimeout);
-        console.error("WebSocket Error: ", event);
-        wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败。';
-      };
-
-      ws.onclose = function (event) {
-        clearTimeout(connectionTimeout);
-        // This will also be called after a successful open and close
-        // We only want to show error if it didn't open successfully first.
-        if (!event.wasClean) { // `wasClean` is false if error occurred
-          console.warn('WebSocket connection closed uncleanly.', event);
-          // To avoid overwriting a more specific error from onerror or instantiation failure:
-          if (wsStatusIndicator.innerHTML.includes('正在检测')) {
-            wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务无法建立连接。';
-          }
+        try {
+            if (socket) {
+                socket.close();
+            }
+            socket = new WebSocket(wsUrl);
+        } catch (e) {
+            console.error("WebSocket instantiation failed:", e);
+            wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败 (无法创建)。';
+            return;
         }
-      };
+
+        // 设置连接超时
+        const connectionTimeout = setTimeout(() => {
+            if (socket && socket.readyState !== WebSocket.OPEN) {
+                wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i>WebSocket 连接超时，但提交功能可能仍然可用。';
+                socket.close();
+            }
+        }, 5000);
+
+        socket.onopen = function () {
+            clearTimeout(connectionTimeout);
+            wsStatusIndicator.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i>WebSocket 服务连接正常。';
+            socket.close();
+        };
+
+        socket.onerror = function (event) {
+            clearTimeout(connectionTimeout);
+            console.error("WebSocket Error: ", event);
+            wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务连接失败。';
+        };
+
+        socket.onclose = function (event) {
+            clearTimeout(connectionTimeout);
+            if (!event.wasClean) {
+                console.warn('WebSocket connection closed uncleanly.', event);
+                if (wsStatusIndicator.innerHTML.includes('正在检测')) {
+                    wsStatusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>WebSocket 服务无法建立连接。';
+                }
+            }
+        };
     }
+
+    // Add WebSocket cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close(1000, 'Page navigation');
+        }
+    });
 
     function saveFormDataToLocalStorage() {
       const formData = {
@@ -1400,6 +1447,9 @@
       submitButton.disabled = true;
       submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>处理中...';
       formGeneralError.classList.add('hidden');
+      
+      // Show submission overlay
+      document.getElementById('submission_overlay').style.display = 'flex';
 
       // Show spinner for library loading during form submission as well, if needed, though it might be confusing.
       // For now, only on initial load.
@@ -1445,6 +1495,8 @@
       } finally {
         submitButton.disabled = false;
         submitButton.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>提交请求';
+        // Hide submission overlay
+        document.getElementById('submission_overlay').style.display = 'none';
       }
     });
 
@@ -1479,17 +1531,14 @@
       saveFormDataToLocalStorage();
     });
 
-    // Function to set theme (called by parent or on initial load)
+    // Function to set theme (called by parent)
     window.setAppTheme = function (theme) {
-      if (theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
     };
-
-    loadInitialTheme();
-    loadPage(currentPageIndex);
   </script>
 </body>
 

@@ -30,6 +30,7 @@ try:
     )
     from fastapi.responses import JSONResponse
     from fastapi.templating import Jinja2Templates
+    from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel, Field, validator
     import uvicorn
 
@@ -650,9 +651,9 @@ def perform_seat_operation(
 
                     if success_indicator:
                         success_msg = f"✅ {mode_str}成功 (主操作响应 {res.status_code}, 内容符合预期)"
-                        send_status("******************************")
+                        # send_status("******************************")
                         send_status(success_msg)
-                        send_status("******************************\n")
+                        # send_status("******************************\n")
                         return "成功" # 操作成功，直接返回
                     else:
                         # HTTP 成功，无 "errors"，但内容不符合成功格式
@@ -684,9 +685,9 @@ def perform_seat_operation(
 
                 success_keywords = ["您已经预约了座位", "您已经预定了座位", "操作成功", "当前已有有效预约"]
                 if any(keyword in error_msg_main for keyword in success_keywords):
-                    send_status("******************************")
+                    # send_status("******************************")
                     send_status(f"✅ {mode_str}成功 (检测到确认性消息: {error_msg_main})")
-                    send_status("******************************\n")
+                    # send_status("******************************\n")
                     return f"成功 ({error_msg_main})" # 返回成功及消息
 
                 # --- 一般主操作错误 ---
@@ -933,6 +934,9 @@ templates = None
 if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were imported AND app was initialized
     print("Web 依赖项已找到。Web 服务器功能已启用。")
 
+    # --- Mount static files ---
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
     # --- Setup Jinja2 Templates ---
     if not os.path.isdir(TEMPLATES_DIR):
          print(f"警告: Templates 目录 '{TEMPLATES_DIR}' 未找到。Web 界面将无法加载。")
@@ -943,22 +947,49 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
 
     # --- ConnectionManager definition ---
     class ConnectionManager:
-        def __init__(self): self.active_connections: Dict[str, WebSocket] = {} # type: ignore
-        async def connect(self, websocket: WebSocket, client_id: str): await websocket.accept(); self.active_connections[client_id] = websocket; print(f"WebSocket connected: {client_id}") # type: ignore
+        def __init__(self): 
+            self.active_connections: Dict[str, WebSocket] = {} # type: ignore
+            self.message_locks: Dict[str, asyncio.Lock] = {}  # 每个连接的消息锁
+
+        async def connect(self, websocket: WebSocket, client_id: str):
+            await websocket.accept()
+            self.active_connections[client_id] = websocket
+            # 为每个新连接创建锁
+            self.message_locks[client_id] = asyncio.Lock()
+            print(f"WebSocket connected: {client_id}") # type: ignore
+
         def disconnect(self, client_id: str):
-            if client_id in self.active_connections: del self.active_connections[client_id]
+            if client_id in self.active_connections: 
+                del self.active_connections[client_id]
+            if client_id in self.message_locks:
+                del self.message_locks[client_id]
             print(f"WebSocket disconnected: {client_id}")
+
         async def _send_json_safe(self, client_id: str, payload: dict):
             websocket = self.active_connections.get(client_id)
-            if websocket:
-                try: await websocket.send_json(payload)
-                except Exception as e: print(f"Error sending WS ({payload.get('type', 'message')}) to {client_id}: {e}"); self.disconnect(client_id)
-        async def send_status_update(self, client_id: str, message: str): await self._send_json_safe(client_id, {"type": "status", "message": message})
+            lock = self.message_locks.get(client_id)
+            
+            if websocket and lock:
+                # 使用锁确保消息按顺序发送
+                async with lock:
+                    try:
+                        await websocket.send_json(payload)
+                        # 添加小延迟确保客户端有时间处理
+                        await asyncio.sleep(0.01)
+                    except Exception as e:
+                        print(f"Error sending WS ({payload.get('type', 'message')}) to {client_id}: {e}")
+                        self.disconnect(client_id)
+
+        async def send_status_update(self, client_id: str, message: str): 
+            await self._send_json_safe(client_id, {"type": "status", "message": message})
+
         async def send_final_result(self, client_id: str, status: str, message: str, error_code: Optional[str] = None):
-            payload = {"type": "result", "status": status, "message": message};
+            payload = {"type": "result", "status": status, "message": message}
             if error_code: payload["error_code"] = error_code
             await self._send_json_safe(client_id, payload)
-        async def send_cookie_update(self, client_id: str, cookie: str): await self._send_json_safe(client_id, {"type": "cookie_update", "cookie": cookie})
+
+        async def send_cookie_update(self, client_id: str, cookie: str): 
+            await self._send_json_safe(client_id, {"type": "cookie_update", "cookie": cookie})
 
     if WebSocket and asyncio: manager = ConnectionManager() # Instantiate manager
     else: manager = None; print("错误：无法初始化 ConnectionManager (缺少 WebSocket 或 asyncio)")
@@ -1025,7 +1056,15 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
         def run_seat_operation_task(client_id: str, mode: int, cookie: str, lib_id: int, seat_key: str, start_dt: Optional[datetime.datetime], background_tasks: BackgroundTasks): # type: ignore
             """Wrapper to run seat operation and send updates via WS."""
             def ws_status_callback_sync(message: str):
-                if manager: background_tasks.add_task(manager.send_status_update, client_id, message)
+                # 同步发送状态消息而不是使用background_tasks
+                if manager:
+                    try:
+                        # 创建一个新的事件循环来运行异步发送
+                        loop = asyncio.new_event_loop()
+                        loop.run_until_complete(manager.send_status_update(client_id, message))
+                        loop.close()
+                    except Exception as e:
+                        print(f"[发送状态更新错误] {type(e).__name__}: {e}")
 
             print(f"[Task {client_id}] Starting background operation...")
             final_result = perform_seat_operation(mode, cookie, lib_id, seat_key, start_dt, ws_status_callback_sync)
@@ -1042,7 +1081,15 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                      seat_num_for_msg = reverse_map.get(seat_key, "[未知Key]")
                 user_message = f"该座位 (阅览室: {room_name_for_msg}, 座位号: {seat_num_for_msg}) 已被占用，请重选。"
                 error_code_ws = SEAT_TAKEN_ERROR_CODE
-            if manager: background_tasks.add_task(manager.send_final_result, client_id, status_code_ws, user_message, error_code_ws)
+            
+            # 使用同样的同步方法发送最终结果
+            if manager:
+                try:
+                    loop = asyncio.new_event_loop()
+                    loop.run_until_complete(manager.send_final_result(client_id, status_code_ws, user_message, error_code_ws))
+                    loop.close()
+                except Exception as e:
+                    print(f"[发送最终结果错误] {type(e).__name__}: {e}")
     else: run_seat_operation_task = None; print("警告：座位操作后台任务包装器未定义 (缺少依赖)")
 
     # --- Background Task for Cookie Watching ---

@@ -4,7 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>操作状态 - 图书馆抢座系统</title>
+  <title>操作状态 - 我去抢个座</title>
+  <link rel="shortcut icon" href="/static/images/favicon/favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/images/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/static/images/favicon/site.webmanifest">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
@@ -61,34 +66,56 @@
       padding: 1rem;
       height: 55vh;
       /* Fixed height relative to viewport height */
-      /* min-height: 200px; Retained as a fallback, but height:40vh should dominate */
       overflow-y: auto;
       font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 0.875rem;
       line-height: 1.6;
       color: #1f2937;
       /* Gray-800 */
-      /* flex-grow: 1; Removed */
       min-height: 200px;
       /* Minimum height for the log area */
     }
 
     .log-entry {
-      padding: 0.35rem 0.5rem;
-      border-bottom: 1px dashed #e5e7eb;
+      padding: 0.45rem 0.6rem;
+      margin-bottom: 0.3rem;
+      border-left: 3px solid transparent;
+      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
       display: flex;
       /* For aligning timestamp and message */
       word-break: break-all;
       /* Prevent long strings from breaking layout */
+      transition: background-color 0.2s;
+      border-radius: 4px;
+    }
+    
+    .log-entry:hover {
+      background-color: rgba(243, 244, 246, 0.7);
     }
 
     .log-entry:last-child {
       border-bottom: none;
+      background-color: rgba(243, 244, 246, 0.4);
     }
 
     .log-status {
       color: #4b5563;
       /* Gray-600 */
+    }
+    
+    .log-entry.log-step {
+      background-color: #f3f4f6;
+      border-left-color: #60a5fa;
+      font-weight: 600;
+    }
+    
+    .log-entry.log-section {
+      background-color: #e5e7eb;
+      padding-top: 0.6rem;
+      padding-bottom: 0.6rem;
+      margin-top: 0.4rem;
+      margin-bottom: 0.4rem;
+      border-left-color: #4b5563;
     }
 
     .log-success {
@@ -96,11 +123,21 @@
       /* Green-500 */
       font-weight: bold;
     }
+    
+    .log-entry.log-success-entry {
+      border-left-color: #10B981;
+      background-color: rgba(16, 185, 129, 0.1);
+    }
 
     .log-error {
       color: #EF4444;
       /* Red-500 */
       font-weight: bold;
+    }
+    
+    .log-entry.log-error-entry {
+      border-left-color: #EF4444;
+      background-color: rgba(239, 68, 68, 0.1);
     }
 
     .log-warning {
@@ -108,6 +145,11 @@
       /* Amber-500 */
       font-weight: 600;
       /* Slightly bolder for warnings */
+    }
+    
+    .log-entry.log-warning-entry {
+      border-left-color: #F59E0B;
+      background-color: rgba(245, 158, 11, 0.1);
     }
 
     .log-timestamp {
@@ -123,6 +165,48 @@
 
     .log-message-content {
       flex-grow: 1;
+      display: flex;
+      align-items: center;
+    }
+    
+    .log-icon {
+      margin-right: 0.5rem;
+      width: 16px;
+      text-align: center;
+    }
+    
+    /* 更新暗黑模式样式 */
+    html.dark .log-entry:hover {
+      background-color: rgba(55, 65, 81, 0.5);
+    }
+    
+    html.dark .log-entry:last-child {
+      background-color: rgba(55, 65, 81, 0.3);
+    }
+    
+    html.dark .log-entry.log-step {
+      background-color: rgba(31, 41, 55, 0.8); 
+      border-left-color: #3b82f6;
+    }
+    
+    html.dark .log-entry.log-section {
+      background-color: rgba(31, 41, 55, 0.9);
+      border-left-color: #9ca3af;
+    }
+    
+    html.dark .log-entry.log-success-entry {
+      border-left-color: #10B981;
+      background-color: rgba(16, 185, 129, 0.15);
+    }
+    
+    html.dark .log-entry.log-error-entry {
+      border-left-color: #EF4444;
+      background-color: rgba(239, 68, 68, 0.15);
+    }
+    
+    html.dark .log-entry.log-warning-entry {
+      border-left-color: #F59E0B;
+      background-color: rgba(245, 158, 11, 0.15);
     }
 
     .centered-message-container {
@@ -217,6 +301,43 @@
 
       #status_log_area {
         font-size: 0.8rem;
+        height: 45vh; /* Smaller height for mobile */
+      }
+      
+      .back-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+      }
+      
+      .countdown-container {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.75rem;
+      }
+    }
+    
+    /* Extra small screens */
+    @media (max-width: 360px) {
+      .log-header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .log-header p {
+        font-size: 0.8rem;
+      }
+      
+      .log-timestamp {
+        font-size: 0.65rem;
+        margin-right: 0.35rem;
+      }
+      
+      #status_log_area {
+        font-size: 0.75rem;
+        padding: 0.75rem;
+      }
+      
+      .back-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
       }
     }
 
@@ -307,43 +428,380 @@
 
     .actions-container {
       margin-top: 1.5rem;
-      /* Space above the button */
       text-align: center;
-      /* Center the button */
       flex-shrink: 0;
-      /* Prevent this container from shrinking */
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
     }
 
-    .back-button {
+    .back-button, .view-result-button {
       background-color: #007bff;
-      /* Blue */
       color: white;
       padding: 0.6rem 1.2rem;
-      /* Slightly smaller than main submit */
       border-radius: 8px;
       font-weight: 600;
-      /* Semibold */
       transition: background-color 0.3s ease;
       border: none;
       cursor: pointer;
       display: inline-flex;
-      /* To align icon and text */
       align-items: center;
+    }
+
+    .view-result-button {
+      background-color: #10B981;
+    }
+
+    .view-result-button:hover {
+      background-color: #059669;
     }
 
     .back-button:hover {
       background-color: #0056b3;
-      /* Darker blue */
     }
 
     html.dark .back-button {
       background-color: #3182ce;
-      /* Tailwind blue-600 */
     }
 
     html.dark .back-button:hover {
       background-color: #2b6cb0;
-      /* Tailwind blue-700 */
+    }
+
+    html.dark .view-result-button {
+      background-color: #059669;
+    }
+
+    html.dark .view-result-button:hover {
+      background-color: #047857;
+    }
+
+    /* Add styles for disabled view-result button */
+    .view-result-button:disabled {
+      background-color: #9CA3AF;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    html.dark .view-result-button:disabled {
+      background-color: #4B5563;
+    }
+
+    /* 添加彩色图标样式 */
+    .log-icon i {
+      opacity: 0.9;
+    }
+    
+    .log-icon .fa-check-circle,
+    .log-icon .fa-trophy {
+      color: #10B981; /* 绿色 */
+    }
+    
+    .log-icon .fa-times-circle,
+    .log-icon .fa-exclamation-circle {
+      color: #EF4444; /* 红色 */
+    }
+    
+    .log-icon .fa-exclamation-triangle {
+      color: #F59E0B; /* 黄色 */
+    }
+    
+    .log-icon .fa-sync-alt {
+      color: #3B82F6; /* 蓝色 */
+    }
+    
+    .log-icon .fa-clock {
+      color: #8B5CF6; /* 紫色 */
+    }
+    
+    .log-icon .fa-calendar-alt {
+      color: #EC4899; /* 粉色 */
+    }
+    
+    .log-icon .fa-plug {
+      color: #6366F1; /* 靛蓝色 */
+    }
+    
+    .log-icon .fa-play {
+      color: #2563EB; /* 深蓝色 */
+    }
+    
+    .log-icon .fa-angle-right {
+      color: #1D4ED8; /* 更深的蓝色 */
+    }
+    
+    .log-icon .fa-info-circle {
+      color: #60A5FA; /* 淡蓝色 */
+    }
+
+    /* 为最终结果添加特殊样式 */
+    .log-entry.final-result {
+      background-color: #F0FDF4; /* 非常淡的绿色背景 */
+      padding: 0.75rem;
+      margin: 1rem 0;
+      border-width: 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+      font-weight: 600;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    
+    .log-entry.final-result .log-timestamp {
+      margin-right: 0;
+      margin-bottom: 0.4rem;
+      font-weight: normal;
+      font-size: 0.75rem;
+    }
+    
+    .log-entry.final-result .log-message-content {
+      width: 100%;
+      text-align: center;
+      justify-content: center;
+    }
+    
+    .log-entry.final-result .log-icon {
+      margin-right: 0.6rem;
+      font-size: 1.2rem;
+    }
+    
+    .log-entry.final-result.log-success-entry {
+      background-color: #ECFDF5; /* 淡绿色 */
+      border: 1px solid #A7F3D0; /* 绿色边框 */
+    }
+    
+    .log-entry.final-result.log-error-entry {
+      background-color: #FEF2F2; /* 淡红色 */
+      border: 1px solid #FECACA; /* 红色边框 */
+    }
+    
+    /* 暗黑模式适配 */
+    html.dark .log-entry.final-result {
+      background-color: rgba(6, 78, 59, 0.2);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    html.dark .log-entry.final-result.log-success-entry {
+      background-color: rgba(6, 78, 59, 0.3);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    
+    html.dark .log-entry.final-result.log-error-entry {
+      background-color: rgba(153, 27, 27, 0.3);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    /* 更新成功卡片样式 */
+    .success-card {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+      border-radius: 20px;
+      padding: 1.75rem 1.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(37, 99, 235, 0.1);
+      max-width: 90%;
+      width: 420px;
+      text-align: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(37, 99, 235, 0.1);
+    }
+
+    .success-card.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .success-card .card-header {
+      margin-bottom: 1.25rem;
+    }
+
+    .success-card .success-icon {
+      font-size: 2.75rem;
+      color: #10B981;
+      margin-bottom: 0.75rem;
+      animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      display: inline-block;
+      filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.2));
+    }
+
+    .success-card .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+
+    .success-card .card-subtitle {
+      color: #6B7280;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .success-card .info-section {
+      background: rgba(37, 99, 235, 0.03);
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(37, 99, 235, 0.08);
+    }
+
+    .success-card .info-item {
+      background-color: white;
+      padding: 0.75rem;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: left;
+      transition: transform 0.2s ease;
+      border: 1px solid rgba(37, 99, 235, 0.08);
+    }
+
+    .success-card .info-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .success-card .info-item:hover {
+      transform: translateY(-2px);
+    }
+
+    .success-card .info-item i {
+      font-size: 1.1rem;
+      margin-right: 0.75rem;
+      color: #3B82F6;
+      width: 24px;
+      text-align: center;
+    }
+
+    .success-card .info-label {
+      color: #6B7280;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 0.2rem;
+      display: block;
+    }
+
+    .success-card .info-text {
+      color: #1F2937;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .success-card .encouragement {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+      border-radius: 12px;
+      color: #2563EB;
+      font-style: italic;
+      font-weight: 500;
+      line-height: 1.5;
+      position: relative;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+
+    .success-card .encouragement::before {
+      content: '"';
+      position: absolute;
+      top: 0.5rem;
+      left: 0.75rem;
+      font-size: 2.5rem;
+      color: rgba(37, 99, 235, 0.1);
+      font-family: serif;
+    }
+
+    .success-card .close-button {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      padding: 0.5rem;
+      transition: all 0.2s;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-card .close-button:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #4B5563;
+    }
+
+    /* 深色模式适配 */
+    html.dark .success-card {
+      background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.2);
+    }
+
+    html.dark .success-card .card-title {
+      color: #F3F4F6;
+    }
+
+    html.dark .success-card .card-subtitle {
+      color: #9CA3AF;
+    }
+
+    html.dark .success-card .info-section {
+      background: rgba(59, 130, 246, 0.05);
+      border-color: rgba(59, 130, 246, 0.1);
+    }
+
+    html.dark .success-card .info-item {
+      background-color: rgba(31, 41, 55, 0.5);
+      border-color: rgba(59, 130, 246, 0.1);
+    }
+
+    html.dark .success-card .info-label {
+      color: #9CA3AF;
+    }
+
+    html.dark .success-card .info-text {
+      color: #F3F4F6;
+    }
+
+    html.dark .success-card .encouragement {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+      color: #60A5FA;
+    }
+
+    html.dark .success-card .close-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 添加新的动画效果 */
+    @keyframes slideInInfo {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .success-card .info-item {
+      animation: slideInInfo 0.3s ease forwards;
+      animation-delay: calc(var(--item-index) * 0.1s);
     }
   </style>
 </head>
@@ -375,6 +833,47 @@
       <button id="back_to_config_button" class="back-button">
         <i class="fas fa-arrow-left mr-2"></i>返回配置页
       </button>
+      <button id="view_result_button" class="view-result-button" disabled>
+        <i class="fas fa-trophy mr-2"></i>查看预约结果
+      </button>
+    </div>
+  </div>
+
+  <!-- 成功预约卡片 -->
+  <div id="successCard" class="success-card">
+    <button class="close-button" onclick="hideSuccessCard()">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="card-header">
+      <i class="fas fa-check-circle success-icon"></i>
+      <h2 class="card-title">预约成功</h2>
+      <p class="card-subtitle">座位预约成功，祝您学习愉快</p>
+    </div>
+    <div class="info-section">
+      <div class="info-item" style="--item-index: 0">
+        <i class="fas fa-clock"></i>
+        <div>
+          <span class="info-label">预约时间</span>
+          <div class="info-text" id="reserveTime">待定</div>
+        </div>
+      </div>
+      <div class="info-item" style="--item-index: 1">
+        <i class="fas fa-building"></i>
+        <div>
+          <span class="info-label">阅览室</span>
+          <div class="info-text" id="roomInfo">待定</div>
+        </div>
+      </div>
+      <div class="info-item" style="--item-index: 2">
+        <i class="fas fa-chair"></i>
+        <div>
+          <span class="info-label">座位号</span>
+          <div class="info-text" id="seatInfo">待定</div>
+        </div>
+      </div>
+    </div>
+    <div class="encouragement" id="encouragementText">
+      今天也要加油学习哦！
     </div>
   </div>
 
@@ -387,41 +886,187 @@
     const countdownTimer = document.getElementById('countdown_timer');
     let socket = null;
     let countdownInterval = null;
+    let notificationsEnabled = false;
 
     function getCurrentTimestamp() {
       return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     }
 
-    function addLogEntry(message, type = 'status') {
+    // Request notification permission
+    function requestNotificationPermission() {
+      if ('Notification' in window) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              notificationsEnabled = true;
+              showNotification('通知已启用', '重要的操作完成时将收到通知');
+            }
+          });
+        } else if (Notification.permission === 'granted') {
+          notificationsEnabled = true;
+        }
+      }
+    }
+
+    // Show browser notification
+    function showNotification(title, message) {
+      if (notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+          body: message,
+          icon: '/static/images/favicon/favicon.ico'  // Update favicon path
+        });
+        
+        // Auto close after 5 seconds
+        setTimeout(() => notification.close(), 5000);
+        
+        // Focus window when notification is clicked
+        notification.onclick = function() {
+          window.focus();
+          this.close();
+        };
+      }
+    }
+
+    function addLogEntry(message, type = 'status', isFinalResult = false) {
       const entry = document.createElement('div');
       entry.classList.add('log-entry');
+      
+      // 如果是最终结果，添加特殊样式类
+      if (isFinalResult) {
+        entry.classList.add('final-result');
+      }
 
       const timestampSpan = document.createElement('span');
       timestampSpan.classList.add('log-timestamp');
       timestampSpan.textContent = `[${getCurrentTimestamp()}]`;
 
       const messageSpan = document.createElement('span');
-      messageSpan.classList.add('log-message-content'); // Class for message content
-      messageSpan.textContent = message;
-
+      messageSpan.classList.add('log-message-content');
+      
+      // 添加图标
+      const iconSpan = document.createElement('span');
+      iconSpan.classList.add('log-icon');
+      
+      // 创建消息文本元素
+      const textSpan = document.createElement('span');
+      textSpan.textContent = message;
+      
+      // 根据消息内容和类型进行更细致的分类
+      let entryClass = '';
+      let icon = '';
+      
+      // 识别特定的日志类型和添加对应的图标
+      if (isFinalResult) {
+        // 最终结果使用特殊图标
+        if (type === 'success') {
+          icon = '<i class="fas fa-trophy"></i>';
+        } else {
+          icon = '<i class="fas fa-exclamation-circle"></i>';
+        }
+      } else if (message.match(/^-{3,}\s*开始执行.*操作/) || message.match(/^-{10,}$/)) {
+        // 主要分隔线或开始操作
+        entryClass = 'log-section';
+        icon = '<i class="fas fa-play"></i>';
+        type = 'status';
+      } else if (message.match(/^步骤\s+\d+\/\d+:/)) {
+        // 步骤标题
+        entryClass = 'log-step';
+        icon = '<i class="fas fa-angle-right"></i>';
+      } else if (message.includes('成功') || message.includes('✅')) {
+        entryClass = 'log-success-entry';
+        icon = '<i class="fas fa-check-circle"></i>';
+        type = 'success';
+      } else if (message.includes('错误') || message.includes('失败') || message.includes('❌')) {
+        entryClass = 'log-error-entry';
+        icon = '<i class="fas fa-times-circle"></i>';
+        type = 'error';
+      } else if (message.includes('警告')) {
+        entryClass = 'log-warning-entry';
+        icon = '<i class="fas fa-exclamation-triangle"></i>';
+        type = 'warning';
+      } else if (message.includes('尝试')) {
+        // 尝试消息
+        icon = '<i class="fas fa-sync-alt"></i>';
+      } else if (message.includes('排队')) {
+        // 排队相关
+        icon = '<i class="fas fa-clock"></i>';
+      } else if (message.includes('计划执行时间')) {
+        // 执行时间
+        icon = '<i class="fas fa-calendar-alt"></i>';
+      } else if (message.includes('WebSocket')) {
+        // WebSocket相关
+        icon = '<i class="fas fa-plug"></i>';
+      } else if (message.match(/^-{5,}$/)) {
+        // 短分隔线
+        icon = '<i class="fas fa-minus"></i>';
+      } else if (message.includes('[最终结果]') && !isFinalResult) {
+        // 非特殊处理的最终结果
+        entryClass = 'log-section';
+        if (type === 'success') {
+          entryClass = 'log-success-entry';
+          icon = '<i class="fas fa-trophy"></i>';
+        } else {
+          entryClass = 'log-error-entry';
+          icon = '<i class="fas fa-exclamation-circle"></i>';
+        }
+      } else {
+        // 默认图标
+        icon = '<i class="fas fa-info-circle"></i>';
+      }
+      
+      // 设置图标
+      iconSpan.innerHTML = icon;
+      
+      // 根据类型添加样式类
       switch (type) {
         case 'success':
-          messageSpan.classList.add('log-success');
+          textSpan.classList.add('log-success');
+          if (!entryClass && !isFinalResult) entryClass = 'log-success-entry';
+          // 显示成功通知
+          if (message.includes('成功') || message.includes('完成') || message.includes('✅')) {
+            showNotification('操作成功', message);
+          }
           break;
         case 'error':
-          messageSpan.classList.add('log-error');
+          textSpan.classList.add('log-error');
+          if (!entryClass && !isFinalResult) entryClass = 'log-error-entry';
+          // 显示错误通知
+          showNotification('操作失败', message);
           break;
         case 'warning':
-          messageSpan.classList.add('log-warning');
+          textSpan.classList.add('log-warning');
+          if (!entryClass && !isFinalResult) entryClass = 'log-warning-entry';
           break;
         default:
-          messageSpan.classList.add('log-status');
+          textSpan.classList.add('log-status');
       }
-
+      
+      // 添加特定的样式类
+      if (entryClass && !isFinalResult) {
+        entry.classList.add(entryClass);
+      }
+      
+      // 根据类型为最终结果添加特定类
+      if (isFinalResult) {
+        if (type === 'success') {
+          entry.classList.add('log-success-entry');
+        } else {
+          entry.classList.add('log-error-entry');
+        }
+      }
+      
+      // 组装日志条目
+      messageSpan.appendChild(iconSpan);
+      messageSpan.appendChild(textSpan);
       entry.appendChild(timestampSpan);
       entry.appendChild(messageSpan);
       logArea.appendChild(entry);
-      logArea.scrollTop = logArea.scrollHeight; // Auto-scroll to bottom
+      
+      // 确保每次添加日志后都滚动到底部
+      // 使用 requestAnimationFrame 确保在DOM更新后滚动
+      requestAnimationFrame(() => {
+        logArea.scrollTop = logArea.scrollHeight;
+      });
 
       // 检测倒计时消息并处理
       checkForCountdown(message);
@@ -504,36 +1149,73 @@
           let type = 'status';
 
           if (data.type === 'status') {
-            type = 'status';
-            if (message.toLowerCase().includes('错误') ||
-              message.toLowerCase().includes('失败') ||
-              message.toLowerCase().includes('超时') ||
-              message.toLowerCase().includes('无效') ||
-              message.toLowerCase().includes('err')) {
-              type = 'error';
-            } else if (message.toLowerCase().includes('警告') || message.toLowerCase().includes('warn')) {
-              type = 'warning';
-            } else if (message.toLowerCase().includes('成功') || message.toLowerCase().includes('ok')) {
+            // 检查是否包含座位信息的状态消息
+            if (message.includes('阅览室') || message.includes('座位')) {
+              const successInfo = parseSuccessMessage(message);
+              if (successInfo && successInfo.roomName && successInfo.seatNumber) {
+                showSuccessCard(
+                  successInfo.roomName,
+                  successInfo.seatNumber,
+                  successInfo.timeInfo || new Date().toLocaleString('zh-CN')
+                );
+              }
+            }
+            
+            if (message.toLowerCase().includes('*****')) {
               type = 'success';
             }
+            
+            addLogEntry(message, type);
+            setTimeout(() => {
+              logArea.scrollTop = logArea.scrollHeight;
+            }, 10);
           } else if (data.type === 'result') {
-            if (data.status === 'success') {
-              type = 'success';
-            } else {
-              type = 'error';
+            type = data.status === 'success' ? 'success' : 'error';
+            
+            if (data.status === 'success' || message.includes('成功')) {
+              const logEntries = Array.from(logArea.getElementsByClassName('log-entry'));
+              let latestRoomInfo = null;
+              let latestSeatInfo = null;
+              
+              for (let i = logEntries.length - 1; i >= 0; i--) {
+                const entryText = logEntries[i].textContent;
+                if (entryText.includes('阅览室') || entryText.includes('座位')) {
+                  const info = parseSuccessMessage(entryText);
+                  if (info) {
+                    if (!latestRoomInfo && info.roomName) latestRoomInfo = info.roomName;
+                    if (!latestSeatInfo && info.seatNumber) latestSeatInfo = info.seatNumber;
+                    if (latestRoomInfo && latestSeatInfo) break;
+                  }
+                }
+              }
+              
+              if (latestRoomInfo && latestSeatInfo) {
+                const timeStr = new Date().toLocaleString('zh-CN', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                });
+                
+                showSuccessCard(latestRoomInfo, latestSeatInfo, timeStr);
+              }
             }
+            
             message = `[最终结果] ${message}`;
             if (data.error_code) {
               message += ` (错误码: ${data.error_code})`;
             }
-            // Make sure to stop spinner or show completion in UI if any
-            stopCountdown(); // 确保任务结束时停止倒计时
+            
+            addLogEntry(message, type, true);
+            stopCountdown();
           } else if (data.type === 'cookie_update') {
-            type = 'success'; // Or a specific type for cookie updates
-            message = `[系统] ${message}`;
-            // We are not using auto cookie update in this version, but good to handle.
+            type = 'success';
+            message = `[Cookie 更新] 已成功获取新 Cookie`;
+            addLogEntry(message, type);
           }
-          addLogEntry(message, type);
         } catch (e) {
           console.error("Error parsing WebSocket message:", e);
           addLogEntry(`无法解析服务器消息: ${event.data}`, 'error');
@@ -558,6 +1240,9 @@
     document.addEventListener('DOMContentLoaded', function () {
       const urlParams = new URLSearchParams(window.location.search);
       const clientId = urlParams.get('clientId');
+
+      // Request notification permissions when page loads
+      requestNotificationPermission();
 
       if (clientId) {
         initialMessageContainer.classList.add('hidden');
@@ -603,6 +1288,162 @@
         }
       });
     }
+
+    // 更新随机鼓励语句数组
+    const encouragements = [
+      "今天也要加油学习哦！✨",
+      "知识就是力量，继续前进吧！💪",
+      "一步一个脚印，你正在变得更强！🌟",
+      "保持专注，你一定能实现目标！🎯",
+      "每一天的努力都在为未来铺路！🌈",
+      "静心学习，收获知识的果实！📚",
+      "今天的付出，是明天的收获！🌱",
+      "保持热爱，奔赴山海！⛰️",
+      "学习使人进步，加油！💡",
+      "愿你的努力都能开花结果！🌸",
+      "书山有路勤为径，学海无涯苦作舟！🚀",
+      "每一次专注都是对未来的投资！💫",
+      "让知识成为你最闪亮的光芒！⭐",
+      "坚持的人最美丽，奋斗的人最可爱！🌺"
+    ];
+
+    // 获取随机鼓励语
+    function getRandomEncouragement() {
+      return encouragements[Math.floor(Math.random() * encouragements.length)];
+    }
+
+    // 显示成功卡片
+    function showSuccessCard(roomName, seatNumber, timeInfo) {
+      const card = document.getElementById('successCard');
+      const roomInfoEl = document.getElementById('roomInfo');
+      const seatInfoEl = document.getElementById('seatInfo');
+      const timeInfoEl = document.getElementById('reserveTime');
+      const encouragementEl = document.getElementById('encouragementText');
+
+      timeInfoEl.textContent = timeInfo;
+      roomInfoEl.textContent = roomName;
+      seatInfoEl.textContent = seatNumber;
+      encouragementEl.textContent = getRandomEncouragement();
+
+      card.classList.add('show');
+
+      card.addEventListener('click', function(e) {
+        if (e.target === card) {
+          hideSuccessCard();
+        }
+      });
+    }
+
+    // 隐藏成功卡片
+    function hideSuccessCard() {
+      const card = document.getElementById('successCard');
+      card.classList.remove('show');
+    }
+
+    // 解析成功消息中的信息
+    function parseSuccessMessage(message) {
+      try {
+        // 更新正则表达式以匹配更多格式
+        const roomMatch = message.match(/阅览室[：:\s]*\(?([^,，\s)）]+(?:自习室|图书馆|阅览室)?)\)?/);
+        const seatMatch = message.match(/座位[：:\s]*\(?(\d+)\)?/);
+        const timeMatch = message.match(/时间[：:]\s*([^,，]+)/);
+        
+        const roomName = roomMatch ? roomMatch[1] : null;
+        const seatNumber = seatMatch ? seatMatch[1] : null;
+        
+        // 只有当真正找到了阅览室和座位号时才返回结果
+        if (roomName && seatNumber) {
+          return {
+            roomName: roomName,
+            seatNumber: seatNumber,
+            timeInfo: timeMatch ? timeMatch[1] : null
+          };
+        }
+        
+        // 如果常规匹配失败，尝试特殊格式匹配
+        if (!roomName || !seatNumber) {
+          // 匹配 "阅览室 (xxx自习室)" 格式
+          const specialRoomMatch = message.match(/阅览室\s*\(([^)]+)\)/);
+          // 匹配 "抢座 (座位 xxx)" 或 "预约 (座位 xxx)" 格式
+          const specialSeatMatch = message.match(/[抢预]座\s*\(座位\s*(\d+)\)/);
+          
+          if (specialRoomMatch || specialSeatMatch) {
+            return {
+              roomName: specialRoomMatch ? specialRoomMatch[1] : roomName,
+              seatNumber: specialSeatMatch ? specialSeatMatch[1] : seatNumber,
+              timeInfo: timeMatch ? timeMatch[1] : null
+            };
+          }
+        }
+        
+        return null;
+      } catch (e) {
+        console.error('Error parsing success message:', e);
+        return null;
+      }
+    }
+
+    // 添加 ESC 键关闭卡片功能
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        hideSuccessCard();
+      }
+    });
+
+    // Function to save reservation result
+    function saveReservationResult(result) {
+      if (result && result.roomName && result.seatNumber) {
+        const reservationData = {
+          roomName: result.roomName,
+          seatNumber: result.seatNumber,
+          timeInfo: result.timeInfo || new Date().toLocaleString('zh-CN'),
+          timestamp: new Date().getTime()
+        };
+        localStorage.setItem('lastReservationResult', JSON.stringify(reservationData));
+        updateViewResultButton();
+      }
+    }
+
+    // Function to load and show last reservation result
+    function loadAndShowLastResult() {
+      const savedData = localStorage.getItem('lastReservationResult');
+      if (savedData) {
+        try {
+          const data = JSON.parse(savedData);
+          showSuccessCard(data.roomName, data.seatNumber, data.timeInfo);
+        } catch (e) {
+          console.error('Error loading saved reservation result:', e);
+          alert('无法加载预约结果，请重新预约。');
+        }
+      } else {
+        alert('暂无预约记录。');
+      }
+    }
+
+    // Function to update view result button state
+    function updateViewResultButton() {
+      const viewResultButton = document.getElementById('view_result_button');
+      const hasResult = localStorage.getItem('lastReservationResult') !== null;
+      if (viewResultButton) {
+        viewResultButton.disabled = !hasResult;
+      }
+    }
+
+    // Update showSuccessCard function to save result
+    const originalShowSuccessCard = showSuccessCard;
+    showSuccessCard = function(roomName, seatNumber, timeInfo) {
+      originalShowSuccessCard(roomName, seatNumber, timeInfo);
+      saveReservationResult({ roomName, seatNumber, timeInfo });
+    };
+
+    // Add click handler for view result button
+    document.getElementById('view_result_button').addEventListener('click', loadAndShowLastResult);
+
+    // Call updateViewResultButton on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      updateViewResultButton();
+      // ... existing DOMContentLoaded code ...
+    });
   </script>
 </body>
 
