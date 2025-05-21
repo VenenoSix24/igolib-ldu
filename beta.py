@@ -65,7 +65,7 @@ WEBSOCKET_URL = 'wss://libseats.ldu.edu.cn/ws?ns=prereserve/queue'
 MAX_REQUEST_ATTEMPTS = 3 # Example: Set maximum request attempts
 SLEEP_INTERVAL_ON_FAIL = 0.5
 COOKIE_ERROR_PATTERN = r'Connection to remote host was lost|invalid session|请先登录|登陆|验证失败'
-TOMORROW_RESERVE_WINDOW_START = datetime.time(19, 48, 0) # Example window start
+TOMORROW_RESERVE_WINDOW_START = datetime.time(00, 00, 00) # Example window start
 TOMORROW_RESERVE_WINDOW_END = datetime.time(23, 59, 59) # Example window end
 DEFAULT_RESERVE_TIME_STR = "21:48:00"
 COOKIE_FILENAME = "latest_cookie.txt"
@@ -461,6 +461,12 @@ def calculate_execution_dt(time_str: str, check_window: bool = False) -> Optiona
     now_dt = datetime.datetime.now(); today_date = now_dt.date()
     try: exec_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
     except ValueError: print(f"错误: 时间格式无效 '{time_str}'"); return None
+    
+    # 特殊处理"00:00:01"，将其识别为"立即执行"的标志
+    if time_str == "00:00:01":
+        print(f"检测到特殊时间值 '{time_str}'，将其解释为'立即执行'")
+        return now_dt  # 返回当前时间，表示立即执行
+        
     exec_dt = datetime.datetime.combine(today_date, exec_time)
 
     if check_window:
@@ -997,6 +1003,12 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                 mode = values.get('mode'); time_str = v.strip()
                 if mode == 1:
                     if not time_str: raise ValueError('明日预约模式必须提供执行时间 (HH:MM:SS)')
+                    
+                    # 特殊处理明日预约模式下的"00:00:01"特殊值
+                    if time_str == "00:00:01":
+                        print(f"明日预约 - 检测到立即执行特殊时间值 '{time_str}'")
+                        return time_str  # 直接通过验证
+                        
                     if not validate_time_format(time_str): raise ValueError('时间格式错误')
                     exec_dt = calculate_execution_dt(time_str, check_window=True)
                     if exec_dt is None: raise ValueError(f"预约时间 '{time_str}' 无效或不在窗口内/已过")
@@ -1136,10 +1148,16 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                 raise HTTPException(status_code=404, detail=f"在 '{room_name}' 中未找到座位号 '{seat_number_as_key}'")
             print(f"查找成功: Room='{room_name}', SeatNo='{seat_number_as_key}' -> Key='{found_coordinate_key}'")
             start_action_dt_web = None
+            
             try:
                 if request.mode == 1:
-                    start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=True)
-                    if start_action_dt_web is None: raise ValueError(f"预约时间 '{request.timeStr}' 无效")
+                    if request.timeStr == "00:00:01":
+                        # 明日预约模式下，特殊处理"00:00:01"值
+                        print(f"明日预约 - API端点检测到立即执行特殊值 '{request.timeStr}'")
+                        start_action_dt_web = datetime.datetime.now()  # 设为当前时间，表示立即执行
+                    else:
+                        start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=True)
+                        if start_action_dt_web is None: raise ValueError(f"预约时间 '{request.timeStr}' 无效")
                 elif request.mode == 2 and request.timeStr:
                     start_action_dt_web = calculate_execution_dt(request.timeStr, check_window=False)
                     if start_action_dt_web is None: raise ValueError(f"抢座时间 '{request.timeStr}' 无效")
@@ -1175,7 +1193,7 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
             except Exception as e: print(f"WS 错误 for {client_id}: {type(e).__name__}"); manager.disconnect(client_id)
 
         @app.websocket("/ws_test_connection")
-        async def websocket_test_endpoint(websocket: WebSocket):
+        async def websocket_test_endpoint(websocket: WebSocket): # type: ignore
             await websocket.accept()
             print("Test WebSocket connection accepted and immediately closed by server.")
             # You can optionally send a message back to the client before closing if needed

@@ -149,6 +149,53 @@
       /* Ensure hidden means display none */
     }
 
+    /* 倒计时样式 */
+    .countdown-container {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: rgba(243, 244, 246, 0.95);
+      /* gray-100 with opacity */
+      padding: 0.5rem 1rem;
+      margin: -1rem -1rem 0.5rem -1rem;
+      border-bottom: 1px solid #e5e7eb;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: all 0.3s ease;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+    }
+
+    .countdown-container.active {
+      max-height: 3rem;
+      opacity: 1;
+    }
+
+    .countdown-container .countdown-timer {
+      color: #2563eb;
+      /* blue-600 */
+      font-weight: 600;
+      margin: 0 0.25rem;
+    }
+
+    html.dark .countdown-container {
+      background-color: rgba(31, 41, 55, 0.95);
+      /* dark gray-800 with opacity */
+      border-bottom-color: #4b5563;
+    }
+
+    html.dark .countdown-container .countdown-timer {
+      color: #3b82f6;
+      /* blue-500 in dark mode */
+    }
+
     @media (max-width: 640px) {
       body {
         padding: 0.5rem;
@@ -309,6 +356,11 @@
       <p class="text-gray-500">实时查看您的预约/抢座请求处理进度。</p>
     </div>
     <div id="status_log_area" class="hidden">
+      <!-- 添加倒计时显示区域 -->
+      <div id="countdown_container" class="countdown-container">
+        <i class="fas fa-clock mr-1"></i>
+        距离计划执行时间还有 <span id="countdown_timer" class="countdown-timer">0.0</span> 秒...
+      </div>
       <!-- Log messages will be appended here -->
     </div>
     <div id="initial_message_area" class="centered-message-container">
@@ -331,7 +383,10 @@
     const initialMessageContainer = document.getElementById('initial_message_area');
     const statusContainerMain = document.getElementById('statusContainerMain');
     const backToConfigButton = document.getElementById('back_to_config_button');
+    const countdownContainer = document.getElementById('countdown_container');
+    const countdownTimer = document.getElementById('countdown_timer');
     let socket = null;
+    let countdownInterval = null;
 
     function getCurrentTimestamp() {
       return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -367,6 +422,68 @@
       entry.appendChild(messageSpan);
       logArea.appendChild(entry);
       logArea.scrollTop = logArea.scrollHeight; // Auto-scroll to bottom
+
+      // 检测倒计时消息并处理
+      checkForCountdown(message);
+    }
+
+    // 检测倒计时消息并启动倒计时显示
+    function checkForCountdown(message) {
+      const countdownRegex = /距离计划执行时间还有\s+(\d+\.\d+)\s+秒/;
+      const match = message.match(countdownRegex);
+
+      if (match) {
+        const secondsLeft = parseFloat(match[1]);
+        startCountdown(secondsLeft);
+      } else if (message.includes("时间到") || message.includes("开始执行")) {
+        // 停止倒计时
+        stopCountdown();
+      }
+    }
+
+    // 启动倒计时
+    function startCountdown(initialSeconds) {
+      // 清除之前的倒计时
+      stopCountdown();
+
+      // 显示倒计时容器
+      if (countdownContainer) {
+        countdownContainer.classList.add('active');
+      }
+
+      // 设置初始值
+      if (countdownTimer) {
+        countdownTimer.textContent = initialSeconds.toFixed(1);
+      }
+
+      // 计算结束时间
+      const endTime = Date.now() + initialSeconds * 1000;
+
+      // 设置定时器
+      countdownInterval = setInterval(() => {
+        const secondsLeft = (endTime - Date.now()) / 1000;
+
+        if (secondsLeft <= 0) {
+          stopCountdown();
+          return;
+        }
+
+        if (countdownTimer) {
+          countdownTimer.textContent = secondsLeft.toFixed(1);
+        }
+      }, 100); // 每100毫秒更新一次，使倒计时更平滑
+    }
+
+    // 停止倒计时
+    function stopCountdown() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      if (countdownContainer) {
+        countdownContainer.classList.remove('active');
+      }
     }
 
     function connectWebSocket(clientId) {
@@ -410,6 +527,7 @@
               message += ` (错误码: ${data.error_code})`;
             }
             // Make sure to stop spinner or show completion in UI if any
+            stopCountdown(); // 确保任务结束时停止倒计时
           } else if (data.type === 'cookie_update') {
             type = 'success'; // Or a specific type for cookie updates
             message = `[系统] ${message}`;
@@ -425,6 +543,7 @@
       socket.onerror = function (event) {
         console.error('WebSocket Error:', event);
         addLogEntry('WebSocket 连接发生错误。请检查网络和服务器状态。', 'error');
+        stopCountdown(); // 出错时停止倒计时
       };
 
       socket.onclose = function (event) {
@@ -432,6 +551,7 @@
         let codeMsg = event.wasClean ? ` (Code: ${event.code})` : ` (Code: ${event.code}, unclean closure)`;
         addLogEntry(`WebSocket 连接已关闭${codeMsg}${reason}。`, 'warning');
         socket = null; // Reset socket variable
+        stopCountdown(); // 连接关闭时停止倒计时
       };
     }
 
@@ -472,6 +592,8 @@
         console.log("Closing WebSocket connection before page unload.");
         socket.close(1000, "Page unloaded"); // Graceful closure
       }
+      // 确保清理倒计时定时器
+      stopCountdown();
     });
 
     if (backToConfigButton) {

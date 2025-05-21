@@ -223,6 +223,20 @@
       z-index: 5;
     }
 
+    /* 执行时间开关的样式，与模式开关相同 */
+    .execution-time-switch-slider {
+      position: absolute;
+      top: 0.25rem;
+      left: 0.25rem;
+      bottom: 0.25rem;
+      width: calc(50% - 0.25rem);
+      background-color: #3b82f6;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: transform 0.3s ease-in-out;
+      z-index: 5;
+    }
+
     .sr-only {
       position: absolute;
       width: 1px;
@@ -486,6 +500,243 @@
     }
 
     /* #time_str (execution time) will use default text alignment (left) */
+
+    /* 改善移动设备上的显示效果 */
+    #scheduled_time_input {
+      transition: all 0.3s ease;
+    }
+
+    #custom_time_input {
+      font-size: 1rem;
+      text-align: center;
+      letter-spacing: 0.5px;
+      height: 48px;
+    }
+
+    @media (max-width: 640px) {
+      fieldset {
+        padding: 1rem;
+      }
+
+      legend {
+        font-size: 1rem;
+        padding: 0 0.25rem;
+      }
+
+      .mode-switch-option {
+        font-size: 0.8rem;
+      }
+
+      .mode-switch-option .fas {
+        margin-right: 0.25rem;
+      }
+
+      #custom_time_input {
+        font-size: 0.9rem;
+        height: 40px;
+      }
+
+      .submit-button {
+        padding: 0.6rem 1rem;
+      }
+    }
+
+    /* 改善时间输入框的显示效果 */
+    #scheduled_time_input {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    html.dark #scheduled_time_input {
+      background-color: #1f2937;
+    }
+
+    #custom_time_input {
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      font-family: monospace;
+    }
+
+    html.dark #custom_time_input {
+      background-color: #2d3748;
+      border-color: #4a5568;
+      color: #e2e8f0;
+    }
+
+    /* 改善移动设备上的显示效果 */
+    #custom_time_input_container {
+      transition: all 0.3s ease;
+    }
+
+    #custom_time_input {
+      font-size: 1rem;
+      text-align: center;
+      letter-spacing: 0.5px;
+      height: 48px;
+    }
+
+    /* 执行时间选项按钮样式 */
+    .time-option-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 0.5rem;
+      background-color: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #4b5563;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .time-option-button:hover {
+      background-color: #e5e7eb;
+    }
+
+    .time-option-button.active {
+      background-color: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    html.dark .time-option-button {
+      background-color: #1f2937;
+      border-color: #4a5568;
+      color: #d1d5db;
+    }
+
+    html.dark .time-option-button:hover {
+      background-color: #374151;
+    }
+
+    html.dark .time-option-button.active {
+      background-color: #3182ce;
+      border-color: #3182ce;
+      color: white;
+    }
+
+    /* 改善时间输入框的显示效果 */
+    #custom_time_input_container {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    html.dark #custom_time_input_container {
+      background-color: #1f2937;
+    }
+
+    #custom_time_input {
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      font-family: monospace;
+    }
+
+    html.dark #custom_time_input {
+      background-color: #2d3748;
+      border-color: #4a5568;
+      color: #e2e8f0;
+    }
+
+    @media (max-width: 640px) {
+      .time-option-button {
+        padding: 0.6rem 0.25rem;
+        font-size: 0.75rem;
+      }
+
+      .time-option-button .fas {
+        margin-right: 0.25rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* 执行时间选择器样式 - 滑块风格 */
+    .execution-mode-switch-container {
+      display: flex;
+      position: relative;
+      background-color: #e5e7eb;
+      border-radius: 8px;
+      padding: 0.25rem;
+      width: 100%;
+    }
+
+    .execution-mode-option {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.3s ease-in-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      color: #4b5563;
+    }
+
+    .execution-mode-option .fas {
+      margin-right: 0.25rem;
+    }
+
+    .execution-mode-option.text-selected {
+      color: white !important;
+      font-weight: 600;
+    }
+
+    .execution-mode-option.text-unselected {
+      color: #4b5563 !important;
+      font-weight: 400;
+    }
+
+    .execution-mode-option .fas.icon-selected {
+      color: white;
+    }
+
+    .execution-mode-option .fas.icon-unselected {
+      color: #6b7280;
+    }
+
+    .execution-mode-slider {
+      position: absolute;
+      top: 0.25rem;
+      left: 0.25rem;
+      bottom: 0.25rem;
+      width: calc(33.333% - 0.25rem);
+      background-color: #3b82f6;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: transform 0.3s ease-in-out;
+      z-index: 5;
+    }
+
+    /* 深色模式 */
+    html.dark .execution-mode-switch-container {
+      background-color: #1f2937;
+    }
+
+    html.dark .execution-mode-slider {
+      background-color: #3182ce;
+    }
+
+    @media (max-width: 640px) {
+      .execution-mode-option {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.25rem;
+      }
+
+      .execution-mode-option .fas {
+        margin-right: 0.15rem;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </head>
 
@@ -532,20 +783,31 @@
       <fieldset>
         <legend><i class="fas fa-calendar-check"></i>预约详情</legend>
         <div id="time_input_container" class="mt-3"> <!-- Added mt-3 for spacing from legend -->
-          <label for="time_str" class="form-label flex items-center"><i class="fas fa-clock mr-2 text-blue-500"></i>执行时间
-            (HH:MM:SS):</label>
-          <div class="input-icon-wrapper flex items-center relative">
-            <input type="time" id="time_str" name="timeStr" class="form-input flex-grow w-auto"
-              placeholder="例如: 19:48:00" step="1" required style="padding-right: 2.5rem;">
-            <button type="button" id="clear_time_button"
-              class="absolute right-0 top-1/2 transform -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 focus:outline-none rounded-full hover:bg-gray-100 transition-colors mr-2"
-              title="清除时间"
-              style="height: calc(100% - 4px); display: flex; align-items: center; justify-content: center;">
-              <i class="fas fa-times-circle text-md"></i>
-            </button>
+          <label class="form-label flex items-center"><i class="fas fa-clock mr-2 text-blue-500"></i>执行时间:</label>
+          <div class="time-option-container mt-2">
+            <div class="execution-mode-switch-container">
+              <input type="radio" name="execution_time" value="now" id="execution_now" class="sr-only" checked>
+              <input type="radio" name="execution_time" value="default" id="execution_default" class="sr-only">
+              <input type="radio" name="execution_time" value="custom" id="execution_custom" class="sr-only">
+
+              <label for="execution_now" id="label_execution_now" class="execution-mode-option">
+                <i class="fas fa-bolt"></i>立即执行
+              </label>
+              <label for="execution_default" id="label_execution_default" class="execution-mode-option">
+                <i class="fas fa-stopwatch"></i>21:48
+              </label>
+              <label for="execution_custom" id="label_execution_custom" class="execution-mode-option">
+                <i class="fas fa-clock"></i>定时执行
+              </label>
+
+              <div class="execution-mode-slider"></div>
+            </div>
           </div>
-          <p class="text-xs text-gray-500 mt-1">明日预约窗口: {{TOMORROW_RESERVE_WINDOW_START_STR | default('19:48:00')}} -
-            {{TOMORROW_RESERVE_WINDOW_END_STR | default('23:59:59')}}. 提示：明日预约模式下时间必填；立即抢座模式下可留空或指定时间。</p>
+          <div id="custom_time_input_container" class="mt-3 hidden">
+            <input type="time" id="custom_time_input" class="form-input" placeholder="自定义时间" step="1">
+            <p class="text-xs text-gray-500 mt-1">请输入您希望执行的时间 (HH:MM:SS)</p>
+          </div>
+          <input type="hidden" id="time_str" name="timeStr" value="">
           <p id="time_error" class="error-message hidden"></p>
         </div>
 
@@ -603,6 +865,15 @@
     const labelModeTomorrow = document.getElementById('label_mode_tomorrow');
     const labelModeInstant = document.getElementById('label_mode_instant');
     const modeSlider = document.querySelector('.mode-switch-slider');
+
+    // 执行时间开关元素
+    const executionNowRadio = document.getElementById('execution_now');
+    const executionDefaultRadio = document.getElementById('execution_default');
+    const executionCustomRadio = document.getElementById('execution_custom');
+    const labelExecutionNow = document.getElementById('label_execution_now');
+    const labelExecutionDefault = document.getElementById('label_execution_default');
+    const labelExecutionCustom = document.getElementById('label_execution_custom');
+    const customTimeInputContainer = document.getElementById('custom_time_input_container');
 
     // Time Clear Button Element
     const clearTimeButton = document.getElementById('clear_time_button');
@@ -664,6 +935,54 @@
         if (window.setAppTheme) window.setAppTheme(currentTheme);
       } else {
         console.warn("Could not get initial theme from parent for page_config.html on DOMContentLoaded");
+      }
+
+      const footer = document.querySelector('.app-footer');
+      const initialPage = pages[currentPageIndex];
+
+      if (initialPage === 'page_welcome.html' || initialPage === 'page_status.html') {
+        if (footer) footer.style.display = 'none';
+        document.body.classList.add('full-height-content');
+        iframe.style.height = '100%';
+      } else {
+        if (footer) footer.style.display = 'block';
+        document.body.classList.remove('full-height-content');
+        // Config page will use dynamic height calculation
+      }
+
+      // 初始化执行时间选项UI
+      updateExecutionTimeVisuals();
+
+      // 设置自定义时间输入框默认值并添加特殊处理
+      const customTimeInput = document.getElementById('custom_time_input');
+      if (customTimeInput) {
+        // 添加失去焦点时处理iOS时间格式
+        customTimeInput.addEventListener('blur', function () {
+          if (this.value) {
+            // 如果缺少秒，自动补全
+            const timeParts = this.value.split(':');
+            if (timeParts.length === 2) {
+              this.value = this.value + ':00';
+              console.log("iOS设备时间输入补全秒数:", this.value);
+              saveFormDataToLocalStorage();
+            }
+          }
+        });
+
+        customTimeInput.addEventListener('input', saveFormDataToLocalStorage);
+        customTimeInput.value = '21:48:00';
+      }
+
+      // 检测设备类型，显示提示
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      if (isIOS && customTimeInput) {
+        const container = document.getElementById('custom_time_input_container');
+        if (container) {
+          const iosHint = document.createElement('p');
+          iosHint.className = 'text-xs text-yellow-500 mt-1';
+          iosHint.innerHTML = '<i class="fas fa-info-circle mr-1"></i>iOS设备提示: 如时间选择器无法选择秒，系统将自动补全为":00"';
+          container.appendChild(iosHint);
+        }
       }
     });
 
@@ -766,7 +1085,26 @@
           updateModeSwitchVisuals();
 
           cookieStrInput.value = savedData.cookieStr || '';
-          timeStrInput.value = savedData.timeStr || '';
+
+          // 处理执行时间选项
+          if (savedData.timeStr === '00:00:01') {
+            // 立即执行
+            executionNowRadio.checked = true;
+          } else if (savedData.timeStr === '21:48:00') {
+            // 默认时间执行
+            executionDefaultRadio.checked = true;
+          } else if (savedData.timeStr) {
+            // 自定义时间执行
+            executionCustomRadio.checked = true;
+            // 设置自定义时间输入框
+            const customTimeInput = document.getElementById('custom_time_input');
+            if (customTimeInput) customTimeInput.value = savedData.timeStr;
+          } else {
+            // 如果没有时间值，默认选择立即执行
+            executionNowRadio.checked = true;
+          }
+          updateExecutionTimeVisuals();
+
           // For libId, ensure it's set after libraries are loaded if it depends on dynamic options
           // We will call applySavedLibId separately after loadLibraries completes.
           seatNumberInput.value = savedData.seatNumber || '';
@@ -865,6 +1203,64 @@
       toggleTimeInput();
     }
 
+    function updateExecutionTimeVisuals() {
+      const iconNow = labelExecutionNow.querySelector('.fas');
+      const iconDefault = labelExecutionDefault.querySelector('.fas');
+      const iconCustom = labelExecutionCustom.querySelector('.fas');
+      const slider = document.querySelector('.execution-mode-slider');
+
+      // 重置所有样式
+      [labelExecutionNow, labelExecutionDefault, labelExecutionCustom].forEach(label => {
+        label.classList.remove('text-selected');
+        label.classList.add('text-unselected');
+      });
+
+      [iconNow, iconDefault, iconCustom].forEach(icon => {
+        if (icon) {
+          icon.classList.remove('icon-selected');
+          icon.classList.add('icon-unselected');
+        }
+      });
+
+      // 隐藏自定义时间输入框
+      if (customTimeInputContainer) {
+        customTimeInputContainer.classList.add('hidden');
+      }
+
+      if (executionNowRadio.checked) {
+        // 立即执行
+        slider.style.transform = 'translateX(0%)';
+        labelExecutionNow.classList.add('text-selected');
+        labelExecutionNow.classList.remove('text-unselected');
+        if (iconNow) {
+          iconNow.classList.add('icon-selected');
+          iconNow.classList.remove('icon-unselected');
+        }
+      } else if (executionDefaultRadio.checked) {
+        // 默认时间执行
+        slider.style.transform = 'translateX(100%)';
+        labelExecutionDefault.classList.add('text-selected');
+        labelExecutionDefault.classList.remove('text-unselected');
+        if (iconDefault) {
+          iconDefault.classList.add('icon-selected');
+          iconDefault.classList.remove('icon-unselected');
+        }
+      } else if (executionCustomRadio.checked) {
+        // 自定义时间执行
+        slider.style.transform = 'translateX(200%)';
+        labelExecutionCustom.classList.add('text-selected');
+        labelExecutionCustom.classList.remove('text-unselected');
+        if (iconCustom) {
+          iconCustom.classList.add('icon-selected');
+          iconCustom.classList.remove('icon-unselected');
+        }
+        // 显示自定义时间输入框
+        if (customTimeInputContainer) {
+          customTimeInputContainer.classList.remove('hidden');
+        }
+      }
+    }
+
     async function loadLibraries() {
       try {
         const response = await fetch(`${API_URL}/mappings`);
@@ -916,20 +1312,47 @@
       }
 
       const selectedMode = document.querySelector('input[name="mode"]:checked').value;
-      if (selectedMode === '1') {
-        if (!timeStrInput.value.trim()) {
-          timeError.textContent = '明日预约模式必须填写执行时间。';
-          timeError.classList.remove('hidden');
-          isValid = false;
-        } else if (!validateTimeFormat(timeStrInput.value.trim())) {
-          timeError.textContent = '时间格式必须为 HH:MM 或 HH:MM:SS。';
-          timeError.classList.remove('hidden');
-          isValid = false;
+      const customTimeInput = document.getElementById('custom_time_input');
+
+      // 更新隐藏的时间字段值
+      if (selectedMode === '1') { // 明日预约模式
+        if (executionNowRadio.checked) {
+          // 立即执行，设置特殊值
+          timeStrInput.value = '00:00:01';
+        } else if (executionDefaultRadio.checked) {
+          // 默认时间
+          timeStrInput.value = '21:48:00';
+        } else if (executionCustomRadio.checked) {
+          // 自定义时间
+          if (customTimeInput && customTimeInput.value) {
+            // 处理iOS设备时间输入格式问题
+            timeStrInput.value = processTimeInput(customTimeInput.value);
+          } else {
+            timeError.textContent = '请输入自定义时间。';
+            timeError.classList.remove('hidden');
+            isValid = false;
+            return isValid;
+          }
         }
-      } else if (timeStrInput.value.trim() && !validateTimeFormat(timeStrInput.value.trim())) {
-        timeError.textContent = '时间格式必须为 HH:MM 或 HH:MM:SS，或留空。';
-        timeError.classList.remove('hidden');
-        isValid = false;
+      } else { // 立即抢座模式
+        if (executionNowRadio.checked) {
+          // 立即执行
+          timeStrInput.value = '';
+        } else if (executionDefaultRadio.checked) {
+          // 默认时间
+          timeStrInput.value = '21:48:00';
+        } else if (executionCustomRadio.checked) {
+          // 自定义时间
+          if (customTimeInput && customTimeInput.value) {
+            // 处理iOS设备时间输入格式问题
+            timeStrInput.value = processTimeInput(customTimeInput.value);
+          } else {
+            timeError.textContent = '请输入自定义时间。';
+            timeError.classList.remove('hidden');
+            isValid = false;
+            return isValid;
+          }
+        }
       }
 
       if (!libIdSelect.value) {
@@ -944,6 +1367,30 @@
         isValid = false;
       }
       return isValid;
+    }
+
+    // 处理时间输入，特别是处理iOS设备上没有秒的问题
+    function processTimeInput(timeValue) {
+      if (!timeValue) return '';
+
+      // 检查是否为iOS设备
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+      // 检查时间格式
+      const timeParts = timeValue.split(':');
+
+      if (timeParts.length === 2) {
+        // 只有时和分，没有秒（iOS设备常见）
+        console.log("检测到iOS格式时间输入，自动补全秒数");
+        return timeValue + ':00';
+      } else if (timeParts.length === 3) {
+        // 已经是完整格式，包含秒
+        return timeValue;
+      } else {
+        // 异常格式，返回原值
+        console.warn("时间格式异常:", timeValue);
+        return timeValue;
+      }
     }
 
     form.addEventListener('submit', async function (event) {
@@ -1012,18 +1459,25 @@
       saveFormDataToLocalStorage();
       autoResizeTextarea(cookieStrInput); // Auto-resize on input
     });
-    timeStrInput.addEventListener('input', saveFormDataToLocalStorage);
+    //timeStrInput.addEventListener('input', saveFormDataToLocalStorage);
     libIdSelect.addEventListener('change', saveFormDataToLocalStorage);
     seatNumberInput.addEventListener('input', saveFormDataToLocalStorage);
 
-    // Event listener for the clear time button
-    if (clearTimeButton) { // Check if element exists before adding listener
-      clearTimeButton.addEventListener('click', () => {
-        timeStrInput.value = '';
-        // Optionally, you might want to trigger a change or input event if other logic depends on it
-        // timeStrInput.dispatchEvent(new Event('input')); 
-      });
-    }
+    // 执行时间选择器的事件监听
+    executionNowRadio.addEventListener('change', () => {
+      updateExecutionTimeVisuals();
+      saveFormDataToLocalStorage();
+    });
+
+    executionDefaultRadio.addEventListener('change', () => {
+      updateExecutionTimeVisuals();
+      saveFormDataToLocalStorage();
+    });
+
+    executionCustomRadio.addEventListener('change', () => {
+      updateExecutionTimeVisuals();
+      saveFormDataToLocalStorage();
+    });
 
     // Function to set theme (called by parent or on initial load)
     window.setAppTheme = function (theme) {
@@ -1033,6 +1487,9 @@
         document.documentElement.classList.remove('dark');
       }
     };
+
+    loadInitialTheme();
+    loadPage(currentPageIndex);
   </script>
 </body>
 
