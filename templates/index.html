@@ -101,6 +101,7 @@
             width: 100%;
             -webkit-overflow-scrolling: touch;
             overflow: hidden;
+            flex-direction: column;
         }
 
         iframe {
@@ -108,6 +109,7 @@
             width: 100%;
             height: 100%;
             min-height: 0;
+            flex-grow: 1;
         }
 
         .nav-controls-container {
@@ -160,84 +162,157 @@
         }
 
         .app-footer {
-            background-color: #f8f9fa;
-            /* 更浅的背景色，更现代的风格 */
-            color: #4A5568;
-            /* Tailwind gray-700 for text */
-            padding: 0.75rem 1rem;
-            /* Reduced padding */
+            background-color: #ffffff;
+            padding: 0.5rem 1rem;
             text-align: center;
-            font-size: 0.875rem;
-            /* Adjusted font size */
-            border-top: 1px solid #E2E8F0;
-            /* Tailwind gray-300 for border */
+            font-size: 0.75rem;
+            color: #333;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.05);
             width: 100%;
-            z-index: 900;
-            margin-top: 0;
-            transition: background-color 0.3s ease, color 0.3s ease, border-top-color 0.3s ease;
+            z-index: 100;
+            position: relative;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid #E2E8F0;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
             height: auto;
+            margin-top: auto;
             display: none;
             /* Hidden by default, will be controlled by JS */
         }
 
         html.dark .app-footer {
-            background-color: #1a202c;
-            /* 更深的暗色调，更符合暗色主题 */
-            color: #A0AEC0;
-            /* Tailwind gray-400 for dark mode text */
-            border-top-color: #2D3748;
-            /* Tailwind gray-700 for dark mode border */
+            background-color: #2d3748;
+            color: #e2e8f0;
+            box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.15);
+            border-top-color: #4A5568;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 1rem;
+        }
+
+        .footer-content p {
+            margin: 0.5rem 0;
+            letter-spacing: 0.02em;
+            font-weight: 500;
+        }
+
+        .footer-content p:last-child {
+            font-size: 0.7rem;
+            opacity: 0.75;
+            margin-top: 0.3rem;
+        }
+
+        .footer-content .footer-links {
+            margin-bottom: 0.4rem;
+        }
+
+        .footer-icons {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 0.4rem 0;
         }
 
         .footer-content a,
         .footer-content .footer-icon-link {
-            color: #3182CE;
-            /* 更亮的蓝色链接 - Tailwind blue-600 */
+            color: #4A90E2;
             text-decoration: none;
             margin: 0 0.5rem;
-            transition: color 0.2s ease-in-out;
+            transition: all 0.25s ease;
+            position: relative;
+            padding: 0.2rem 0.1rem;
+            font-weight: 500;
         }
 
         html.dark .footer-content a,
         html.dark .footer-content .footer-icon-link {
-            color: #4299E1;
-            /* 更亮的深色模式链接 - Tailwind blue-500 */
+            color: #63B3ED;
         }
 
         .footer-content a:hover,
         .footer-content .footer-icon-link:hover {
-            color: #2C5282;
-            /* 更深的蓝色悬停状态 - Tailwind blue-800 */
-            text-decoration: none;
+            color: #357ABD;
+            transform: translateY(-2px);
         }
 
         html.dark .footer-content a:hover,
         html.dark .footer-content .footer-icon-link:hover {
-            color: #63B3ED;
-            /* 更亮的深色模式悬停状态 - Tailwind blue-400 */
+            color: #90CDF4;
+        }
+
+        .footer-content a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 1px;
+            background-color: currentColor;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease;
+        }
+
+        .footer-content a:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
         }
 
         .footer-links span {
             margin: 0 0.25rem;
             color: #CBD5E0;
-            /* 更浅的分隔符颜色 - Tailwind gray-300 */
+            font-size: 0.9em;
         }
 
         html.dark .footer-links span {
             color: #4A5568;
-            /* 更深的深色模式分隔符 - Tailwind gray-600 */
+        }
+
+        .footer-icon-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+            border-radius: 50%;
+            background-color: rgba(74, 144, 226, 0.1);
+            height: 1.75rem;
+            width: 1.75rem;
+            margin: 0 0.3rem;
+            transition: all 0.3s ease;
+        }
+
+        html.dark .footer-icon-link {
+            background-color: rgba(99, 179, 237, 0.1);
+        }
+
+        .footer-icon-link:hover {
+            background-color: rgba(74, 144, 226, 0.2);
+            box-shadow: 0 4px 6px rgba(74, 144, 226, 0.2);
+        }
+
+        html.dark .footer-icon-link:hover {
+            background-color: rgba(99, 179, 237, 0.2);
+            box-shadow: 0 4px 6px rgba(99, 179, 237, 0.2);
         }
 
         .footer-icon-link .fa-lg {
-            font-size: 1.25rem;
-            /* 稍微增大图标尺寸 */
-            vertical-align: middle;
+            font-size: 0.9rem;
             transition: transform 0.2s ease-in-out;
         }
 
         .footer-icon-link:hover .fa-lg {
-            transform: translateY(-2px);
-            /* 悬停时图标轻微上移，增加互动感 */
+            transform: scale(1.1);
         }
 
         /* 针对欢迎页和状态页的特殊样式，使内容区域占满整个高度 */
@@ -251,19 +326,22 @@
         body.full-height-content .main-content {
             flex: 1;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         body.full-height-content iframe {
             height: 100%;
             border: none;
             overflow: auto;
+            flex-grow: 1;
         }
     </style>
 </head>
 
 <body>
     <header class="app-header">
-        <span class="app-title">我去抢个座 V3.0.5</span>
+        <span class="app-title">我去抢个座 V3.0</span>
         <button id="theme_toggle_button" title="切换主题">
             <i class="fas fa-moon"></i>
         </button>
@@ -275,24 +353,25 @@
 
     <footer class="app-footer">
         <div class="footer-content">
-            <p class="mb-2">&copy; 2025 我去抢个座. 保留所有权利.</p>
             <p class="footer-links">
                 <a href="#" class="hover:text-blue-700 dark:hover:text-blue-400">关于我们</a>
                 <span>|</span>
                 <a href="#" class="hover:text-blue-700 dark:hover:text-blue-400">隐私策略</a>
                 <span>|</span>
-                <a href="mailto:3405395460@qq.com" class="footer-icon-link" title="联系作者">
-                    <i class="fas fa-envelope fa-lg text-blue-500"></i>
-                </a>
-                <span>|</span>
-                <a href="https://github.com/VenenoSix24" target="_blank" class="footer-icon-link" title="GitHub">
-                    <i class="fab fa-github fa-lg text-gray-700 dark:text-gray-300"></i>
-                </a>
-                <span>|</span>
-                <a href="https://kawaii.776624.xyz" target="_blank" class="footer-icon-link" title="博客">
-                    <i class="fas fa-blog fa-lg text-green-600 dark:text-green-400"></i>
-                </a>
+                <a href="#" class="hover:text-blue-700 dark:hover:text-blue-400">使用条款</a>
             </p>
+            <div class="footer-icons">
+                <a href="mailto:3405395460@qq.com" class="footer-icon-link" title="联系作者">
+                    <i class="fas fa-envelope fa-lg"></i>
+                </a>
+                <a href="https://github.com/VenenoSix24" target="_blank" class="footer-icon-link" title="GitHub">
+                    <i class="fab fa-github fa-lg"></i>
+                </a>
+                <a href="https://kawaii.776624.xyz" target="_blank" class="footer-icon-link" title="博客">
+                    <i class="fas fa-blog fa-lg"></i>
+                </a>
+            </div>
+            <p>&copy; 2025 我去抢个座</p>
         </div>
     </footer>
 
@@ -459,12 +538,23 @@
                 retryThemeSet();
 
                 // Update page layout
+                const appFooter = document.querySelector('.app-footer');
+                const appHeader = document.querySelector('.app-header');
+                
                 if (targetPagePath === 'page_welcome.html' || targetPagePath === 'page_status.html') {
-                    document.querySelector('.app-footer').style.display = 'none';
+                    if (appFooter) appFooter.style.display = 'none';
                     iframe.style.height = '100%';
                     document.body.classList.add('full-height-content');
+                    
+                    // Hide app-header only for welcome page
+                    if (targetPagePath === 'page_welcome.html' && appHeader) {
+                        appHeader.style.display = 'none';
+                    } else if (appHeader) {
+                        appHeader.style.display = 'flex';
+                    }
                 } else {
-                    document.querySelector('.app-footer').style.display = 'block';
+                    if (appFooter) appFooter.style.display = 'flex';
+                    if (appHeader) appHeader.style.display = 'flex';
                     document.body.classList.remove('full-height-content');
                     resizeIframeToFitContent(iframe);
                 }
@@ -524,14 +614,23 @@
         // Initialize layout and footer visibility based on the initial page
         document.addEventListener('DOMContentLoaded', () => {
             const footer = document.querySelector('.app-footer');
+            const header = document.querySelector('.app-header');
             const initialPage = pages[currentPageIndex];
 
             if (initialPage === 'page_welcome.html' || initialPage === 'page_status.html') {
                 if (footer) footer.style.display = 'none';
                 document.body.classList.add('full-height-content');
                 iframe.style.height = '100%';
+                
+                // Hide app-header only for welcome page
+                if (initialPage === 'page_welcome.html' && header) {
+                    header.style.display = 'none';
+                } else if (header) {
+                    header.style.display = 'flex';
+                }
             } else {
-                if (footer) footer.style.display = 'block';
+                if (footer) footer.style.display = 'flex';
+                if (header) header.style.display = 'flex';
                 document.body.classList.remove('full-height-content');
                 // Config page will use dynamic height calculation
             }

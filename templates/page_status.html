@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>操作状态 - 我去抢个座</title>
+  <title>操作状态 - 图书馆抢座系统</title>
   <link rel="shortcut icon" href="/static/images/favicon/favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="/static/images/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon/favicon-32x32.png">
@@ -58,155 +58,109 @@
     }
 
     #status_log_area {
-      background-color: #f9fafb;
-      /* Gray-50 for log background */
-      border: 1px solid #e5e7eb;
-      /* Gray-200 */
-      border-radius: 8px;
+      background-color: rgb(249 250 251);
+      border: none;
+      border-radius: 0.75rem;
       padding: 1rem;
       height: 55vh;
-      /* Fixed height relative to viewport height */
       overflow-y: auto;
-      font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.875rem;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       line-height: 1.6;
-      color: #1f2937;
-      /* Gray-800 */
       min-height: 200px;
-      /* Minimum height for the log area */
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    }
+
+    html.dark #status_log_area {
+      background-color: rgb(17 24 39);
     }
 
     .log-entry {
-      padding: 0.45rem 0.6rem;
-      margin-bottom: 0.3rem;
-      border-left: 3px solid transparent;
-      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+      padding: 0.5rem 1rem;
+      margin-bottom: 0.5rem;
       display: flex;
-      /* For aligning timestamp and message */
+      align-items: center;
       word-break: break-all;
-      /* Prevent long strings from breaking layout */
-      transition: background-color 0.2s;
-      border-radius: 4px;
+      transition: all 0.3s ease-in-out;
+      border-radius: 0.5rem;
+      border-left-width: 4px;
+      transform: scale(1);
     }
     
     .log-entry:hover {
-      background-color: rgba(243, 244, 246, 0.7);
+      transform: scale(1.02);
     }
 
-    .log-entry:last-child {
-      border-bottom: none;
-      background-color: rgba(243, 244, 246, 0.4);
-    }
-
-    .log-status {
-      color: #4b5563;
-      /* Gray-600 */
-    }
-    
-    .log-entry.log-step {
-      background-color: #f3f4f6;
-      border-left-color: #60a5fa;
-      font-weight: 600;
-    }
-    
-    .log-entry.log-section {
-      background-color: #e5e7eb;
-      padding-top: 0.6rem;
-      padding-bottom: 0.6rem;
-      margin-top: 0.4rem;
-      margin-bottom: 0.4rem;
-      border-left-color: #4b5563;
-    }
-
-    .log-success {
-      color: #10B981;
-      /* Green-500 */
-      font-weight: bold;
-    }
-    
+    /* Success log entry */
     .log-entry.log-success-entry {
-      border-left-color: #10B981;
-      background-color: rgba(16, 185, 129, 0.1);
-    }
-
-    .log-error {
-      color: #EF4444;
-      /* Red-500 */
-      font-weight: bold;
+      background-color: rgb(220 252 231);
+      border-left-color: rgb(34 197 94);
+      color: rgb(21 128 61);
     }
     
-    .log-entry.log-error-entry {
-      border-left-color: #EF4444;
-      background-color: rgba(239, 68, 68, 0.1);
+    html.dark .log-entry.log-success-entry {
+      background-color: rgb(20 83 45);
+      border-left-color: rgb(34 197 94);
+      color: rgb(187 247 208);
     }
 
-    .log-warning {
-      color: #F59E0B;
-      /* Amber-500 */
-      font-weight: 600;
-      /* Slightly bolder for warnings */
+    /* Info/Status log entry */
+    .log-entry.log-step {
+      background-color: rgb(219 234 254);
+      border-left-color: rgb(59 130 246);
+      color: rgb(29 78 216);
     }
     
+    html.dark .log-entry.log-step {
+      background-color: rgb(30 58 138);
+      border-left-color: rgb(59 130 246);
+      color: rgb(191 219 254);
+    }
+
+    /* Warning log entry */
     .log-entry.log-warning-entry {
-      border-left-color: #F59E0B;
-      background-color: rgba(245, 158, 11, 0.1);
+      background-color: rgb(254 249 195);
+      border-left-color: rgb(234 179 8);
+      color: rgb(161 98 7);
+    }
+    
+    html.dark .log-entry.log-warning-entry {
+      background-color: rgb(113 63 18);
+      border-left-color: rgb(234 179 8);
+      color: rgb(254 249 195);
     }
 
-    .log-timestamp {
-      color: #6b7280;
-      /* Gray-500 */
-      font-size: 0.75rem;
-      margin-right: 0.75rem;
-      white-space: nowrap;
-      /* Prevent timestamp from wrapping */
+    /* Error log entry */
+    .log-entry.log-error-entry {
+      background-color: rgb(254 226 226);
+      border-left-color: rgb(239 68 68);
+      color: rgb(185 28 28);
+    }
+    
+    html.dark .log-entry.log-error-entry {
+      background-color: rgb(127 29 29);
+      border-left-color: rgb(239 68 68);
+      color: rgb(254 226 226);
+    }
+
+    .log-icon {
+      height: 1.25rem;
+      width: 1.25rem;
       flex-shrink: 0;
-      /* Prevent timestamp from shrinking */
+      margin-right: 0.5rem;
     }
 
     .log-message-content {
       flex-grow: 1;
-      display: flex;
-      align-items: center;
+      font-size: 0.875rem;
+      font-weight: 600;
     }
-    
-    .log-icon {
-      margin-right: 0.5rem;
-      width: 16px;
-      text-align: center;
-    }
-    
-    /* 更新暗黑模式样式 */
-    html.dark .log-entry:hover {
-      background-color: rgba(55, 65, 81, 0.5);
-    }
-    
-    html.dark .log-entry:last-child {
-      background-color: rgba(55, 65, 81, 0.3);
-    }
-    
-    html.dark .log-entry.log-step {
-      background-color: rgba(31, 41, 55, 0.8); 
-      border-left-color: #3b82f6;
-    }
-    
-    html.dark .log-entry.log-section {
-      background-color: rgba(31, 41, 55, 0.9);
-      border-left-color: #9ca3af;
-    }
-    
-    html.dark .log-entry.log-success-entry {
-      border-left-color: #10B981;
-      background-color: rgba(16, 185, 129, 0.15);
-    }
-    
-    html.dark .log-entry.log-error-entry {
-      border-left-color: #EF4444;
-      background-color: rgba(239, 68, 68, 0.15);
-    }
-    
-    html.dark .log-entry.log-warning-entry {
-      border-left-color: #F59E0B;
-      background-color: rgba(245, 158, 11, 0.15);
+
+    .log-timestamp {
+      font-size: 0.75rem;
+      margin-right: 0.75rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      opacity: 0.8;
     }
 
     .centered-message-container {
@@ -1153,11 +1107,12 @@
             if (message.includes('阅览室') || message.includes('座位')) {
               const successInfo = parseSuccessMessage(message);
               if (successInfo && successInfo.roomName && successInfo.seatNumber) {
-                showSuccessCard(
-                  successInfo.roomName,
-                  successInfo.seatNumber,
-                  successInfo.timeInfo || new Date().toLocaleString('zh-CN')
-                );
+                // 不在这里立即显示成功卡片，只在确认最终结果是成功时保存信息
+                // showSuccessCard(
+                //   successInfo.roomName,
+                //   successInfo.seatNumber,
+                //   successInfo.timeInfo || new Date().toLocaleString('zh-CN')
+                // );
               }
             }
             
@@ -1172,7 +1127,7 @@
           } else if (data.type === 'result') {
             type = data.status === 'success' ? 'success' : 'error';
             
-            if (data.status === 'success' || message.includes('成功')) {
+            if (data.status === 'success' && (message.includes('成功') || !message.includes('失败'))) {
               const logEntries = Array.from(logArea.getElementsByClassName('log-entry'));
               let latestRoomInfo = null;
               let latestSeatInfo = null;
@@ -1200,8 +1155,24 @@
                   hour12: false
                 });
                 
+                // 保存并显示成功卡片
+                saveReservationResult({
+                  roomName: latestRoomInfo,
+                  seatNumber: latestSeatInfo,
+                  timeInfo: timeStr
+                });
                 showSuccessCard(latestRoomInfo, latestSeatInfo, timeStr);
+                // 启用"查看预约结果"按钮
+                document.getElementById('view_result_button').disabled = false;
+              } else {
+                // 预约成功但没有找到详细信息
+                document.getElementById('view_result_button').disabled = true;
               }
+            } else {
+              // 预约失败，禁用"查看预约结果"按钮
+              document.getElementById('view_result_button').disabled = true;
+              // 清除上一次预约结果
+              localStorage.removeItem('lastReservationResult');
             }
             
             message = `[最终结果] ${message}`;
@@ -1397,7 +1368,8 @@
           roomName: result.roomName,
           seatNumber: result.seatNumber,
           timeInfo: result.timeInfo || new Date().toLocaleString('zh-CN'),
-          timestamp: new Date().getTime()
+          timestamp: new Date().getTime(),
+          isSuccess: true // 标记为成功的预约
         };
         localStorage.setItem('lastReservationResult', JSON.stringify(reservationData));
         updateViewResultButton();
@@ -1410,7 +1382,12 @@
       if (savedData) {
         try {
           const data = JSON.parse(savedData);
-          showSuccessCard(data.roomName, data.seatNumber, data.timeInfo);
+          // 只有当结果被标记为成功时才显示
+          if (data.isSuccess === true) {
+            showSuccessCard(data.roomName, data.seatNumber, data.timeInfo);
+          } else {
+            alert('没有成功的预约记录。');
+          }
         } catch (e) {
           console.error('Error loading saved reservation result:', e);
           alert('无法加载预约结果，请重新预约。');
@@ -1423,9 +1400,18 @@
     // Function to update view result button state
     function updateViewResultButton() {
       const viewResultButton = document.getElementById('view_result_button');
-      const hasResult = localStorage.getItem('lastReservationResult') !== null;
-      if (viewResultButton) {
-        viewResultButton.disabled = !hasResult;
+      try {
+        const savedData = localStorage.getItem('lastReservationResult');
+        // 只有当存在成功的预约记录时才启用按钮
+        const hasResult = savedData !== null && JSON.parse(savedData).isSuccess === true;
+        if (viewResultButton) {
+          viewResultButton.disabled = !hasResult;
+        }
+      } catch (e) {
+        // 解析出错，将按钮设为禁用
+        if (viewResultButton) {
+          viewResultButton.disabled = true;
+        }
       }
     }
 
@@ -1433,7 +1419,7 @@
     const originalShowSuccessCard = showSuccessCard;
     showSuccessCard = function(roomName, seatNumber, timeInfo) {
       originalShowSuccessCard(roomName, seatNumber, timeInfo);
-      saveReservationResult({ roomName, seatNumber, timeInfo });
+      // saveReservationResult调用已经移到其他地方，这里不再重复调用
     };
 
     // Add click handler for view result button

@@ -91,28 +91,69 @@
     }
 
     .submit-button {
-      background-color: #28a745;
-      /* Green for submit */
+      background-color: #4A90E2;
+      /* Blue for submit, matching the app theme */
       color: white;
       padding: 0.75rem 1.5rem;
       border-radius: 8px;
       font-weight: bold;
       width: 100%;
-      transition: background-color 0.3s ease;
+      transition: all 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .submit-button:hover {
-      background-color: #218838;
-      /* Darker green */
+      background-color: #357ABD;
+      /* Darker blue */
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
     }
 
     .submit-button:disabled {
       background-color: #d1d5db;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .view-result-button {
+      background-color: #10B981;
+      /* Green color matching status page */
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: bold;
+      width: 100%;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .view-result-button:hover {
+      background-color: #059669;
+      /* Darker green on hover */
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    }
+    
+    .view-result-button:disabled {
+      background-color: #d1d5db;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .buttons-container {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
     }
 
     .error-message {
@@ -444,16 +485,32 @@
     }
 
     html.dark .submit-button {
-      background-color: #2f855a;
-      /* Tailwind green-600 */
+      background-color: #3B82F6;
+      /* Tailwind blue-500 */
     }
 
     html.dark .submit-button:hover {
-      background-color: #276749;
-      /* Tailwind green-700 */
+      background-color: #2563EB;
+      /* Tailwind blue-600 */
     }
 
     html.dark .submit-button:disabled {
+      background-color: #4a5568;
+      /* Tailwind gray-600 */
+      opacity: 0.7;
+    }
+
+    html.dark .view-result-button {
+      background-color: #059669;
+      /* Darker green for dark mode */
+    }
+
+    html.dark .view-result-button:hover {
+      background-color: #047857;
+      /* Even darker green on hover in dark mode */
+    }
+
+    html.dark .view-result-button:disabled {
       background-color: #4a5568;
       /* Tailwind gray-600 */
       opacity: 0.7;
@@ -783,6 +840,217 @@
       border-color: #1f2937;
       border-top-color: #3182ce;
     }
+
+    /* 成功预约卡片样式 */
+    .success-card {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+      border-radius: 20px;
+      padding: 1.75rem 1.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(37, 99, 235, 0.1);
+      max-width: 90%;
+      width: 420px;
+      text-align: center;
+      z-index: 10000; /* 确保比所有元素层级高 */
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(37, 99, 235, 0.1);
+    }
+
+    .success-card.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .success-card .card-header {
+      margin-bottom: 1.25rem;
+    }
+
+    .success-card .success-icon {
+      font-size: 2.75rem;
+      color: #10B981;
+      margin-bottom: 0.75rem;
+      animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      display: inline-block;
+      filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.2));
+    }
+
+    .success-card .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.025em;
+    }
+
+    .success-card .card-subtitle {
+      color: #6B7280;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .success-card .info-section {
+      background: rgba(37, 99, 235, 0.03);
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(37, 99, 235, 0.08);
+    }
+
+    .success-card .info-item {
+      background-color: white;
+      padding: 0.75rem;
+      border-radius: 12px;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: left;
+      transition: transform 0.2s ease;
+      border: 1px solid rgba(37, 99, 235, 0.08);
+    }
+
+    .success-card .info-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .success-card .info-item:hover {
+      transform: translateY(-2px);
+    }
+
+    .success-card .info-item i {
+      font-size: 1.1rem;
+      margin-right: 0.75rem;
+      color: #3B82F6;
+      width: 24px;
+      text-align: center;
+    }
+
+    .success-card .info-label {
+      color: #6B7280;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 0.2rem;
+      display: block;
+    }
+
+    .success-card .info-text {
+      color: #1F2937;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .success-card .encouragement {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+      border-radius: 12px;
+      color: #2563EB;
+      font-style: italic;
+      font-weight: 500;
+      line-height: 1.5;
+      position: relative;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+
+    .success-card .encouragement::before {
+      content: '"';
+      position: absolute;
+      top: 0.5rem;
+      left: 0.75rem;
+      font-size: 2.5rem;
+      color: rgba(37, 99, 235, 0.1);
+      font-family: serif;
+    }
+
+    .success-card .close-button {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      cursor: pointer;
+      padding: 0.5rem;
+      transition: all 0.2s;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-card .close-button:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #4B5563;
+    }
+
+    /* 深色模式适配 */
+    html.dark .success-card {
+      background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.2);
+    }
+
+    html.dark .success-card .card-title {
+      color: #F3F4F6;
+    }
+
+    html.dark .success-card .card-subtitle {
+      color: #9CA3AF;
+    }
+
+    html.dark .success-card .info-section {
+      background: rgba(59, 130, 246, 0.05);
+      border-color: rgba(59, 130, 246, 0.1);
+    }
+
+    html.dark .success-card .info-item {
+      background-color: rgba(31, 41, 55, 0.5);
+      border-color: rgba(59, 130, 246, 0.1);
+    }
+
+    html.dark .success-card .info-label {
+      color: #9CA3AF;
+    }
+
+    html.dark .success-card .info-text {
+      color: #F3F4F6;
+    }
+
+    html.dark .success-card .encouragement {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%);
+      color: #60A5FA;
+    }
+
+    html.dark .success-card .close-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 添加弹跳动画效果 */
+    @keyframes bounceIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+      70% {
+        transform: scale(0.9);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
   </style>
 </head>
 
@@ -880,9 +1148,14 @@
 
       <div id="ws_status_indicator" class="mb-4 text-sm text-gray-600 text-center" role="status" aria-live="polite"></div>
 
-      <button type="submit" id="submit_button" class="submit-button">
-        <i class="fas fa-paper-plane mr-2" aria-hidden="true"></i>提交请求
-      </button>
+      <div class="buttons-container">
+        <button type="submit" id="submit_button" class="submit-button">
+          <i class="fas fa-paper-plane mr-2" aria-hidden="true"></i>提交请求
+        </button>
+        <button type="button" id="view_result_button" class="view-result-button" onclick="showReservationResults(event)">
+          <i class="fas fa-eye mr-2" aria-hidden="true"></i>查看结果
+        </button>
+      </div>
       <div id="form_general_error" class="error-message text-center mt-4 hidden" role="alert"></div>
     </form>
   </div>
@@ -891,6 +1164,44 @@
   <div class="submission-overlay" id="submission_overlay">
     <div class="submission-spinner"></div>
     <div class="submission-message">处理中，请稍候...</div>
+  </div>
+  
+  <!-- 成功预约卡片 -->
+  <div id="successCard" class="success-card">
+    <button class="close-button" onclick="hideSuccessCard()">
+      <i class="fas fa-times"></i>
+    </button>
+    <div class="card-header">
+      <i class="fas fa-check-circle success-icon"></i>
+      <h2 class="card-title">预约成功</h2>
+      <p class="card-subtitle">座位预约成功，祝您学习愉快</p>
+    </div>
+    <div class="info-section">
+      <div class="info-item" style="--item-index: 0">
+        <i class="fas fa-clock"></i>
+        <div>
+          <span class="info-label">预约时间</span>
+          <div class="info-text" id="reserveTime">待定</div>
+        </div>
+      </div>
+      <div class="info-item" style="--item-index: 1">
+        <i class="fas fa-building"></i>
+        <div>
+          <span class="info-label">阅览室</span>
+          <div class="info-text" id="roomInfo">待定</div>
+        </div>
+      </div>
+      <div class="info-item" style="--item-index: 2">
+        <i class="fas fa-chair"></i>
+        <div>
+          <span class="info-label">座位号</span>
+          <div class="info-text" id="seatInfo">待定</div>
+        </div>
+      </div>
+    </div>
+    <div class="encouragement" id="encouragementText">
+      今天也要加油学习哦！
+    </div>
   </div>
 
   <script>
@@ -904,6 +1215,7 @@
     const cookieStrInput = document.getElementById('cookie_str');
     const seatNumberInput = document.getElementById('seat_number');
     const submitButton = document.getElementById('submit_button');
+    const viewResultButton = document.getElementById('view_result_button');
     const formGeneralError = document.getElementById('form_general_error');
 
     const cookieError = document.getElementById('cookie_error');
@@ -1022,6 +1334,29 @@
           iosHint.innerHTML = '<i class="fas fa-info-circle mr-1"></i>iOS设备提示: 如时间选择器无法选择秒，系统将自动补全为":00"';
           container.appendChild(iosHint);
         }
+      }
+      
+      // 初始化查看结果按钮
+      if (viewResultButton) {
+        console.log("初始化查看结果按钮");
+        
+        // 检查是否存在预约结果，否则添加测试数据（仅用于开发调试）
+        if (!localStorage.getItem('lastReservationResult')) {
+          console.log("添加测试预约数据用于调试");
+          addTestData();
+        }
+        
+        updateViewResultButtonState();
+        
+        // 为按钮添加点击事件（除了onclick属性外的额外保障）
+        viewResultButton.addEventListener('click', function(e) {
+          console.log("查看结果按钮被点击");
+          // 阻止事件冒泡
+          e.stopPropagation();
+          showReservationResults(e);
+        });
+      } else {
+        console.error("找不到查看结果按钮元素");
       }
     });
 
@@ -1481,11 +1816,12 @@
           throw new Error(errorData.detail || `HTTP error ${response.status}`);
         }
 
-        // Reverted to original success handling (notify parent)
+        // 请求已提交，但不立即标记为成功
+        // 预约结果将在状态页中确认后再保存
+        
+        // 通知父页面请求已提交成功（用于导航控制）
         if (window.parent && typeof window.parent.notifySubmissionSuccess === 'function') {
           window.parent.notifySubmissionSuccess(data.clientId);
-        } else {
-          alert('提交成功! Client ID: ' + data.clientId + '. 由于无法与主页面通信，请手动在导航栏点击"下一步"查看状态。');
         }
 
       } catch (error) {
@@ -1539,6 +1875,174 @@
             document.documentElement.classList.remove('dark');
         }
     };
+
+    // 更新查看结果按钮状态
+    function updateViewResultButtonState() {
+      try {
+        const reservationData = localStorage.getItem('lastReservationResult');
+        const hasSuccessfulReservation = reservationData !== null && 
+                                        JSON.parse(reservationData).isSuccess === true;
+        
+        viewResultButton.disabled = !hasSuccessfulReservation;
+        
+        if (hasSuccessfulReservation) {
+          viewResultButton.title = "查看最近的预约结果";
+        } else {
+          viewResultButton.title = "暂无成功的预约结果";
+        }
+      } catch (e) {
+        console.error("更新结果按钮状态出错:", e);
+        viewResultButton.disabled = true;
+        viewResultButton.title = "无法检索预约结果";
+      }
+    }
+
+    // 测试函数 - 用于向localStorage添加测试数据
+    function addTestData() {
+      const testData = {
+        roomName: "测试阅览室",
+        seatNumber: "101",
+        timeInfo: new Date().toLocaleString('zh-CN'),
+        timestamp: new Date().getTime(),
+        isSuccess: true // 标记为成功的预约
+      };
+      localStorage.setItem('lastReservationResult', JSON.stringify(testData));
+      console.log("测试数据已添加:", testData);
+      updateViewResultButtonState();
+    }
+
+    // 显示成功卡片
+    function showSuccessCard(roomName, seatNumber, timeInfo) {
+      console.log("显示成功卡片:", roomName, seatNumber, timeInfo);
+      const successCard = document.getElementById('successCard');
+      if (!successCard) {
+        console.error("找不到成功卡片元素!");
+        return;
+      }
+      
+      const roomInfoEl = document.getElementById('roomInfo');
+      const seatInfoEl = document.getElementById('seatInfo');
+      const timeInfoEl = document.getElementById('reserveTime');
+      const encouragementEl = document.getElementById('encouragementText');
+
+      // 设置卡片内容
+      if (roomInfoEl) roomInfoEl.textContent = roomName || '未知';
+      if (seatInfoEl) seatInfoEl.textContent = seatNumber || '未知';
+      if (timeInfoEl) timeInfoEl.textContent = timeInfo || new Date().toLocaleString('zh-CN');
+      if (encouragementEl) encouragementEl.textContent = getRandomEncouragement();
+
+      // 显示卡片
+      console.log("添加show类显示卡片");
+      successCard.classList.add('show');
+
+      // 通过延时添加点击监听器，确保当前事件循环完成
+      setTimeout(() => {
+        // 添加点击背景关闭功能
+        document.addEventListener('click', handleOutsideClick);
+        
+        // 添加ESC键关闭功能
+        document.addEventListener('keydown', handleEscKey);
+      }, 100);
+    }
+
+    // 处理卡片外部点击
+    function handleOutsideClick(e) {
+      const successCard = document.getElementById('successCard');
+      if (!successCard) return;
+      
+      // 检查点击是否在卡片外部且不是查看结果按钮
+      const viewResultButton = document.getElementById('view_result_button');
+      if (e.target !== successCard && 
+          !successCard.contains(e.target) && 
+          e.target !== viewResultButton && 
+          !viewResultButton.contains(e.target)) {
+        hideSuccessCard();
+      }
+    }
+
+    // 处理ESC键关闭
+    function handleEscKey(e) {
+      if (e.key === 'Escape') {
+        hideSuccessCard();
+      }
+    }
+
+    // 隐藏成功卡片
+    function hideSuccessCard() {
+      console.log("隐藏成功卡片");
+      const successCard = document.getElementById('successCard');
+      if (successCard) {
+        successCard.classList.remove('show');
+        
+        // 移除事件监听器
+        document.removeEventListener('click', handleOutsideClick);
+        document.removeEventListener('keydown', handleEscKey);
+      }
+    }
+
+    // 显示预约结果卡片
+    function showReservationResults(e) {
+      // 阻止事件冒泡
+      if (e) e.stopPropagation();
+      
+      console.log("显示预约结果函数被调用");
+      const reservationData = localStorage.getItem('lastReservationResult');
+      if (!reservationData) {
+        console.log("没有找到预约结果数据");
+        alert("暂无预约结果，请先成功预约座位。");
+        return;
+      }
+      
+      try {
+        console.log("尝试解析预约数据:", reservationData);
+        const data = JSON.parse(reservationData);
+        // 检查是否是成功的预约
+        if (data.isSuccess === true) {
+          showSuccessCard(data.roomName, data.seatNumber, data.timeInfo);
+        } else {
+          alert("没有成功的预约记录。");
+        }
+      } catch (e) {
+        console.error('Error loading reservation result:', e);
+        alert('无法加载预约结果。');
+      }
+    }
+
+    // 保存预约结果到本地存储
+    function saveReservationResult(roomName, seatNumber, timeInfo) {
+      const reservationData = {
+        roomName: roomName,
+        seatNumber: seatNumber,
+        timeInfo: timeInfo || new Date().toLocaleString('zh-CN'),
+        timestamp: new Date().getTime(),
+        isSuccess: true // 标记为成功的预约
+      };
+      localStorage.setItem('lastReservationResult', JSON.stringify(reservationData));
+      updateViewResultButtonState();
+    }
+
+    // 随机鼓励语句数组
+    const encouragements = [
+      "今天也要加油学习哦！✨",
+      "知识就是力量，继续前进吧！💪",
+      "一步一个脚印，你正在变得更强！🌟",
+      "保持专注，你一定能实现目标！🎯",
+      "每一天的努力都在为未来铺路！🌈",
+      "静心学习，收获知识的果实！📚",
+      "今天的付出，是明天的收获！🌱",
+      "保持热爱，奔赴山海！⛰️",
+      "学习使人进步，加油！💡",
+      "愿你的努力都能开花结果！🌸",
+      "书山有路勤为径，学海无涯苦作舟！🚀",
+      "每一次专注都是对未来的投资！💫",
+      "让知识成为你最闪亮的光芒！⭐",
+      "坚持的人最美丽，奋斗的人最可爱！🌺"
+    ];
+
+    // 获取随机鼓励语
+    function getRandomEncouragement() {
+      return encouragements[Math.floor(Math.random() * encouragements.length)];
+    }
   </script>
 </body>
 

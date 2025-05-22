@@ -37,13 +37,44 @@
             /* 添加适当内边距 */
             width: 100%;
             min-height: 100%;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            /* 柔和的渐变背景 */
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 添加轻微的背景动画效果 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 30%, rgba(74, 144, 226, 0.05) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(99, 179, 237, 0.05) 0%, transparent 40%);
+            animation: backgroundPulse 15s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes backgroundPulse {
+            0% {
+                opacity: 0.5;
+                background-position: 0% 0%;
+            }
+            100% {
+                opacity: 1;
+                background-position: 100% 100%;
+            }
         }
 
         .content-card {
-            background-color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
             text-align: center;
             max-width: 90%;
             width: auto;
@@ -52,6 +83,8 @@
             flex-shrink: 0;
             position: relative;  /* Add this */
             overflow: hidden;    /* Add this */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
         }
 
         /* Add a subtle gradient background effect */
@@ -61,17 +94,37 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #4A90E2, #63B3ED);
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(74, 144, 226, 0.2), rgba(99, 179, 237, 0.1));
+            z-index: -1;
+            border-radius: 16px;
+            opacity: 0.7;
         }
 
-        /* Add hover effect for the card */
+        /* Add light effect in corners */
+        .content-card::after {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0.4;
+            border-radius: 50%;
+            z-index: -1;
+            animation: floatLight 10s ease-in-out infinite;
+        }
+
+        @keyframes floatLight {
+            0% { transform: translate(0, 0); opacity: 0.4; }
+            50% { transform: translate(-30px, 30px); opacity: 0.6; }
+            100% { transform: translate(0, 0); opacity: 0.4; }
+        }
+
         .content-card:hover {
-            transform: translateY(-2px);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
         }
 
         .icon-primary {
@@ -93,6 +146,15 @@
             opacity: 0;
             transform: translateX(-20px);
             animation: slideIn 0.5s ease forwards;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.75rem !important;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
         }
 
         @keyframes slideIn {
@@ -102,16 +164,52 @@
             }
         }
 
+        .list-item-animate:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: translateX(3px);
+        }
+
         /* Update button styles */
         #agree_button {
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
             transform: scale(1);
+            background: linear-gradient(135deg, #4A90E2, #3182ce);
+            border: none;
+            box-shadow: 0 4px 10px rgba(74, 144, 226, 0.25);
+        }
+
+        /* Add gradient border effect */
+        #agree_button:before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            z-index: -1;
+            background: linear-gradient(45deg, #4A90E2, #63B3ED, #90CDF4, #3182CE, #4A90E2);
+            background-size: 400% 400%;
+            border-radius: 14px;
+            animation: borderGradient 8s ease infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #agree_button:hover:not(:disabled):before {
+            opacity: 1;
+        }
+
+        @keyframes borderGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         #agree_button:hover:not(:disabled) {
-            transform: scale(1.02);
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 6px 15px rgba(74, 144, 226, 0.35);
         }
 
         #agree_button::after {
@@ -132,15 +230,23 @@
             animation: ripple 1s ease-out;
         }
 
+        /* Enhanced ripple effect */
         @keyframes ripple {
             0% {
                 transform: scale(0, 0);
-                opacity: 0.5;
+                opacity: 0.7;
             }
             100% {
-                transform: scale(40, 40);
+                transform: scale(50, 50);
                 opacity: 0;
             }
+        }
+
+        /* Add active animation */
+        #agree_button:active:not(:disabled) {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+            transition: all 0.1s ease;
         }
 
         /* Responsive adjustments for smaller screens */
@@ -209,12 +315,28 @@
             /* Tailwind gray-900 for body bg */
             color: #cbd5e0;
             /* Tailwind gray-400 for general text */
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+
+        html.dark body::before {
+            background: radial-gradient(circle at 20% 30%, rgba(56, 178, 172, 0.05) 0%, transparent 40%),
+                         radial-gradient(circle at 80% 70%, rgba(66, 153, 225, 0.05) 0%, transparent 40%);
         }
 
         html.dark .content-card {
-            background-color: #2d3748;
-            /* Tailwind gray-800 for card bg */
+            background-color: rgba(45, 55, 72, 0.7);
+            /* Tailwind gray-800 for card bg with transparency */
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        html.dark .content-card::before {
+            background: linear-gradient(135deg, rgba(56, 178, 172, 0.2), rgba(66, 153, 225, 0.1));
+            opacity: 0.5;
+        }
+
+        html.dark .content-card::after {
+            background: radial-gradient(circle, rgba(74, 85, 104, 0.8) 0%, rgba(74, 85, 104, 0) 70%);
         }
 
         html.dark h1 {
@@ -234,8 +356,11 @@
         }
 
         html.dark .terms-container {
-            background-color: #1f2937;
-            /* Tailwind gray-850 (custom or darker gray-800) */
+            background-color: rgba(26, 32, 44, 0.7);
+            /* Darker semi-transparent container */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(74, 85, 104, 0.2);
         }
 
         html.dark .terms-container label {
@@ -254,20 +379,28 @@
         }
 
         html.dark #agree_button {
-            background-color: #3182ce;
-            /* Tailwind blue-600 for button */
-            color: white;
+            background: linear-gradient(135deg, #2b6cb0, #2c5282);
+            box-shadow: 0 4px 10px rgba(36, 62, 99, 0.35);
+        }
+
+        html.dark #agree_button:before {
+            background: linear-gradient(45deg, #2b6cb0, #3182ce, #63b3ed, #2c5282, #2b6cb0);
         }
 
         html.dark #agree_button:hover:not(:disabled) {
             background-color: #2b6cb0;
             /* Tailwind blue-700 */
+            box-shadow: 0 6px 15px rgba(36, 62, 99, 0.5);
         }
 
         html.dark #agree_button:disabled {
-            background-color: #4a5568;
-            /* Tailwind gray-600 for disabled button */
+            background: linear-gradient(135deg, #4a5568, #2d3748);
             opacity: 0.7;
+            box-shadow: none;
+        }
+
+        html.dark #agree_button:active:not(:disabled) {
+            box-shadow: 0 2px 8px rgba(36, 62, 99, 0.3);
         }
 
         html.dark .form-checkbox {
@@ -283,6 +416,89 @@
         html.dark #terms_error_message {
             color: #f87171;
             /* Tailwind red-400 for better visibility on dark backgrounds */
+        }
+
+        .terms-container {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: rgba(249, 250, 251, 0.7);
+            border-radius: 0.75rem;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .terms-container:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .list-item-animate {
+            opacity: 0;
+            transform: translateX(-20px);
+            animation: slideIn 0.5s ease forwards;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.75rem !important;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+        }
+
+        .list-item-animate:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: translateX(3px);
+        }
+
+        html.dark .list-item-animate {
+            background-color: rgba(45, 55, 72, 0.5);
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        html.dark .list-item-animate:hover {
+            background-color: rgba(45, 55, 72, 0.8);
+        }
+
+        /* Form checkbox styling */
+        .form-checkbox {
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-checkbox:checked {
+            transform: scale(1.05);
+            box-shadow: 0 1px 3px rgba(74, 144, 226, 0.2);
+        }
+
+        /* Enhance links */
+        .text-blue-600 {
+            position: relative;
+            text-decoration: none !important;
+            transition: all 0.2s ease;
+        }
+
+        .text-blue-600::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: currentColor;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease;
+        }
+
+        .text-blue-600:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
         }
     </style>
 </head>
@@ -325,9 +541,9 @@
         </div>
 
         <button id="agree_button"
-            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-150 ease-in-out opacity-50 cursor-not-allowed"
+            class="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out opacity-50 cursor-not-allowed relative overflow-hidden"
             disabled>
-            同意并继续
+            <span class="relative z-10">同意并继续</span>
         </button>
 
         <p class="text-sm text-gray-500 mt-6">
