@@ -753,6 +753,47 @@
       }
     }
 
+    /* 添加脉冲动画效果 */
+    @keyframes pulseButton {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      
+      70% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+      }
+      
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      }
+    }
+    
+    /* 取消按钮样式 */
+    .cancel-button {
+      background-color: #e53e3e !important; /* 红色背景 */
+      border-color: #c53030 !important;
+      animation: pulseButton 1.5s infinite;
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 1);
+      transition: all 0.3s ease;
+    }
+    
+    .cancel-button:hover {
+      background-color: #c53030 !important;
+      transform: scale(1.05);
+    }
+    
+    html.dark .cancel-button {
+      background-color: #e53e3e !important;
+      border-color: #c53030 !important;
+    }
+    
+    html.dark .cancel-button:hover {
+      background-color: #c53030 !important;
+    }
+
     .success-card .info-item {
       animation: slideInInfo 0.3s ease forwards;
       animation-delay: calc(var(--item-index) * 0.1s);
@@ -882,6 +923,12 @@
     }
 
     function addLogEntry(message, type = 'status', isFinalResult = false) {
+      // 如果是倒计时消息，交给checkForCountdown处理
+      if (message.match(/距离计划执行时间还有\s+\d+\.\d+\s+秒/)) {
+        checkForCountdown(message);
+        return; // 不再添加新的日志条目
+      }
+      
       const entry = document.createElement('div');
       entry.classList.add('log-entry');
       
@@ -1022,8 +1069,12 @@
         logArea.scrollTop = logArea.scrollHeight;
       });
 
-      // 检测倒计时消息并处理
-      checkForCountdown(message);
+      // 检测倒计时消息并处理 - 只处理非倒计时消息的其他关键词
+      if (!message.match(/距离计划执行时间还有\s+\d+\.\d+\s+秒/)) {
+        if (message.includes("时间到") || message.includes("开始执行")) {
+          stopCountdown();
+        }
+      }
     }
 
     // 检测倒计时消息并启动倒计时显示
@@ -1033,10 +1084,62 @@
 
       if (match) {
         const secondsLeft = parseFloat(match[1]);
+        
+        // 检查是否已经存在倒计时日志条目
+        const existingCountdownEntry = document.getElementById('countdown_log_entry');
+        
+        if (!existingCountdownEntry) {
+          // 如果不存在，创建一个新的倒计时日志条目
+          const entry = document.createElement('div');
+          entry.classList.add('log-entry');
+          entry.id = 'countdown_log_entry'; // 添加ID以便后续更新
+          
+          const timestampSpan = document.createElement('span');
+          timestampSpan.classList.add('log-timestamp');
+          timestampSpan.textContent = `[${getCurrentTimestamp()}]`;
+          
+          const messageSpan = document.createElement('span');
+          messageSpan.classList.add('log-message-content');
+          
+          const iconSpan = document.createElement('span');
+          iconSpan.classList.add('log-icon');
+          iconSpan.innerHTML = '<i class="fas fa-clock"></i>';
+          
+          const textSpan = document.createElement('span');
+          textSpan.id = 'countdown_log_text'; // 添加ID以便动态更新文本
+          textSpan.textContent = `距离计划执行时间还有 ${secondsLeft.toFixed(1)} 秒...`;
+          
+          messageSpan.appendChild(iconSpan);
+          messageSpan.appendChild(textSpan);
+          entry.appendChild(timestampSpan);
+          entry.appendChild(messageSpan);
+          
+          // 添加到日志区域的顶部
+          if (logArea.firstChild) {
+            logArea.insertBefore(entry, logArea.firstChild);
+          } else {
+            logArea.appendChild(entry);
+          }
+        }
+        
+        // 启动倒计时
         startCountdown(secondsLeft);
+        
+        // 更新按钮文本，表明点击将取消任务
+        if (backToConfigButton) {
+          backToConfigButton.innerHTML = '<i class="fas fa-times-circle mr-2"></i>取消任务并返回';
+          // 添加取消按钮样式类
+          backToConfigButton.classList.add('cancel-button');
+        }
       } else if (message.includes("时间到") || message.includes("开始执行")) {
         // 停止倒计时
         stopCountdown();
+        
+        // 移除倒计时日志条目
+        const countdownEntry = document.getElementById('countdown_log_entry');
+        if (countdownEntry) {
+          countdownEntry.remove();
+        }
       }
     }
 
@@ -1067,8 +1170,15 @@
           return;
         }
 
+        // 更新倒计时容器中的时间
         if (countdownTimer) {
           countdownTimer.textContent = secondsLeft.toFixed(1);
+        }
+        
+        // 更新日志条目中的倒计时文本
+        const countdownLogText = document.getElementById('countdown_log_text');
+        if (countdownLogText) {
+          countdownLogText.textContent = `距离计划执行时间还有 ${secondsLeft.toFixed(1)} 秒...`;
         }
       }, 100); // 每100毫秒更新一次，使倒计时更平滑
     }
@@ -1078,6 +1188,13 @@
       if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
+        
+        // 恢复按钮原始文本
+        if (backToConfigButton) {
+          backToConfigButton.innerHTML = '<i class="fas fa-arrow-left mr-2"></i>返回配置页';
+          // 移除取消按钮样式类
+          backToConfigButton.classList.remove('cancel-button');
+        }
       }
 
       if (countdownContainer) {
@@ -1120,14 +1237,27 @@
               type = 'success';
             }
             
+            // 检查是否是取消任务的消息
+            if (message.includes('任务取消') || message.includes('已被用户取消')) {
+              type = 'warning';
+              stopCountdown(); // 停止倒计时
+            }
+            
             addLogEntry(message, type);
             setTimeout(() => {
               logArea.scrollTop = logArea.scrollHeight;
             }, 10);
           } else if (data.type === 'result') {
-            type = data.status === 'success' ? 'success' : 'error';
+            type = data.status === 'success' ? 'success' : (data.status === 'cancelled' ? 'warning' : 'error');
             
-            if (data.status === 'success' && (message.includes('成功') || !message.includes('失败'))) {
+            if (data.status === 'cancelled') {
+              // 任务被取消
+              stopCountdown();
+              addLogEntry(message, 'warning', true);
+              // 任务被取消，不需要保存预约结果
+              document.getElementById('view_result_button').disabled = true;
+            }
+            else if (data.status === 'success' && (message.includes('成功') || !message.includes('失败'))) {
               const logEntries = Array.from(logArea.getElementsByClassName('log-entry'));
               let latestRoomInfo = null;
               let latestSeatInfo = null;
@@ -1252,10 +1382,70 @@
       stopCountdown();
     });
 
+    // 添加取消任务的函数
+    async function cancelCurrentTask(clientId) {
+      if (!clientId) {
+        console.error("无法取消任务：缺少客户端ID");
+        return false;
+      }
+      
+      try {
+        const response = await fetch(`/api/cancel_task/${clientId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          addLogEntry(`任务已取消: ${data.message}`, 'warning');
+          stopCountdown(); // 停止倒计时显示
+          return true;
+        } else {
+          const errorData = await response.json();
+          addLogEntry(`取消任务失败: ${errorData.detail || '未知错误'}`, 'error');
+          return false;
+        }
+      } catch (error) {
+        addLogEntry(`取消任务请求出错: ${error.message}`, 'error');
+        return false;
+      }
+    }
+
     if (backToConfigButton) {
-      backToConfigButton.addEventListener('click', () => {
-        if (window.parent && typeof window.parent.navigateToSpecificPage === 'function') {
-          window.parent.navigateToSpecificPage(1); // Navigate to page_config.html (index 1)
+      backToConfigButton.addEventListener('click', async (e) => {
+        // 获取当前客户端ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('clientId');
+        
+        if (clientId && countdownInterval) {
+          // 如果有倒计时正在进行，说明有任务需要取消
+          addLogEntry("正在取消当前任务...", 'status');
+          
+          // 修改按钮文本，显示正在处理
+          const originalText = backToConfigButton.innerHTML;
+          backToConfigButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>正在取消任务...';
+          backToConfigButton.disabled = true;
+          // 暂时移除脉冲动画
+          backToConfigButton.classList.remove('cancel-button');
+          
+          // 尝试取消任务
+          const cancelled = await cancelCurrentTask(clientId);
+          
+          // 恢复按钮状态
+          backToConfigButton.innerHTML = originalText;
+          backToConfigButton.disabled = false;
+          
+          // 无论取消成功与否，都导航回配置页面
+          if (window.parent && typeof window.parent.navigateToSpecificPage === 'function') {
+            window.parent.navigateToSpecificPage(1); // Navigate to page_config.html (index 1)
+          }
+        } else {
+          // 如果没有倒计时，直接导航回配置页
+          if (window.parent && typeof window.parent.navigateToSpecificPage === 'function') {
+            window.parent.navigateToSpecificPage(1); // Navigate to page_config.html (index 1)
+          }
         }
       });
     }

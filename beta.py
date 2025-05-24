@@ -11,7 +11,7 @@ import time
 import atexit
 import traceback
 import subprocess
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Set
 import requests
 import websocket  # 需要安装 websocket-client
 
@@ -494,7 +494,8 @@ def perform_seat_operation(
     lib_id: int,
     seat_key: str,
     start_action_dt: Optional[datetime.datetime],
-    status_callback: Optional[Callable[[str], None]] = None
+    status_callback: Optional[Callable[[str], None]] = None,
+    client_id: Optional[str] = None
 ) -> str:
     """
     执行座位预约/抢座操作，包含详细状态更新和错误处理。
@@ -565,6 +566,12 @@ def perform_seat_operation(
             send_status(f"等待计划执行时间: {start_action_dt.strftime('%Y-%m-%d %H:%M:%S')}...")
             last_ws_update_time = time.time()
             while True:
+                # 检查任务是否被取消
+                if client_id and manager and manager.is_task_cancelled(client_id):
+                    send_status("❌ 任务已被用户取消")
+                    manager.clear_cancelled_task(client_id)  # 清除取消标记
+                    return "任务已被用户取消"
+                    
                 now_ts = time.time()
                 remaining_seconds = start_action_dt.timestamp() - now_ts
                 if remaining_seconds <= 0.01:
@@ -950,6 +957,7 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
         def __init__(self): 
             self.active_connections: Dict[str, WebSocket] = {} # type: ignore
             self.message_locks: Dict[str, asyncio.Lock] = {}  # 每个连接的消息锁
+            self.cancelled_tasks: Set[str] = set()  # 存储已取消任务的客户端ID
 
         async def connect(self, websocket: WebSocket, client_id: str):
             await websocket.accept()
@@ -990,6 +998,24 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
 
         async def send_cookie_update(self, client_id: str, cookie: str): 
             await self._send_json_safe(client_id, {"type": "cookie_update", "cookie": cookie})
+            
+        def cancel_task(self, client_id: str) -> bool:
+            """将任务标记为已取消"""
+            if client_id:
+                self.cancelled_tasks.add(client_id)
+                print(f"Task for client {client_id} marked as cancelled")
+                return True
+            return False
+            
+        def is_task_cancelled(self, client_id: str) -> bool:
+            """检查任务是否已被取消"""
+            return client_id in self.cancelled_tasks
+            
+        def clear_cancelled_task(self, client_id: str) -> None:
+            """清除已取消的任务标记"""
+            if client_id in self.cancelled_tasks:
+                self.cancelled_tasks.remove(client_id)
+                print(f"Cancelled task for client {client_id} cleared")
 
     if WebSocket and asyncio: manager = ConnectionManager() # Instantiate manager
     else: manager = None; print("错误：无法初始化 ConnectionManager (缺少 WebSocket 或 asyncio)")
@@ -1067,7 +1093,7 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                         print(f"[发送状态更新错误] {type(e).__name__}: {e}")
 
             print(f"[Task {client_id}] Starting background operation...")
-            final_result = perform_seat_operation(mode, cookie, lib_id, seat_key, start_dt, ws_status_callback_sync)
+            final_result = perform_seat_operation(mode, cookie, lib_id, seat_key, start_dt, ws_status_callback_sync, client_id)
             print(f"[Task {client_id}] Background operation finished with result: {final_result}")
 
             status_code_ws = "success" if final_result.startswith("成功") else "error"
@@ -1081,6 +1107,9 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
                      seat_num_for_msg = reverse_map.get(seat_key, "[未知Key]")
                 user_message = f"该座位 (阅览室: {room_name_for_msg}, 座位号: {seat_num_for_msg}) 已被占用，请重选。"
                 error_code_ws = SEAT_TAKEN_ERROR_CODE
+            elif final_result == "任务已被用户取消":
+                status_code_ws = "cancelled"
+                user_message = "任务已被用户取消，您可以重新配置参数。"
             
             # 使用同样的同步方法发送最终结果
             if manager:
@@ -1227,6 +1256,26 @@ if WEB_DEPENDENCIES_MET and app: # Check if FastAPI and dependencies were import
             print(f"已为 Client={client_id} 添加 Cookie 监控任务。")
             return JSONResponse(content={"status": "watching", "message": "已启动 Cookie 文件监控，请查看状态区域指南。"})
     else: print("警告：自动 Cookie 获取 API 端点 (/api/start_auto_cookie_watch) 未定义 (缺少依赖)")
+    
+    # --- API Endpoint for Task Cancellation ---
+    if manager and HTTPException and JSONResponse:
+        @app.post("/api/cancel_task/{client_id}")
+        async def cancel_task(client_id: str): # type: ignore
+            """Cancels a running task for the specified client."""
+            print(f"收到取消任务请求: Client={client_id}")
+            if not manager: raise HTTPException(status_code=503, detail="WebSocket管理器未初始化")
+            
+            # 检查客户端是否连接
+            if client_id not in manager.active_connections:
+                raise HTTPException(status_code=404, detail="客户端 WebSocket 未连接")
+            
+            # 标记任务为已取消
+            if manager.cancel_task(client_id):
+                await manager.send_status_update(client_id, "任务取消请求已接收，正在处理...")
+                return JSONResponse(content={"status": "cancelling", "message": "任务取消请求已接收"})
+            else:
+                raise HTTPException(status_code=400, detail="无法取消任务")
+    else: print("警告：任务取消 API 端点 (/api/cancel_task) 未定义 (缺少依赖)")
 
     # --- WebSocket Endpoint ---
     if WebSocket and WebSocketDisconnect and manager:
