@@ -1413,6 +1413,41 @@
                 font-size: 1.1rem;
             }
         }
+
+        /* 版权信息样式 */
+        .copyright {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6B7280;
+            padding: 0.5rem 0;
+            border-top: 1px solid rgba(226, 232, 240, 0.5);
+            width: 100%;
+        }
+
+        html.dark .copyright {
+            color: #9CA3AF;
+            border-top-color: rgba(75, 85, 99, 0.5);
+        }
+
+        .copyright a {
+            color: #4A90E2;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        html.dark .copyright a {
+            color: #60A5FA;
+        }
+
+        .copyright a:hover {
+            color: #2563EB;
+            text-decoration: underline;
+        }
+
+        html.dark .copyright a:hover {
+            color: #93C5FD;
+        }
     </style>
 </head>
 
@@ -1613,6 +1648,12 @@
                 <a href="http://wpa.qq.com/msgrd?v=3&uin=3405395460&site=qq&menu=yes" class="social-link qq" title="QQ">
                     <i class="fab fa-qq"></i>
                 </a>
+            </div>
+
+            <!-- 添加版权信息 -->
+            <div class="copyright">
+                <p>&copy; 2025 我去抢个座 V3.1.2</p>
+                <p>本项目采用MIT许可证，仅供学习和研究使用</p>
             </div>
         </div>
     </div>
