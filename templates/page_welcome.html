@@ -18,29 +18,100 @@
             height: 100%;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #ffffff;
-            display: flex;
-            align-items: flex-start;
-            /* 改为flex-start而非center，防止垂直居中导致的裁剪 */
-            justify-content: center;
-            color: #333;
-            box-sizing: border-box;
-            flex-direction: column;
-            position: relative;
-            overflow-y: auto;
-            /* 允许内容溢出时滚动 */
+            width: 100%;
+            overflow-x: hidden;
         }
 
         body {
-            padding: 1.5rem 1rem;
-            /* 添加适当内边距 */
-            width: 100%;
-            min-height: 100%;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
-            /* 柔和的渐变背景 */
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             position: relative;
-            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            .content-card {
+                width: 95%;
+                min-width: auto;
+                margin: 1rem auto;
+            }
+        }
+
+        /* 定义统一的圆角变量 */
+        :root {
+            --border-radius-lg: 16px;
+            --border-radius-md: 12px;
+            --border-radius-sm: 8px;
+        }
+
+        .content-card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+            margin: 1rem auto 2.5rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        /* 统一其他组件的圆角 */
+        .feature-list {
+            border-radius: var(--border-radius-md);
+        }
+
+        .feature-item {
+            border-radius: var(--border-radius-sm);
+        }
+
+        .terms-container {
+            border-radius: var(--border-radius-md);
+        }
+
+        .usage-stats {
+            border-radius: var(--border-radius-md);
+        }
+
+        .stat-card {
+            border-radius: var(--border-radius-sm) !important;
+        }
+
+        .achievements-preview {
+            border-radius: var(--border-radius-md);
+        }
+
+        .achievement {
+            border-radius: var(--border-radius-sm);
+        }
+
+        .btn-primary, .tutorial-btn {
+            border-radius: var(--border-radius-sm) !important;
         }
 
         /* 添加轻微的背景动画效果 */
@@ -66,25 +137,6 @@
                 opacity: 1;
                 background-position: 100% 100%;
             }
-        }
-
-        .content-card {
-            background-color: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-            text-align: center;
-            max-width: 90%;
-            width: auto;
-            min-width: 300px;
-            margin: 2rem auto;  /* Updated margin */
-            flex-shrink: 0;
-            position: relative;  /* Add this */
-            overflow: hidden;    /* Add this */
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease;
         }
 
         /* Add a subtle gradient background effect */
@@ -127,18 +179,85 @@
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
         }
 
+        /* 优化标题和图标样式 */
         .icon-primary {
             color: #4A90E2;
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            animation: float 6s ease-in-out infinite;  /* Add floating animation */
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            animation: float 6s ease-in-out infinite;
+            background: linear-gradient(135deg, #4A90E2, #63B3ED);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
         }
 
-        /* Add floating animation */
+        .welcome-title {
+            font-weight: 700;
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            letter-spacing: -0.025em;
+            line-height: 1.1;
+        }
+
+        .greeting-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #4B5563;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+
+        /* 暗黑模式下的标题和图标样式 */
+        html.dark .icon-primary {
+            background: linear-gradient(135deg, #60A5FA, #93C5FD);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+        }
+
+        html.dark .welcome-title {
+            background: linear-gradient(135deg, #E2E8F0, #CBD5E0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        html.dark .greeting-text {
+            color: #E5E7EB;
+        }
+
+        /* 添加浮动动画 */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
             100% { transform: translateY(0px); }
+        }
+
+        /* 优化打字效果文本样式 */
+        .typing-text {
+            font-size: 1.125rem;
+            font-weight: 600;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
+            color: #4B5563;
+            margin-bottom: 1.5rem;
+            height: 1.75rem;
+        }
+
+        html.dark .typing-text {
+            color: #E5E7EB;
         }
 
         /* Add animation for list items */
@@ -180,6 +299,28 @@
             box-shadow: 0 4px 10px rgba(74, 144, 226, 0.25);
         }
 
+        /* 使用教程按钮样式 */
+        .tutorial-btn {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            transform: scale(1);
+            background: linear-gradient(135deg, #10B981, #059669);
+            border: none;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+        }
+
+        .tutorial-btn:hover {
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.35);
+        }
+
+        .tutorial-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+            transition: all 0.1s ease;
+        }
+
         /* Add gradient border effect */
         #agree_button:before {
             content: '';
@@ -197,49 +338,39 @@
             transition: opacity 0.3s ease;
         }
 
-        #agree_button:hover:not(:disabled):before {
+        .tutorial-btn:before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            z-index: -1;
+            background: linear-gradient(45deg, #10B981, #34D399, #6EE7B7, #059669, #10B981);
+            background-size: 400% 400%;
+            border-radius: 14px;
+            animation: borderGradient 8s ease infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #agree_button:hover:not(:disabled):before,
+        .tutorial-btn:hover:before {
             opacity: 1;
         }
 
-        @keyframes borderGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        /* 暗黑模式下的按钮样式 */
+        html.dark .tutorial-btn {
+            background: linear-gradient(135deg, #059669, #047857);
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
         }
 
-        #agree_button:hover:not(:disabled) {
-            transform: scale(1.02) translateY(-2px);
-            box-shadow: 0 6px 15px rgba(74, 144, 226, 0.35);
+        html.dark .tutorial-btn:before {
+            background: linear-gradient(45deg, #059669, #10B981, #34D399, #047857, #059669);
         }
 
-        #agree_button::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%);
-            transform-origin: 50% 50%;
-        }
-
-        #agree_button:hover::after {
-            animation: ripple 1s ease-out;
-        }
-
-        /* Enhanced ripple effect */
-        @keyframes ripple {
-            0% {
-                transform: scale(0, 0);
-                opacity: 0.7;
-            }
-            100% {
-                transform: scale(50, 50);
-                opacity: 0;
-            }
+        html.dark .tutorial-btn:hover {
+            box-shadow: 0 6px 15px rgba(5, 150, 105, 0.5);
         }
 
         /* Add active animation */
@@ -250,21 +381,25 @@
         }
 
         /* Responsive adjustments for smaller screens */
+        @media (max-width: 900px) {
+            .content-card {
+                width: 90%; /* 小屏幕上增加宽度百分比 */
+            }
+        }
+
         @media (max-width: 640px) {
             .content-card {
                 padding: 1.5rem;
                 max-width: 95%;
-                /* 在小屏幕上增加宽度利用率 */
+                width: 95%; /* 更小屏幕上进一步增加宽度百分比 */
+                min-width: 300px; /* 在小屏幕上减小最小宽度 */
                 margin-top: 0.5rem;
-                /* 小屏幕上减小上边距 */
                 margin-bottom: 0.5rem;
             }
 
             body {
-                padding: 1rem 0.5rem;
-                /* 小屏幕上减小内边距 */
+                padding: 2rem 0.5rem 1rem 0.5rem; /* 调整小屏幕上的内边距 */
                 justify-content: flex-start;
-                /* 在小屏幕上从顶部开始布局 */
             }
 
             .icon-primary {
@@ -423,7 +558,7 @@
             margin-bottom: 1rem;
             padding: 1rem;
             background-color: rgba(249, 250, 251, 0.7);
-            border-radius: 0.75rem;
+            border-radius: var(--border-radius-md);
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.5);
@@ -500,63 +635,1032 @@
             transform: scaleX(1);
             transform-origin: left;
         }
+
+        /* 成就系统样式优化 */
+        .achievements-preview {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(to bottom right, #f0f9ff, #e6f7ff);
+            border-radius: var(--border-radius-md);
+            padding: 1.25rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            width: 100%;
+        }
+        
+        .achievement-items {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .achievement {
+            background-color: white;
+            border-radius: var(--border-radius-sm);
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .achievement:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .achievement i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .achievement p {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        
+        .achievement strong {
+            font-size: 1.25rem;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        /* 小屏幕上的成就系统样式调整 */
+        @media (max-width: 640px) {
+            .achievement-items {
+                gap: 0.5rem;
+            }
+            
+            .achievement {
+                padding: 0.5rem 0.25rem;
+            }
+            
+            .achievement i {
+                font-size: 1.25rem;
+                margin-bottom: 0.25rem;
+            }
+            
+            .achievement p {
+                font-size: 0.7rem;
+                margin-bottom: 0.1rem;
+            }
+            
+            .achievement strong {
+                font-size: 1rem;
+            }
+        }
+        
+        /* 特小屏幕上的成就系统样式调整 */
+        @media (max-width: 360px) {
+            .achievements-preview {
+                padding: 0.75rem;
+            }
+            
+            .achievement-items {
+                gap: 0.25rem;
+            }
+            
+            .achievement i {
+                font-size: 1rem;
+            }
+            
+            .achievement p {
+                font-size: 0.65rem;
+            }
+            
+            .achievement strong {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* 成就系统深色模式适配 */
+        html.dark .achievements-preview {
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.3), rgba(49, 46, 129, 0.3));
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+        
+        html.dark .achievements-preview h3 {
+            color: #93c5fd; /* blue-300 */
+        }
+        
+        html.dark .achievement {
+            background-color: rgba(30, 41, 59, 0.8); /* slate-800 with opacity */
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+        
+        html.dark .achievement p {
+            color: #94a3b8; /* slate-400 */
+        }
+        
+        html.dark .achievement strong {
+            color: #60a5fa; /* blue-400 */
+        }
+        
+        html.dark .achievements-preview .text-gray-500 {
+            color: #94a3b8; /* slate-400 */
+        }
+
+        /* 打字效果样式 */
+        .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.2em;
+            background-color: #4b5563;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+            animation: blink 0.7s infinite;
+        }
+        
+        html.dark .typing-cursor {
+            background-color: #e5e7eb;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* 确保打字效果容器正确显示 */
+        #typing-text-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 1.5em;
+        }
+
+        /* 确保打字文本可见 */
+        #typing-text {
+            display: inline;
+            white-space: pre-wrap;
+        }
+        
+        /* 错误消息抖动动画 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        /* 使用统计样式优化 */
+        .usage-stats {
+            background-color: rgba(239, 246, 255, 0.7);
+            border-radius: var(--border-radius-md);
+            padding: 1.25rem;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            width: 100%;
+            margin-bottom: 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+        }
+
+        .usage-stats:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .usage-stats .stat-card {
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .usage-stats .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .usage-stats .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2563EB, #3B82F6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .usage-stats .stat-card:hover .stat-value {
+            transform: scale(1.05);
+        }
+
+        /* 暗黑模式下的使用统计样式 */
+        html.dark .usage-stats {
+            background-color: rgba(30, 58, 138, 0.3);
+            border-color: rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        html.dark .usage-stats:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        html.dark .usage-stats h3 {
+            color: #93c5fd;
+        }
+
+        html.dark .usage-stats .bg-white {
+            background-color: rgba(30, 41, 59, 0.8) !important;
+            border-color: rgba(51, 65, 85, 0.5) !important;
+        }
+
+        html.dark .usage-stats .text-gray-500 {
+            color: #94a3b8 !important;
+        }
+
+        html.dark .usage-stats .stat-value {
+            background: linear-gradient(135deg, #3B82F6, #60A5FA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        html.dark .usage-stats .stat-card:hover {
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+        }
+
+        /* 表单复选框容器样式 */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0;
+            padding: 0;
+        }
+
+        /* 优化功能展示列表 */
+        .feature-list {
+            text-align: left;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+            margin: 1.5rem auto;
+            padding: 1.75rem;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: var(--border-radius-md);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 100%;
+            max-width: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: var(--border-radius-sm);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.5s ease forwards;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .feature-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .feature-item i {
+            font-size: 1rem;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: white;
+            margin-right: 1rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+
+        .feature-item:nth-child(1) i {
+            color: #10B981; /* emerald-500 */
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .feature-item:nth-child(2) i {
+            color: #6366F1; /* indigo-500 */
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .feature-item:nth-child(3) i {
+            color: #F59E0B; /* amber-500 */
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .feature-item:hover i {
+            transform: scale(1.15) rotate(5deg);
+        }
+
+        .feature-item-content {
+            flex: 1;
+        }
+        
+        .feature-item-content span {
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .feature-item-number {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-right: 1rem;
+            opacity: 0.3;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #4A90E2, #63B3ED);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .feature-item:nth-child(1) .feature-item-number {
+            background: linear-gradient(135deg, #059669, #10B981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .feature-item:nth-child(2) .feature-item-number {
+            background: linear-gradient(135deg, #4F46E5, #6366F1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .feature-item:nth-child(3) .feature-item-number {
+            background: linear-gradient(135deg, #D97706, #F59E0B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 深色模式适配 */
+        html.dark .feature-list {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(51, 65, 85, 0.4);
+        }
+
+        html.dark .feature-item {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(51, 65, 85, 0.5);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        html.dark .feature-item:hover {
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        html.dark .feature-item-content span {
+            color: #E5E7EB;
+        }
+
+        html.dark .feature-item i {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        html.dark .feature-item:nth-child(1) i {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        html.dark .feature-item:nth-child(2) i {
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        html.dark .feature-item:nth-child(3) i {
+            background: rgba(245, 158, 11, 0.15);
+        }
+
+        html.dark .feature-item:nth-child(1) .feature-item-number {
+            background: linear-gradient(135deg, #10B981, #34D399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        html.dark .feature-item:nth-child(2) .feature-item-number {
+            background: linear-gradient(135deg, #6366F1, #818CF8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        html.dark .feature-item:nth-child(3) .feature-item-number {
+            background: linear-gradient(135deg, #F59E0B, #FBBF24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        @media (max-width: 768px) {
+            .feature-list {
+                padding: 1.25rem;
+                gap: 0.9rem;
+                margin: 1.25rem auto;
+                width: 100%;
+            }
+
+            .feature-item {
+                padding: 1rem 1.25rem;
+            }
+
+            .feature-item i {
+                font-size: 1.25rem;
+                margin-right: 1rem;
+                width: 35px;
+                height: 35px;
+            }
+
+            .feature-item-content span {
+                font-size: 0.95rem;
+            }
+
+            .feature-item-number {
+                font-size: 1.2rem;
+                margin-right: 0.75rem;
+            }
+        }
+
+        /* 使用条款和隐私策略对话框样式 */
+        .terms-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 2.5rem;
+            border-radius: var(--border-radius-lg);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            animation: dialogFadeIn 0.3s ease-out;
+        }
+
+        @keyframes dialogFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .terms-dialog h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #2D3748;
+            text-align: center;
+            border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+            padding-bottom: 1rem;
+        }
+
+        .terms-dialog p {
+            margin-bottom: 1rem;
+            line-height: 1.7;
+            font-size: 1.05rem;
+            color: #4A5568;
+        }
+
+        .terms-dialog ul {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        .terms-dialog ul li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+            color: #4A5568;
+        }
+
+        .terms-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            animation: overlayFadeIn 0.3s ease-out;
+        }
+
+        @keyframes overlayFadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .terms-dialog button {
+            margin-top: 1.5rem;
+            padding: 0.75rem 2rem;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .terms-dialog button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .terms-dialog button:active {
+            transform: translateY(0);
+        }
+
+        html.dark .terms-dialog {
+            background: #2D3748;
+            color: #E2E8F0;
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        html.dark .terms-dialog h2 {
+            color: #E2E8F0;
+            border-bottom-color: rgba(74, 85, 104, 0.6);
+        }
+
+        html.dark .terms-dialog p,
+        html.dark .terms-dialog ul li {
+            color: #CBD5E0;
+        }
+
+        html.dark .terms-dialog button {
+            background: linear-gradient(135deg, #4299E1, #3182CE);
+        }
+        
+        @keyframes borderGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #agree_button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%);
+            transform-origin: 50% 50%;
+        }
+
+        #agree_button:hover::after {
+            animation: ripple 1s ease-out;
+        }
+
+        /* Enhanced ripple effect */
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(50, 50);
+                opacity: 0;
+            }
+        }
+
+        /* 暗黑模式下的按钮样式 */
+        html.dark .tutorial-btn {
+            background: linear-gradient(135deg, #059669, #047857);
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
+        }
+
+        html.dark .tutorial-btn:before {
+            background: linear-gradient(45deg, #059669, #10B981, #34D399, #047857, #059669);
+        }
+
+        html.dark .tutorial-btn:hover {
+            box-shadow: 0 6px 15px rgba(5, 150, 105, 0.5);
+        }
+
+        #agree_button:hover:not(:disabled) {
+            transform: scale(1.02) translateY(-2px);
+            box-shadow: 0 6px 15px rgba(74, 144, 226, 0.35);
+        }
+
+        /* 社交图标链接样式 */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0 0;
+            padding: 0.75rem 0.75rem 0 0.75rem;
+        }
+
+        .social-link {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            aspect-ratio: 1/1; /* 确保宽高比例为1:1 */
+            flex-shrink: 0; /* 防止被压缩 */
+        }
+
+        .social-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .social-link:hover::before {
+            opacity: 1;
+        }
+
+        .social-link i {
+            font-size: 1.25rem;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .social-link:hover i {
+            transform: scale(1.1);
+        }
+
+        .social-link.github {
+            background: linear-gradient(135deg, #333333, #24292e);
+        }
+
+        .social-link.github i {
+            color: white;
+        }
+
+        .social-link.twitter {
+            background: linear-gradient(135deg, #1DA1F2, #0d8ecf);
+        }
+
+        .social-link.twitter i {
+            color: white;
+        }
+
+        .social-link.telegram {
+            background: linear-gradient(135deg, #0088cc, #0077b5);
+        }
+
+        .social-link.telegram i {
+            color: white;
+        }
+
+        .social-link.blog {
+            background: linear-gradient(135deg, #FF5722, #FF9800);
+        }
+
+        .social-link.blog i {
+            color: white;
+        }
+
+        .social-link.email {
+            background: linear-gradient(135deg, #6366F1, #4F46E5);
+        }
+
+        .social-link.email i {
+            color: white;
+        }
+
+        .social-link.qq {
+            background: linear-gradient(135deg, #12B7F5, #0e9fd6);
+        }
+
+        .social-link.qq i {
+            color: white;
+        }
+
+        html.dark .social-link {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        html.dark .social-link:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        @media (max-width: 640px) {
+            .social-links {
+                gap: 0.75rem;
+            }
+            
+            .social-link {
+                width: 38px;
+                height: 38px;
+                min-width: 38px; /* 确保最小宽度 */
+                min-height: 38px; /* 确保最小高度 */
+                max-width: 38px; /* 确保最大宽度 */
+                max-height: 38px; /* 确保最大高度 */
+            }
+            
+            .social-link i {
+                font-size: 1.1rem;
+            }
+        }
     </style>
 </head>
 
-<body>
-    <div class="content-card">
-        <i class="fas fa-university icon-primary"></i>
-        <h1 class="text-3xl font-bold mb-4 text-gray-800">欢迎使用我去抢个座</h1>
-        <p class="text-gray-600 mb-6">
-            本系统旨在帮助您更方便地预约图书馆的座位。请按照指引完成操作。
-        </p>
-        <p class="text-gray-600 mb-2">
-            <i class="fas fa-info-circle text-blue-500 mr-2"></i>简单三步，轻松抢座：
-        </p>
-        <ul class="list-none text-left inline-block text-gray-600 mb-6">
-            <li class="mb-2 list-item-animate" style="animation-delay: 0.1s">
-                <i class="fas fa-check-circle text-green-500 mr-2"></i>点击下方按钮进入配置页面。
-            </li>
-            <li class="mb-2 list-item-animate" style="animation-delay: 0.2s">
-                <i class="fas fa-edit text-green-500 mr-2"></i>填写您的 Cookie 和预约信息。
-            </li>
-            <li class="mb-2 list-item-animate" style="animation-delay: 0.3s">
-                <i class="fas fa-paper-plane text-green-500 mr-2"></i>提交请求并查看实时状态。
-            </li>
-        </ul>
-
-        <div class="terms-container mt-6 mb-4 p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center justify-center">
-                <input type="checkbox" id="terms_agree_checkbox"
-                    class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 align-middle">
-                <label for="terms_agree_checkbox" class="ml-2 text-sm text-gray-700 align-middle">
-                    我已阅读并同意
-                    <span id="show_terms" class="text-blue-600 hover:text-blue-800 underline cursor-pointer" tabindex="0" role="button" aria-label="查看使用条款">使用条款</span>
-                    和
-                    <span id="show_disclaimer"
-                        class="text-blue-600 hover:text-blue-800 underline cursor-pointer" tabindex="0" role="button" aria-label="查看免责声明">免责声明</span>。
-                </label>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <!-- 主要内容容器 -->
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <div class="content-card">
+            <i class="fas fa-university icon-primary"></i>
+            <h1 class="text-center text-2xl font-bold mb-4 text-gray-800 dark:text-white welcome-title">欢迎使用我去抢个座</h1>
+            <p id="greeting" class="text-center text-lg text-gray-600 dark:text-gray-300 greeting-text mb-4"></p>
+            
+            <!-- 替换静态介绍文本为打字效果容器 -->
+            <div class="text-center mb-6">
+                <div id="typing-text-container">
+                    <p id="typing-text" class="text-gray-600 dark:text-gray-300"></p>
+                    <span id="typing-cursor" class="typing-cursor">|</span>
+                </div>
             </div>
-            <p id="terms_error_message" class="text-red-500 text-xs mt-2 text-center hidden" role="alert">请阅读并勾选同意使用条款和免责声明。</p>
+
+            <!-- <p class="text-gray-600 mb-2">
+                <i class="fas fa-info-circle text-blue-500 mr-2"></i>简单三步，轻松抢座：
+            </p> -->
+            <ul class="feature-list">
+                <li class="feature-item" style="animation-delay: 0.1s">
+                    <span class="feature-item-number">01</span>
+                    <i class="fas fa-mouse"></i>
+                    <div class="feature-item-content">
+                        <span>点击下方按钮进入配置页面</span>
+                    </div>
+                </li>
+                <li class="feature-item" style="animation-delay: 0.2s">
+                    <span class="feature-item-number">02</span>
+                    <i class="fas fa-keyboard"></i>
+                    <div class="feature-item-content">
+                        <span>填写您的 Cookie 和预约信息</span>
+                    </div>
+                </li>
+                <li class="feature-item" style="animation-delay: 0.3s">
+                    <span class="feature-item-number">03</span>
+                    <i class="fas fa-chair"></i>
+                    <div class="feature-item-content">
+                        <span>提交请求并查看实时状态</span>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="terms-container">
+                <div class="checkbox-container">
+                    <input id="terms_agree" name="terms_agree" type="checkbox" class="form-checkbox">
+                    <label for="terms_agree" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                        使用本服务即表示您已仔细阅读并同意
+                        <a href="#" class="text-blue-600 dark:text-blue-400 hover:underline" onclick="showTerms(event)">使用条款</a>
+                        和
+                        <a href="#" class="text-blue-600 dark:text-blue-400 hover:underline" onclick="showPrivacy(event)">隐私策略</a>
+                    </label>
+                </div>
+                <p id="terms_error_message" class="text-red-500 text-xs hidden">请先同意使用条款和隐私策略</p>
+            </div>
+
+            <!-- 使用条款对话框 -->
+            <div class="terms-dialog-overlay" id="terms_overlay"></div>
+            <div class="terms-dialog" id="terms_dialog">
+                <h2>使用条款</h2>
+                <div class="terms-content">
+                    <p>欢迎使用我去抢个座服务。使用本服务即表示您同意以下条款：</p>
+                    <p>1. 服务说明</p>
+                    <ul>
+                        <li>本服务仅供学习交流使用，不得用于商业用途</li>
+                        <li>用户需自行获取并维护有效的图书馆账号和Cookie</li>
+                        <li>本服务不保证100%的预约成功率</li>
+                    </ul>
+                    <p>2. 用户责任</p>
+                    <ul>
+                        <li>用户应遵守图书馆相关规定</li>
+                        <li>不得利用本服务影响图书馆正常运营</li>
+                        <li>不得将本服务用于违法或不当用途</li>
+                    </ul>
+                    <p>3. 免责声明</p>
+                    <ul>
+                        <li>本服务不对任何直接或间接损失负责</li>
+                        <li>我们保留随时修改或终止服务的权利</li>
+                    </ul>
+                </div>
+                <button onclick="hideDialog('terms_dialog')" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">关闭</button>
+            </div>
+
+            <!-- 隐私策略对话框 -->
+            <div class="terms-dialog" id="privacy_dialog">
+                <h2>隐私策略</h2>
+                <div class="privacy-content">
+                    <p>我们重视您的隐私保护，特此说明我们的隐私政策：</p>
+                    <p>1. 信息收集</p>
+                    <ul>
+                        <li>我们仅收集必要的Cookie信息用于座位预约</li>
+                        <li>用户的预约记录和使用数据</li>
+                        <li>设备信息和使用统计数据</li>
+                    </ul>
+                    <p>2. 信息使用</p>
+                    <ul>
+                        <li>仅用于完成座位预约服务</li>
+                        <li>改进用户体验和服务质量</li>
+                        <li>不会向第三方出售或共享您的个人信息</li>
+                    </ul>
+                    <p>3. 信息保护</p>
+                    <ul>
+                        <li>采用加密技术保护您的信息安全</li>
+                        <li>定期清理过期数据</li>
+                        <li>仅授权人员可访问相关信息</li>
+                    </ul>
+                </div>
+                <button onclick="hideDialog('privacy_dialog')" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">关闭</button>
+            </div>
+
+            <div class="flex space-x-4 mt-4">
+                <a href="https://6aig.cn" target="_blank" class="tutorial-btn flex-1 py-2 px-4 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 focus:ring-offset-emerald-200 text-white transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg">
+                    <i class="fas fa-book-reader mr-2"></i>使用教程
+                </a>
+                <button id="agree_button" class="btn-primary flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 focus:ring-offset-blue-200 text-white transition ease-in duration-200 text-center text-base font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 rounded-lg">
+                    <i class="fas fa-rocket mr-2"></i>开始使用
+                </button>
+            </div>
+
+            <p class="text-sm text-gray-500 mt-6">
+                请确保您已从图书馆官方途径获取了有效的 Cookie。
+            </p>
+            
+            <!-- 添加成就系统预览 -->
+            <div class="achievements-preview">
+                <h3 class="text-center text-blue-700 font-bold mb-3 dark:text-blue-300">
+                    <i class="fas fa-award text-yellow-500 mr-2"></i>成就系统
+                </h3>
+                <div class="achievement-items">
+                    <div class="achievement">
+                        <i class="fas fa-trophy text-yellow-500"></i>
+                        <p>成功预约数</p>
+                        <strong>0</strong>
+                    </div>
+                    <div class="achievement">
+                        <i class="fas fa-clock text-blue-500"></i>
+                        <p>学习总时长</p>
+                        <strong>0小时</strong>
+                    </div>
+                    <div class="achievement">
+                        <i class="fas fa-star text-purple-500"></i>
+                        <p>常用阅览室</p>
+                        <strong>暂无</strong>
+                    </div>
+                </div>
+                <p class="text-center text-xs text-gray-500 mt-3 italic">开始使用后记录您的学习数据</p>
+            </div>
+
+            <!-- 添加用户反馈和使用统计 -->
+            <div class="usage-stats bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 mb-6 border border-blue-100 dark:border-blue-800">
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="font-semibold tracking-wide">系统使用情况</span>
+                </h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">今日活跃用户</p>
+                        <p class="stat-value" id="active-users">--</p>
+                    </div>
+                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">今日预约次数</p>
+                        <p class="stat-value" id="today-bookings">--</p>
+                    </div>
+                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">系统运行天数</p>
+                        <p class="stat-value" id="system-days">--</p>
+                    </div>
+                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">系统可用率</p>
+                        <p class="stat-value" id="system-uptime">--</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center italic font-light">数据每小时更新一次</p>
+            </div>
+
+            <!-- 添加社交图标链接 -->
+            <div class="social-links">
+                <a href="https://t.me/s1xig" target="_blank" class="social-link telegram" title="Telegram">
+                    <i class="fab fa-telegram-plane"></i>
+                </a>
+                <a href="https://twitter.com" target="_blank" class="social-link twitter" title="Twitter">
+                    <i class="fab fa-twitter"></i>
+                </a>
+                <a href="https://github.com/VenenoSix24" target="_blank" class="social-link github" title="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="https://kawaii.776624.xyz" target="_blank" class="social-link blog" title="博客">
+                    <i class="fas fa-blog"></i>
+                </a>
+                <a href="mailto:3405395460@qq.com" class="social-link email" title="邮箱">
+                    <i class="fas fa-envelope"></i>
+                </a>
+                <a href="http://wpa.qq.com/msgrd?v=3&uin=3405395460&site=qq&menu=yes" class="social-link qq" title="QQ">
+                    <i class="fab fa-qq"></i>
+                </a>
+            </div>
         </div>
-
-        <button id="agree_button"
-            class="w-full bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out opacity-50 cursor-not-allowed relative overflow-hidden"
-            disabled>
-            <span class="relative z-10">同意并继续</span>
-        </button>
-
-        <p class="text-sm text-gray-500 mt-6">
-            请确保您已从图书馆官方途径获取了有效的 Cookie。
-        </p>
     </div>
 
     <script>
-        const agreeCheckbox = document.getElementById('terms_agree_checkbox');
+        const agreeCheckbox = document.getElementById('terms_agree');
         const agreeButton = document.getElementById('agree_button');
         const termsErrorMessage = document.getElementById('terms_error_message');
-        const showTermsLink = document.getElementById('show_terms');
-        const showDisclaimerLink = document.getElementById('show_disclaimer');
+        const termsOverlay = document.getElementById('terms_overlay');
+
+        // 显示使用条款
+        function showTerms(event) {
+            event.preventDefault();
+            document.getElementById('terms_dialog').style.display = 'block';
+            termsOverlay.style.display = 'block';
+        }
+
+        // 显示隐私策略
+        function showPrivacy(event) {
+            event.preventDefault();
+            document.getElementById('privacy_dialog').style.display = 'block';
+            termsOverlay.style.display = 'block';
+        }
+
+        // 隐藏对话框
+        function hideDialog(dialogId) {
+            document.getElementById(dialogId).style.display = 'none';
+            termsOverlay.style.display = 'none';
+        }
+
+        // 点击遮罩层关闭对话框
+        termsOverlay.addEventListener('click', function() {
+            document.getElementById('terms_dialog').style.display = 'none';
+            document.getElementById('privacy_dialog').style.display = 'none';
+            termsOverlay.style.display = 'none';
+        });
 
         agreeCheckbox.addEventListener('change', function () {
             if (this.checked) {
@@ -571,60 +1675,23 @@
             }
         });
 
-        agreeButton.addEventListener('click', function () {
+        agreeButton.addEventListener('click', function (e) {
             if (!agreeCheckbox.checked) {
+                e.preventDefault();
                 termsErrorMessage.classList.remove('hidden');
-                // Simple shake animation for error message
                 termsErrorMessage.classList.add('animate-shake');
-                setTimeout(() => termsErrorMessage.classList.remove('animate-shake'), 500);
-                return; // Stop further action
+                setTimeout(() => {
+                    termsErrorMessage.classList.remove('animate-shake');
+                }, 300);
+                return;
             }
-            // If checked, proceed to next page (handled by index.html's navigateToPage)
+            
             if (window.parent && typeof window.parent.navigateToSpecificPage === 'function') {
-                window.parent.navigateToSpecificPage(1); // Navigate to page_config.html (index 1)
+                window.parent.navigateToSpecificPage(1);
             } else {
-                console.error('navigateToSpecificPage function not found on parent window.');
-                alert('无法导航到下一页，请检查控制台获取更多信息。');
+                window.location.href = 'page_config.html';
             }
         });
-
-        showTermsLink.addEventListener('click', function () {
-            alert('使用条款:\n\n1. 本程序仅为辅助工具，旨在简化图书馆座位预约流程。\n2. 用户需自行承担使用本程序可能带来的所有风险，包括但不限于预约失败、账号异常等。\n3. 请勿滥用本程序，遵守图书馆相关规定及预约系统的使用协议。\n4. 开发者不对任何因使用本程序造成的直接或间接损失负责。\n5. ... (更多条款内容) ...');
-        });
-        
-        showTermsLink.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.click();
-            }
-        });
-
-        showDisclaimerLink.addEventListener('click', function () {
-            alert('免责声明:\n\n1. 本程序为开源的非官方工具，与图书馆官方无任何关联。\n2. 所有操作均在用户本地设备上或通过用户授权的代理执行，开发者不收集、不存储任何用户个人信息（如 Cookie）。\n3. 请确保您通过合法途径获取并使用 Cookie，并对您的 Cookie 安全负责。\n4. 使用本程序即表示您理解并同意以上所有条款。\n5. ... (更多免责内容) ...');
-        });
-        
-        showDisclaimerLink.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.click();
-            }
-        });
-
-        // Add a simple shake animation CSS for the error message
-        const styleSheet = document.createElement("style")
-        styleSheet.type = "text/css"
-        styleSheet.innerText = `
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                25% { transform: translateX(-5px); }
-                50% { transform: translateX(5px); }
-                75% { transform: translateX(-5px); }
-            }
-            .animate-shake {
-                animation: shake 0.3s ease-in-out;
-            }
-        `;
-        document.head.appendChild(styleSheet);
 
         // Function to set theme (called by parent)
         window.setAppTheme = function (theme) {
@@ -642,6 +1709,135 @@
                 window.setAppTheme(currentTheme);
             }
         });
+
+        // 打字效果函数
+        function typeWriter(text, element, speed = 50) {
+            let i = 0;
+            element.textContent = '';
+            element.style.display = 'inline'; // 确保元素可见
+            
+            function type() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, speed);
+                }
+            }
+            
+            type();
+        }
+        
+        // 获取基于时间的问候语
+        function getGreeting() {
+            const hour = new Date().getHours();
+            
+            if (hour >= 5 && hour < 8) {
+                return "早安，新的一天从图书馆开始！";
+            } else if (hour >= 8 && hour < 12) {
+                return "上午好，学习效率最佳时段！";
+            } else if (hour >= 12 && hour < 14) {
+                return "中午好，午休后继续加油！";
+            } else if (hour >= 14 && hour < 18) {
+                return "下午好，学习充电的好时光！";
+            } else if (hour >= 18 && hour < 22) {
+                return "晚上好，专注学习的黄金时间！";
+            } else {
+                return "夜深了，记得劳逸结合哦！";
+            }
+        }
+        
+        // 页面加载时初始化打字效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化问候语
+            const greetingElement = document.getElementById('greeting');
+            if (greetingElement) {
+                greetingElement.textContent = getGreeting();
+            }
+            
+            // 初始化打字效果
+            const typingText = document.getElementById('typing-text');
+            if (typingText) {
+                const introText = '帮助您更方便地预约图书馆的座位';
+                // 确保元素可见
+                typingText.style.display = 'inline';
+                setTimeout(() => {
+                    typeWriter(introText, typingText, 40);
+                }, 500);
+            }
+            
+            // 获取系统使用数据
+            setTimeout(() => {
+                fetchSystemStats();
+            }, 1000);
+            
+            // 加载个人成就数据
+            loadAchievements();
+        });
+
+        // 模拟获取系统使用数据
+        function fetchSystemStats() {
+            // 在实际应用中，这里应该是从服务器获取真实数据
+            // 这里使用模拟数据进行演示
+            
+            // 随机生成今日活跃用户数 (50-200)
+            const activeUsers = Math.floor(Math.random() * 151) + 50;
+            document.getElementById('active-users').textContent = activeUsers;
+            
+            // 随机生成今日预约次数 (100-500)
+            const todayBookings = Math.floor(Math.random() * 401) + 100;
+            document.getElementById('today-bookings').textContent = todayBookings;
+            
+            // 系统运行天数 (固定值，模拟系统已运行一段时间)
+            const systemDays = 365;
+            document.getElementById('system-days').textContent = systemDays;
+            
+            // 系统可用率 (95%-99.9%)
+            const systemUptime = (99 + Math.random() * 0.9).toFixed(1) + '%';
+            document.getElementById('system-uptime').textContent = systemUptime;
+        }
+        
+        // 加载个人成就数据
+        function loadAchievements() {
+            // 从localStorage获取成就数据，如果没有则初始化
+            let achievements = JSON.parse(localStorage.getItem('userAchievements')) || {
+                reservationCount: 0,
+                studyHours: 0,
+                favoriteRoom: '暂无'
+            };
+            
+            // 更新UI显示
+            document.querySelector('.achievement:nth-child(1) strong').textContent = achievements.reservationCount;
+            document.querySelector('.achievement:nth-child(2) strong').textContent = achievements.studyHours + '小时';
+            document.querySelector('.achievement:nth-child(3) strong').textContent = achievements.favoriteRoom;
+            
+            return achievements;
+        }
+        
+        // 更新成就数据（在成功预约后调用）
+        function updateAchievements(roomName) {
+            let achievements = loadAchievements();
+            
+            // 增加预约次数
+            achievements.reservationCount++;
+            
+            // 更新学习时长（假设每次预约学习4小时）
+            achievements.studyHours += 4;
+            
+            // 更新最常用阅览室
+            if (roomName && roomName !== '暂无') {
+                // 如果提供了阅览室名称，更新最常用阅览室
+                // 这里可以实现更复杂的逻辑，比如统计每个阅览室的使用次数
+                achievements.favoriteRoom = roomName;
+            }
+            
+            // 保存到localStorage
+            localStorage.setItem('userAchievements', JSON.stringify(achievements));
+            
+            // 更新UI显示
+            document.querySelector('.achievement:nth-child(1) strong').textContent = achievements.reservationCount;
+            document.querySelector('.achievement:nth-child(2) strong').textContent = achievements.studyHours + '小时';
+            document.querySelector('.achievement:nth-child(3) strong').textContent = achievements.favoriteRoom;
+        }
     </script>
 </body>
 
