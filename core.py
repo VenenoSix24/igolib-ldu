@@ -1,19 +1,19 @@
-# -*- coding: utf-8 -*-
+# core.py (日志升级完整版)
 """
-核心逻辑模块 (最终优化版)
+核心逻辑模块
 
-本版本优化了重试逻辑，当遇到不可恢复的业务错误时将立即停止。
+抢座/预约主程序。
 """
 import json
 import re
 import time
-import requests
 import datetime
-import websocket
 import traceback
-
+import logging
 from typing import Any, Callable, Dict, Optional
 
+import requests
+import websocket
 
 from config import (
     URL, WEBSOCKET_URL, MAX_REQUEST_ATTEMPTS, SLEEP_INTERVAL_ON_FAIL,
@@ -22,6 +22,9 @@ from config import (
     data_template_tomorrow, data_template_today, data_validate,
     data_lib_chosen_template, queue_header_base, pre_header_base
 )
+
+# 获取一个以当前模块名命名的logger
+logger = logging.getLogger(__name__)
 
 # --- 辅助函数 ---
 def extract_error_msg(response_text: str) -> str:
@@ -40,7 +43,7 @@ def extract_error_msg(response_text: str) -> str:
 
 def pass_queue(mode: int, ws_headers: Dict[str, str], status_callback: Optional[Callable[[str], None]] = None) -> bool:
     def send_status_pq(msg: str):
-        print(msg)
+        logger.info(msg) # 使用 logger
         if status_callback: status_callback(msg.strip().replace('\r', ''))
 
     send_status_pq("\n================================")
@@ -76,7 +79,7 @@ def pass_queue(mode: int, ws_headers: Dict[str, str], status_callback: Optional[
                     is_success = True
                     break
     except Exception as e_outer:
-        send_status_pq(f"排队过程中发生连接错误: {e_outer}")
+        logger.warning(f"排队过程中发生连接错误: {e_outer}") # 使用 warning 级别
         if re.search(COOKIE_ERROR_PATTERN, str(e_outer), re.IGNORECASE):
             raise ConnectionError("Cookie失效(WebSocket)，请更新。")
     finally:
@@ -91,12 +94,20 @@ def validate_time_format(time_str: str) -> bool:
 
 def calculate_execution_dt(time_str: str, check_window: bool = False) -> Optional[datetime.datetime]:
     now_dt = datetime.datetime.now()
-    try: exec_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
-    except ValueError: return None
-    if time_str == "00:00:01": return now_dt
+    try:
+        exec_time = datetime.datetime.strptime(time_str, "%H:%M:%S").time()
+    except ValueError:
+        logger.error(f"时间格式无效 '{time_str}'")
+        return None
+    if time_str == "00:00:01":
+        return now_dt
     exec_dt = datetime.datetime.combine(now_dt.date(), exec_time)
-    if check_window and not (TOMORROW_RESERVE_WINDOW_START <= exec_time <= TOMORROW_RESERVE_WINDOW_END): return None
-    if exec_dt < now_dt - datetime.timedelta(seconds=5): return None
+    if check_window and not (TOMORROW_RESERVE_WINDOW_START <= exec_time <= TOMORROW_RESERVE_WINDOW_END):
+        logger.error(f"预约时间 {time_str} 不在允许的窗口内。")
+        return None
+    if exec_dt < now_dt - datetime.timedelta(seconds=5):
+        logger.error(f"指定时间 {time_str} 已过。")
+        return None
     return exec_dt
 
 # --- 核心操作函数 ---
@@ -106,7 +117,7 @@ def perform_seat_operation(
     status_callback: Optional[Callable[[str], None]] = None, client_id: Optional[str] = None
 ) -> str:
     def send_status(msg: str):
-        print(msg)
+        logger.info(msg)
         if status_callback: status_callback(msg.strip().replace('\r', ''))
     
     mode_str = '预约' if mode == 1 else '抢座'
@@ -124,10 +135,11 @@ def perform_seat_operation(
     
     for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
         send_status(f"\n--- 第 {attempt}/{MAX_REQUEST_ATTEMPTS} 次尝试 ---")
+        current_attempt_error = None
         if attempt > 1:
             send_status(f"等待 {SLEEP_INTERVAL_ON_FAIL} 秒后重试...")
             time.sleep(SLEEP_INTERVAL_ON_FAIL)
-        
+
         current_pre_header = pre_header_base.copy(); current_pre_header['Cookie'] = cookie
         current_queue_header = queue_header_base.copy(); current_queue_header['Cookie'] = cookie
         main_payload_template = data_template_tomorrow if mode == 1 else data_template_today
@@ -138,7 +150,7 @@ def perform_seat_operation(
             main_payload['variables']['seatKey'] = seat_key; main_payload['variables']['libId'] = lib_id
         data_lib_chosen = json.loads(json.dumps(data_lib_chosen_template)); data_lib_chosen['variables']['libId'] = lib_id
         data_validate_payload = json.loads(json.dumps(data_validate))
-
+        
         try:
             if mode == 1:
                 send_status("步骤 1/5: 执行排队...");
@@ -172,8 +184,8 @@ def perform_seat_operation(
                 
                 permanent_errors = ["不在预约时间内", "日不开放"]
                 if any(err in error_msg_main for err in permanent_errors):
-                    send_status("检测到不可恢复的业务错误，操作终止。")
-                    return f"操作失败: {error_msg_main}" # 直接返回，不再重试
+                    logger.warning("检测到不可恢复的业务错误，操作终止。")
+                    return f"操作失败: {error_msg_main}"
 
                 if "access denied" in error_msg_main.lower(): return "Cookie无效或已过期，请更新。"
                 if any(err in error_msg_main for err in ["该座位已经被人预定了", "您选择的座位已被预约", "已被占座"]): return SEAT_TAKEN_ERROR_CODE
@@ -183,11 +195,29 @@ def perform_seat_operation(
             else:
                 send_status(f"✅ {mode_str}成功！")
                 return "成功"
+        
+        except requests.exceptions.Timeout as e:
+            current_attempt_error = f"请求超时: {e}"
+            logger.warning(current_attempt_error)
+        except requests.exceptions.ConnectionError as e:
+            current_attempt_error = f"网络连接错误: {e}"
+            logger.error(current_attempt_error)
+            if re.search(COOKIE_ERROR_PATTERN, str(e), re.IGNORECASE): return "Cookie无效或已过期，请更新。"
+        except requests.exceptions.RequestException as e:
+            current_attempt_error = f"其他网络请求错误: {e}"
+            logger.error(current_attempt_error)
+        except ConnectionError as e:
+            current_attempt_error = f"WebSocket连接错误: {e}"
+            logger.error(current_attempt_error)
+            return str(e)
         except Exception as e:
-            last_error_msg = f"在第 {attempt} 次尝试中发生异常: {e}"
-            send_status(f"❌ {last_error_msg}")
-            # 对于网络等异常，继续重试
-    
+            current_attempt_error = f"发生未知严重错误: {e}"
+            logger.critical(f"在第 {attempt} 次尝试中发生严重错误", exc_info=True)
+            return current_attempt_error
+
+        if current_attempt_error:
+            last_error_msg = current_attempt_error
+
     send_status(f"\n--- 达到最大尝试次数 ({MAX_REQUEST_ATTEMPTS}) ---")
     send_status(f"最终未能成功，最后记录的错误: {last_error_msg}")
     return last_error_msg

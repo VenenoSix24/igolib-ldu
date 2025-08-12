@@ -7,8 +7,10 @@
 import sys
 import os
 
-print("代码正在被这个 Python 解释器运行:", sys.executable)
-print("解释器正在这些路径中寻找库:", sys.path)
+import logger_config
+
+# print("代码正在被这个 Python 解释器运行:", sys.executable)
+# print("解释器正在这些路径中寻找库:", sys.path)
 
 def main():
     """程序主函数，解析命令行参数并启动相应模式。"""

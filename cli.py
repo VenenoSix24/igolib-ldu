@@ -26,6 +26,7 @@ mitmproxy_process = None
 def start_mitmproxy():
     """启动 mitmproxy 脚本作为后台进程 (CLI专用)"""
     global mitmproxy_process
+
     MITMPROXY_SCRIPT_PATH = os.path.join(SCRIPT_DIR, MITMPROXY_SCRIPT_NAME)
     if mitmproxy_process and mitmproxy_process.poll() is None:
         print("Mitmproxy 进程似乎已在运行。")
@@ -61,7 +62,6 @@ def stop_mitmproxy():
             print(f"终止 mitmproxy 进程时发生错误: {e}")
         finally:
              mitmproxy_process = None
-             
 
 def auto_get_cookie_cli() -> Optional[str]:
     """

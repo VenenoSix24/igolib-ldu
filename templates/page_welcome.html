@@ -1467,9 +1467,6 @@
                 </div>
             </div>
 
-            <!-- <p class="text-gray-600 mb-2">
-                <i class="fas fa-info-circle text-blue-500 mr-2"></i>简单三步，轻松抢座：
-            </p> -->
             <ul class="feature-list">
                 <li class="feature-item" style="animation-delay: 0.1s">
                     <span class="feature-item-number">01</span>
@@ -1577,55 +1574,26 @@
             <!-- 添加成就系统预览 -->
             <div class="achievements-preview">
                 <h3 class="text-center text-blue-700 font-bold mb-3 dark:text-blue-300">
-                    <i class="fas fa-award text-yellow-500 mr-2"></i>成就系统
+                    <i class="fas fa-chart-bar text-green-500 mr-2"></i>本站统计
                 </h3>
                 <div class="achievement-items">
                     <div class="achievement">
-                        <i class="fas fa-trophy text-yellow-500"></i>
-                        <p>成功预约数</p>
-                        <strong>0</strong>
+                        <i class="fas fa-calendar-day text-yellow-500"></i>
+                        <p>今日成功抢座</p>
+                        <strong id="stats_today_reservations">--</strong>
                     </div>
                     <div class="achievement">
-                        <i class="fas fa-clock text-blue-500"></i>
-                        <p>学习总时长</p>
-                        <strong>0小时</strong>
+                        <i class="fas fa-trophy text-blue-500"></i>
+                        <p>累计成功抢座</p>
+                        <strong id="stats_total_reservations">--</strong>
                     </div>
                     <div class="achievement">
                         <i class="fas fa-star text-purple-500"></i>
-                        <p>常用阅览室</p>
-                        <strong>暂无</strong>
+                        <p>最受欢迎阅览室</p>
+                        <strong id="stats_favorite_room" style="font-size: 1rem;">暂无</strong>
                     </div>
                 </div>
-                <p class="text-center text-xs text-gray-500 mt-3 italic">开始使用后记录您的学习数据</p>
-            </div>
-
-            <!-- 添加用户反馈和使用统计 -->
-            <div class="usage-stats bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 mb-6 border border-blue-100 dark:border-blue-800">
-                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300 mb-3 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
-                    <span class="font-semibold tracking-wide">系统使用情况</span>
-                </h3>
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">今日活跃用户</p>
-                        <p class="stat-value" id="active-users">--</p>
-                    </div>
-                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">今日预约次数</p>
-                        <p class="stat-value" id="today-bookings">--</p>
-                    </div>
-                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">系统运行天数</p>
-                        <p class="stat-value" id="system-days">--</p>
-                    </div>
-                    <div class="stat-card bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <p class="text-gray-500 dark:text-gray-400 text-xs mb-1 font-medium">系统可用率</p>
-                        <p class="stat-value" id="system-uptime">--</p>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-3 text-center italic font-light">数据每小时更新一次</p>
+                <p class="text-center text-xs text-gray-500 mt-3 italic">数据实时更新</p>
             </div>
 
             <!-- 添加社交图标链接 -->
@@ -1639,7 +1607,7 @@
                 <a href="https://github.com/VenenoSix24" target="_blank" class="social-link github" title="GitHub">
                     <i class="fab fa-github"></i>
                 </a>
-                <a href="https://kawaii.776624.xyz" target="_blank" class="social-link blog" title="博客">
+                <a href="https://6aig.cn" target="_blank" class="social-link blog" title="博客">
                     <i class="fas fa-blog"></i>
                 </a>
                 <a href="mailto:3405395460@qq.com" class="social-link email" title="邮箱">
@@ -1652,7 +1620,7 @@
 
             <!-- 添加版权信息 -->
             <div class="copyright">
-                <p>&copy; 2025 我去抢个座 V3.1.2</p>
+                <p>&copy; 2025 我去抢个座 V3.2.1</p>
                 <p>本项目采用MIT许可证，仅供学习和研究使用</p>
             </div>
         </div>
@@ -1793,80 +1761,41 @@
                     typeWriter(introText, typingText, 40);
                 }, 500);
             }
-            
-            // 获取系统使用数据
+
+            // 延迟50毫秒，对用户无感，但足以避免竞态条件
             setTimeout(() => {
-                fetchSystemStats();
-            }, 1000);
-            
-            // 加载个人成就数据
-            loadAchievements();
+                fetchAndDisplayStats();
+            }, 50);
+
+            // 成就系统 / 本站统计
+            fetchAndDisplayStats();
+
         });
 
-        // 模拟获取系统使用数据
-        function fetchSystemStats() {
-            // 在实际应用中，这里应该是从服务器获取真实数据
-            // 这里使用模拟数据进行演示
-            
-            // 随机生成今日活跃用户数 (50-200)
-            const activeUsers = Math.floor(Math.random() * 151) + 50;
-            document.getElementById('active-users').textContent = activeUsers;
-            
-            // 随机生成今日预约次数 (100-500)
-            const todayBookings = Math.floor(Math.random() * 401) + 100;
-            document.getElementById('today-bookings').textContent = todayBookings;
-            
-            // 系统运行天数 (固定值，模拟系统已运行一段时间)
-            const systemDays = 365;
-            document.getElementById('system-days').textContent = systemDays;
-            
-            // 系统可用率 (95%-99.9%)
-            const systemUptime = (99 + Math.random() * 0.9).toFixed(1) + '%';
-            document.getElementById('system-uptime').textContent = systemUptime;
-        }
-        
-        // 加载个人成就数据
-        function loadAchievements() {
-            // 从localStorage获取成就数据，如果没有则初始化
-            let achievements = JSON.parse(localStorage.getItem('userAchievements')) || {
-                reservationCount: 0,
-                studyHours: 0,
-                favoriteRoom: '暂无'
-            };
-            
-            // 更新UI显示
-            document.querySelector('.achievement:nth-child(1) strong').textContent = achievements.reservationCount;
-            document.querySelector('.achievement:nth-child(2) strong').textContent = achievements.studyHours + '小时';
-            document.querySelector('.achievement:nth-child(3) strong').textContent = achievements.favoriteRoom;
-            
-            return achievements;
-        }
-        
-        // 更新成就数据（在成功预约后调用）
-        function updateAchievements(roomName) {
-            let achievements = loadAchievements();
-            
-            // 增加预约次数
-            achievements.reservationCount++;
-            
-            // 更新学习时长（假设每次预约学习4小时）
-            achievements.studyHours += 4;
-            
-            // 更新最常用阅览室
-            if (roomName && roomName !== '暂无') {
-                // 如果提供了阅览室名称，更新最常用阅览室
-                // 这里可以实现更复杂的逻辑，比如统计每个阅览室的使用次数
-                achievements.favoriteRoom = roomName;
+        async function fetchAndDisplayStats() {
+            const todayEl = document.getElementById('stats_today_reservations');
+            const totalEl = document.getElementById('stats_total_reservations');
+            const favoriteEl = document.getElementById('stats_favorite_room');
+
+            try {
+                const response = await fetch('/api/stats');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const stats = await response.json();
+
+                if (todayEl) todayEl.textContent = stats.todayReservations !== undefined ? stats.todayReservations : '0';
+                if (totalEl) totalEl.textContent = stats.totalReservations !== undefined ? stats.totalReservations : '0';
+                if (favoriteEl) favoriteEl.textContent = stats.favoriteRoom || '暂无';
+
+            } catch (error) {
+                console.error("获取统计数据失败:", error);
+                if (todayEl) todayEl.textContent = 'N/A';
+                if (totalEl) totalEl.textContent = 'N/A';
+                if (favoriteEl) favoriteEl.textContent = '加载失败';
             }
-            
-            // 保存到localStorage
-            localStorage.setItem('userAchievements', JSON.stringify(achievements));
-            
-            // 更新UI显示
-            document.querySelector('.achievement:nth-child(1) strong').textContent = achievements.reservationCount;
-            document.querySelector('.achievement:nth-child(2) strong').textContent = achievements.studyHours + '小时';
-            document.querySelector('.achievement:nth-child(3) strong').textContent = achievements.favoriteRoom;
         }
+        
     </script>
 </body>
 

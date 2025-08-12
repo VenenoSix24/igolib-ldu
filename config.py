@@ -45,7 +45,7 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 queue_header_base: dict[str, str] = {
     'Host': 'libseats.ldu.edu.cn',
     'Connection': 'Upgrade',
-    'Pragma': 'no-cache',
+    'Pragma': 'no-cache', 
     'Cache-Control': 'no-cache',
     'User-Agent': USER_AGENT,
     'Upgrade': 'websocket',
