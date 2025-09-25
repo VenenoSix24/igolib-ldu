@@ -8,6 +8,12 @@
 
 一个现代化的图书馆座位预约和抢座系统Web版，通过精美的响应式界面操作，轻松实现图书馆座位预约。系统支持明日预约和即时抢座两种模式，为用户提供便捷的图书馆座位管理体验。
 
+
+
+![igolib.png](https://s2.loli.net/2025/09/25/CDMzc4GfqbYWmBE.png)
+
+
+
 *基于某个我去图书馆，谁去图书馆？！！*
 
 **（人话：我想要抢一个喜欢的座位！！！！！！！拿来吧你）**
@@ -80,7 +86,7 @@
    # macOS/Linux
    python3 -m venv venv
    source venv/bin/activate
-
+   
    # Windows
    python -m venv venv
    venv\Scripts\activate
