@@ -10,6 +10,8 @@ beta.py
 beta2.py
 debug_core.py
 test.py
+/fil-result
+/tests
 
 ### macOS ###
 # 通用文件

@@ -59,7 +59,6 @@ queue_header_base: dict[str, str] = {
 pre_header_base: dict[str, str] = {
     'Host': 'libseats.ldu.edu.cn',
     'Connection': 'keep-alive',
-    'Content-Length': '353',
     'User-Agent': USER_AGENT,
     'Content-Type': 'application/json',
     'Accept': '*/*',

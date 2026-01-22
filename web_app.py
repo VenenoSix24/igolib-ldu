@@ -13,6 +13,7 @@ from typing import Dict, Optional, Set
 from fastapi import (
     BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -50,6 +51,29 @@ app = FastAPI(title="我去抢个座", lifespan=lifespan)
 STATIC_DIR_PATH = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR_PATH), name="static")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    捕获 Pydantic 校验错误，返回前端可读的 JSON 错误信息，
+    防止前端显示 [object Object]
+    """
+    try:
+        # 获取第一个错误信息
+        error = exc.errors()[0]
+        # 如果是 Pydantic 自定义错误 (ValueError)，msg 通常就是我们的错误提示
+        # Pydantic v2 format: 'ctx' might contain the original error
+        msg = error.get("msg", "参数校验错误")
+        # 去掉 'Value error, ' 前缀
+        if msg.startswith("Value error, "):
+            msg = msg.replace("Value error, ", "")
+        
+        return JSONResponse(
+            status_code=400,
+            content={"detail": f"{msg}"},
+        )
+    except Exception:
+        return JSONResponse(status_code=400, content={"detail": "请求参数无效"})
 
 # --- WebSocket 管理器 ---
 class ConnectionManager:
@@ -108,7 +132,7 @@ async def get_system_stats():
     获取格式化后的全站统计数据。
     """
     try:
-        stats = get_formatted_stats()
+        stats = await get_formatted_stats()
         return JSONResponse(content=stats)
     except Exception as e:
         logger.error(f"获取系统统计数据时出错: {e}", exc_info=True)

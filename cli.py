@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-命令行界面 (CLI) 模块
+命令行界面 (CLI) 模块 (Async Refactor)
 
 负责处理所有命令行交互的逻辑。
+已适配异步 Core。
 """
 import os
 import stat
 import time
 import datetime
 import subprocess
+import asyncio
 from typing import Optional
 
 # 从项目其他模块导入必要的函数和变量
@@ -187,14 +189,24 @@ def run_cli():
             else: # 如果没有映射文件，则让用户直接输入key
                 seat_key = seat_number_input
 
-        # 执行核心操作
-        final_result = perform_seat_operation(
-            mode, cookie_str, lib_id_int, seat_key, start_action_dt,
-            room_id_to_name, seat_mappings
-        )
+        # 定义一个简单的同步回调，打印消息
+        def cli_status_callback(msg):
+            print(msg)
 
-        print("\n--- 操作结束 ---")
-        print(f"最终结果: {final_result}")
+        # 执行核心操作 (通过 asyncio.run)
+        print("\n正在启动异步任务...")
+        try:
+            final_result = asyncio.run(perform_seat_operation(
+                mode, cookie_str, lib_id_int, seat_key, start_action_dt,
+                room_id_to_name, seat_mappings,
+                status_callback=cli_status_callback
+            ))
+            print("\n--- 操作结束 ---")
+            print(f"最终结果: {final_result}")
+        except KeyboardInterrupt:
+            print("\n操作已取消。")
+        except Exception as e:
+            print(f"\n发生错误: {e}")
         
         try_again = input("\n是否要执行新的任务? (y/n): ").strip().lower()
         if try_again != 'y':
