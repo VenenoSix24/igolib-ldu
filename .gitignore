@@ -12,6 +12,11 @@ debug_core.py
 test.py
 /fil-result
 /tests
+/templates_backup
+/.history
+/logs
+/templates
+/app_data
 
 ### macOS ###
 # 通用文件

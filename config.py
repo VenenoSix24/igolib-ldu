@@ -31,11 +31,8 @@ except NameError:
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data_process')
 ROOM_MAPPINGS_FILE = os.path.join(DATA_DIR, 'room', 'output', 'room_mappings.json')
 SEAT_MAPPINGS_DIR = os.path.join(DATA_DIR, 'seat', 'output')
-TEMPLATES_DIR = os.path.join(SCRIPT_DIR, 'templates')
 COOKIE_FILENAME = "latest_cookie.txt"
 COOKIE_FILE_PATH = os.path.join(SCRIPT_DIR, COOKIE_FILENAME)
-MITMPROXY_SCRIPT_NAME = "cookie_extractor.py"
-MITMPROXY_COMMAND = "mitmweb"
 FILE_CHECK_INTERVAL = 2
 MAX_WAIT_TIME = 120
 

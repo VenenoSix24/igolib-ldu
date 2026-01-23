@@ -16,15 +16,12 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 # --- 从模块中导入 ---
-from config import TEMPLATES_DIR
 from core import calculate_execution_dt
 from models import SeatRequestWeb
 from tasks import background_task_runner
 from data_utils import load_mappings
-from achievements import get_formatted_stats
 import globals
 
 # 获取一个以当前模块名命名的logger
@@ -47,10 +44,14 @@ async def lifespan(app: FastAPI):
     logger.info("--- FastAPI 应用关闭 ---")
 
 # --- FastAPI 应用实例 ---
-app = FastAPI(title="我去抢个座", lifespan=lifespan)
-STATIC_DIR_PATH = os.path.join(os.path.dirname(__file__), "static")
-app.mount("/static", StaticFiles(directory=STATIC_DIR_PATH), name="static")
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
+app = FastAPI(title="我去抢个座 API", lifespan=lifespan)
+
+# --- 静态文件挂载 ---
+# 前端现在由 React 独立管理，后端不再挂载 static 目录，也不提供 favicon.ico
+# 如果需要调试，可取消注释
+# STATIC_DIR_PATH = os.path.join(os.path.dirname(__file__), "static")
+# app.mount("/static", StaticFiles(directory=STATIC_DIR_PATH), name="static")
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -62,7 +63,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         # 获取第一个错误信息
         error = exc.errors()[0]
         # 如果是 Pydantic 自定义错误 (ValueError)，msg 通常就是我们的错误提示
-        # Pydantic v2 format: 'ctx' might contain the original error
         msg = error.get("msg", "参数校验错误")
         # 去掉 'Value error, ' 前缀
         if msg.startswith("Value error, "):
@@ -85,12 +85,12 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections[client_id] = websocket
         self.message_locks[client_id] = asyncio.Lock()
-        logger.info(f"WebSocket connected: {client_id}")
+        logger.info(f"WebSocket 已连接: {client_id}")
 
     def disconnect(self, client_id: str):
         if client_id in self.active_connections: del self.active_connections[client_id]
         if client_id in self.message_locks: del self.message_locks[client_id]
-        logger.info(f"WebSocket disconnected: {client_id}")
+        logger.info(f"WebSocket 已断开: {client_id}")
 
     async def _send_json_safe(self, client_id: str, payload: dict):
         websocket = self.active_connections.get(client_id)
@@ -125,19 +125,6 @@ async def get_mappings():
         raise HTTPException(status_code=503, detail="服务正在初始化，请稍后重试。")
     sorted_rooms = dict(sorted(globals.ROOM_ID_TO_NAME.items(), key=lambda item: item[1]))
     return {"rooms": sorted_rooms}
-
-@app.get("/api/stats")
-async def get_system_stats():
-    """
-    获取格式化后的全站统计数据。
-    """
-    try:
-        stats = await get_formatted_stats()
-        return JSONResponse(content=stats)
-    except Exception as e:
-        logger.error(f"获取系统统计数据时出错: {e}", exc_info=True)
-        # 向前端返回一个标准的服务器错误
-        raise HTTPException(status_code=500, detail="无法获取统计数据")
 
 @app.post("/api/submit_request")
 async def handle_seat_request(request: SeatRequestWeb, background_tasks: BackgroundTasks):
@@ -185,24 +172,5 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 @app.websocket("/ws_test_connection")
 async def websocket_test_endpoint(websocket: WebSocket):
     await websocket.accept()
-    logger.debug("Test WebSocket connection accepted and immediately closed by server.")
+    logger.debug("测试 WebSocket 连接已接受并立即关闭。")
     await websocket.close(code=1000)
-
-# --- HTML 页面路由 ---
-@app.get("/")
-async def get_index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
-@app.get("/{page_name}.html")
-async def get_page(request: Request, page_name: str):
-    if page_name not in ["page_welcome", "page_config", "page_status"]:
-        raise HTTPException(status_code=404, detail="页面未找到")
-    return templates.TemplateResponse(f"{page_name}.html", {"request": request})
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    favicon_path = os.path.join(STATIC_DIR_PATH, "images/favicon/favicon.ico")
-    if os.path.exists(favicon_path):
-        return FileResponse(favicon_path)
-    else:
-        raise HTTPException(status_code=404, detail="Icon not found")

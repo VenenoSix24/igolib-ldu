@@ -13,7 +13,6 @@ from typing import Optional
 
 from core import perform_seat_operation
 from config import SEAT_TAKEN_ERROR_CODE
-from achievements import update_stats_on_success
 import globals
 
 logger = logging.getLogger(__name__)
@@ -64,7 +63,9 @@ async def background_task_runner(
         start_dt = BEIJING_TZ.localize(start_dt)
 
     if start_dt and start_dt > now_dt:
-        await send_status(f"等待计划执行时间: {start_dt.strftime('%Y-%m-%d %H:%M:%S')}...")
+        # 立即发送一条状态，避免用户等待
+        remaining_seconds = start_dt.timestamp() - now_dt.timestamp()
+        await send_status(f"预约任务已启动，距离计划执行时间还有 {remaining_seconds:.1f} 秒...")
         
         while True:
             # 1. 检查任务取消
@@ -77,6 +78,9 @@ async def background_task_runner(
             # 2. 计算剩余时间
             now_ts = time.time()
             remaining_seconds = start_dt.timestamp() - now_ts
+            
+            # 移除偏移量，严格与前端 Math.floor 保持一致，确保精确同步
+            display_sec = int(remaining_seconds)
             
             # 3. 触发条件
             if remaining_seconds <= 0.01:
@@ -99,11 +103,13 @@ async def background_task_runner(
             elif remaining_seconds > 10:
                 await asyncio.sleep(0.5)
             else:
-                # 临近 10 秒，倒计时显示
-                # 避免刷屏，每秒发一次
-                if int(remaining_seconds * 2) != int((remaining_seconds - 0.1) * 2):
-                     # float formatting
-                    await send_status(f"距离计划执行时间还有 {remaining_seconds:.1f} 秒...")
+                # 倒计时显示逻辑 (带状态跟踪)
+                if 'last_logged_sec' not in locals():
+                     last_logged_sec = -999
+
+                if display_sec != last_logged_sec and display_sec >= 0:
+                     await send_status(f"距离计划执行时间还有 {display_sec} 秒...")
+                     last_logged_sec = display_sec
                 
                 # 高精度等待
                 wait_time = max(0.01, min(0.05, remaining_seconds / 5))
@@ -119,13 +125,6 @@ async def background_task_runner(
 
     # --- 后续处理 ---
     logger.info(f"[后台任务 {client_id}] 执行完毕，结果: {final_result}")
-
-    if "成功" in final_result:
-        try:
-            room_name = globals.ROOM_ID_TO_NAME.get(str(lib_id), "未知阅览室")
-            await update_stats_on_success(room_name)
-        except Exception as e:
-            logger.error(f"更新统计数据时发生错误: {e}", exc_info=True)
 
     status_code_ws = "success" if "成功" in final_result else "error"
     if "任务已被用户取消" in final_result:

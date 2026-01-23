@@ -1,16 +1,17 @@
-# 我去抢个座 - Web版
+# 我去抢个座 - iGoLib-LDU
 
-![版本](https://img.shields.io/badge/版本-3.2.1-blue.svg)
+![版本](https://img.shields.io/badge/版本-4.2.23-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.9+-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115.12-brightgreen.svg)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-2.2.19-38B2AC.svg)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.17-38B2AC.svg)
 ![许可证](https://img.shields.io/badge/许可证-MIT-yellow.svg)
 
-一个现代化的图书馆座位预约和抢座系统Web版，通过精美的响应式界面操作，轻松实现图书馆座位预约。系统支持明日预约和即时抢座两种模式，为用户提供便捷的图书馆座位管理体验。
+
+一个基于 **Python Asyncio + FastAPI + React** 的现代化图书馆座位预约系统。核心逻辑均为 **全异步 (Full Async)** 架构，采用 `httpx` 和 `websockets` 库，解决了线程阻塞问题，能够单线程高效处理海量并发抢座任务。支持明日预约和即时抢座两种模式，配合精美的响应式 Web 界面，提供极致流畅的体验。
 
 
 
-![igolib.png](https://s2.loli.net/2025/09/25/CDMzc4GfqbYWmBE.png)
+![igolib_ldu_v4_p2.jpg](https://s2.loli.net/2026/01/24/vfFthcUYaTIDB9l.jpg)
 
 
 
@@ -45,15 +46,14 @@
 
 ## ✨ 功能特性
 
-- 🔄 **明日预约模式**：在开放时间预约第二天的座位。
-- ⚡ **即时抢座模式**：实时抢占当天可用座位（虽然有些鸡肋）。
-- 🌐 **精美Web界面**：基于TailwindCSS的响应式设计。
+- 🚀 **全异步高性能内核**：基于 `asyncio`、`httpx` 和 `websockets` 重写核心逻辑，非阻塞 I/O，极低内存占用，秒级处理并发。
+- 🔄 **明日预约模式**：在开放时间预约第二天的座位，支持 WebSocket 排队通道。
+- ⚡ **即时抢座模式**：实时抢占当天可用座位，智能优化等待策略。
+- 🌐 **精美Web界面**：基于 TailwindCSS 的响应式设计，操作丝滑。
 - 🌙 **深色/浅色模式**：自动适应系统主题或手动切换。
-- 🕒 **定时执行**：支持立即执行、预设时间或自定义时间三种执行方式。
-- 📊 **实时状态**：预约/抢座过程实时反馈，清晰的日志显示。
-- 📈 **全站统计**：实时查看本站的总抢座次数、今日次数和最受欢迎阅览室。
-- 📱 **移动友好**：完美支持手机访问和操作。
-- 🎨 **精美动效**：流畅的过渡动画和交互效果。
+- 🕒 **智能定时**：支持立即执行、预设时间（21:48）或自定义时间（精确到秒）。
+- 📊 **实时状态反馈**：WebSocket 实时推送抢座日志和结果，零延迟。
+- 📱 **移动友好**：完美适配 iOS/Android，针对移动端输入进行专项优化。
 
 ## 📋 目录
 
@@ -70,14 +70,14 @@
 ### 环境要求
 
 - Python 3.9+
-- pip包管理器
+- pip 包管理器
 
 ### 安装步骤
 
 1. **克隆或下载项目代码**
 
    ```bash
-   git clone [https://github.com/VenenoSix24/igolib-ldu.git](https://github.com/VenenoSix24/igolib-ldu.git)
+   git clone https://github.com/VenenoSix24/igolib-ldu.git
    cd igolib-ldu
    ```
 2. **创建并激活虚拟环境**（推荐）
@@ -103,85 +103,94 @@
 
 - `main.py`: 项目的统一启动入口。
 - `config.py`: 存放所有全局配置、URL和请求头。
-- `core.py`: 封装了最核心的抢座/预约业务逻辑。
-- `web_app.py`: 包含所有 FastAPI Web 服务、API路由和 WebSocket 逻辑。
-- `tasks.py`: 后台任务执行器，作为 Web 层和 Core 层的桥梁。
-- `cli.py`: 命令行版本的所有功能。
+- `core.py`: **[Async]** 封装了最核心的抢座/预约业务逻辑，使用 `httpx` 和 `websockets`。
+- `web_app.py`: **[Async]** FastAPI Web 服务层，处理 HTTP/WebSocket 请求。
+- `tasks.py`: **[Async]** 异步后台任务调度器，使用 `asyncio` 协程运行定时任务。
+- `cli.py`: **[Async]** 命令行版本，适配了异步核心。
 - `data_utils.py`: 负责加载阅览室、座位等静态映射数据。
-- `achievements.py`: 负责处理全站统计数据的读写逻辑。
 - `globals.py`: 存放跨模块共享的全局变量。
 - `models.py`: 定义 Pydantic 数据模型。
-- `app_data/`: 存放程序运行时动态生成的数据。
 - `data_process/`: 存放预处理的静态数据。
-- `templates/` & `static/`: 前端文件。
+- `frontend/`: React 前端项目源码。
 
 ## 🚀 使用方法
 
 项目支持 Web 界面和命令行两种模式，通过 `main.py` 启动。
 
-### 启动Web服务
+项目分为后端 API 服务和 React 前端应用。
 
-在激活虚拟环境后，运行以下命令：
+### 1. 启动后端 API 服务
 
-```bash
-python main.py --web
-```
-
-如果希望局域网内的其他设备（如手机）也能访问，请使用：
-
-```bash
-python main.py --web --host 0.0.0.0
-```
-
-### 访问Web界面
-
-打开浏览器访问: `http://127.0.0.1:8000` 或 `http://[你的IP地址]:8000`
-
-### 启动命令行界面
-
-如果您想使用纯命令行版本，直接运行：
+在激活虚拟环境后，运行：
 
 ```bash
 python main.py
 ```
 
+后端服务将在 `http://127.0.0.1:8000` 启动 API 文档地址: `http://127.0.0.1:8000/docs`
+
+### 2. 启动前端 React 应用
+
+进入 `frontend` 目录并启动开发服务器：
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+前端页面通常将在 `http://127.0.0.1:5173` 访问。
+
+### 3. 访问
+
+打开浏览器访问前端地址 (如 `http://127.0.0.1:5173`) 即可使用。后端只负责提供 API 接口。
+
 ### 使用流程
 
-1. **欢迎页面**：
-
-   - 阅读系统介绍和功能特点
-   - 查看系统使用情况统计
-   - 同意使用条款和隐私政策
-2. **配置页面**：
-
+1. **Landing Page 页面**：
+   - 项目介绍
+   - 项目功能特点
+   - 点击 `进入系统` 按钮
+2. **填写配置**：
    - 选择操作模式（明日预约/立即抢座）
-   - 填入Cookie信息（需自行抓包获取，教程还没写 T^T）
+   - 填写 Cookie 信息（需自行抓包获取，教程还没写 T^T）
    - 选择阅览室和填写座位号
    - 设置执行时间（立即执行/默认时间/自定义时间）
-   - 提交请求
-3. **状态页面**：
-
+   - 启动任务
+3. **查看状态**：
    - 实时查看预约/抢座进度
    - 查看详细操作日志
    - 获取最终结果
 
 ## 🖼️ 界面预览
 
-太懒了，还没截图...
+
+
+<img src="https://s2.loli.net/2026/01/24/dMJ9Kwi8VejqP4f.jpg" width="100%" />
+
+
+
+<p align="center">
+  <img src="https://s2.loli.net/2026/01/24/m1qXWvlsOSxRwb6.jpg" width="35%" />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://s2.loli.net/2026/01/24/m1qXWvlsOSxRwb6.jpg" width="35%" />
+</p>
+
+
 
 ## ❓ 常见问题
 
 ### Q: 如何获取Cookie？
 
-A: 您需要使用抓包软件从图书馆小程序登录后获取Cookie信息（教程还没写...大家应该都会..吧..）。
+A: 您需要使用抓包软件从图书馆小程序登录后获取 Cookie 信息（教程还没写...大家应该都会..吧..）。
 
 ### Q: 预约失败怎么办？
 
-A: 常见原因包括Cookie失效、座位已被预约或网络问题。请检查Cookie是否有效，并尝试选择其他座位。
+A: 常见原因包括 Cookie 失效、座位已被预约或网络问题。请检查 Cookie 是否有效，并尝试选择其他座位。
 
 ### Q: 支持哪些浏览器？
 
-A: 支持所有浏览器，包括Chrome、Firefox、Edge、Safari等，并且对移动设备浏览器做了特别优化。
+A: 支持所有浏览器，包括 Chrome、Firefox、Edge、Safari 等，并且对移动设备浏览器做了特别优化。
 
 ## 🤝 贡献指南
 

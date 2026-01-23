@@ -31,11 +31,13 @@ class SeatRequestWeb(BaseModel):
             
             if mode == 1: # 明日预约模式
                 if not time_str:
-                    raise ValueError('明日预约模式必须提供执行时间')
+                    # 允许为空，表示立即执行预约操作
+                    return v
                 if time_str == "00:00:01":
                     return time_str
                 if not validate_time_format(time_str):
                     raise ValueError('时间格式错误，应为 HH:MM:SS')
+                # 仅当提供了时间且非立即执行时检查窗口
                 if calculate_execution_dt(time_str, check_window=True) is None:
                     raise ValueError(f"预约时间 '{time_str}' 无效或不在窗口内/已过")
             

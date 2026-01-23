@@ -15,74 +15,27 @@ from typing import Optional
 
 # 从项目其他模块导入必要的函数和变量
 from config import (
-    COOKIE_FILE_PATH, SCRIPT_DIR, MITMPROXY_COMMAND,
-    MITMPROXY_SCRIPT_NAME, MAX_WAIT_TIME, FILE_CHECK_INTERVAL,
+    COOKIE_FILE_PATH, SCRIPT_DIR, MAX_WAIT_TIME, FILE_CHECK_INTERVAL,
     TOMORROW_RESERVE_WINDOW_START, TOMORROW_RESERVE_WINDOW_END
 )
 from core import perform_seat_operation, calculate_execution_dt, validate_time_format
 from data_utils import load_mappings
 
-# 这个全局变量用于在此模块内部跟踪 mitmproxy 进程
-mitmproxy_process = None
 
-def start_mitmproxy():
-    """启动 mitmproxy 脚本作为后台进程 (CLI专用)"""
-    global mitmproxy_process
-
-    MITMPROXY_SCRIPT_PATH = os.path.join(SCRIPT_DIR, MITMPROXY_SCRIPT_NAME)
-    if mitmproxy_process and mitmproxy_process.poll() is None:
-        print("Mitmproxy 进程似乎已在运行。")
-        return True
-    if not os.path.exists(MITMPROXY_SCRIPT_PATH):
-        print(f"错误：mitmproxy 脚本未找到: {MITMPROXY_SCRIPT_PATH}")
-        return False
-    command = [MITMPROXY_COMMAND, "-s", MITMPROXY_SCRIPT_PATH, "--set", "web_port=8081"]
-    try:
-        print(f"正在启动 mitmproxy ({MITMPROXY_COMMAND}) 后台进程...")
-        mitmproxy_process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-        )
-        print(f"Mitmproxy 进程已启动 (PID: {mitmproxy_process.pid})。")
-        return True
-    except Exception as e:
-        print(f"启动 mitmproxy 时发生错误: {e}")
-        return False
-
-def stop_mitmproxy():
-    """停止由本程序启动的 mitmproxy 进程 (CLI专用)"""
-    global mitmproxy_process
-    if mitmproxy_process and mitmproxy_process.poll() is None:
-        print(f"正在尝试终止 mitmproxy 进程 (PID: {mitmproxy_process.pid})...")
-        try:
-            mitmproxy_process.terminate()
-            mitmproxy_process.wait(timeout=5)
-            print("Mitmproxy 进程已终止。")
-        except Exception as e:
-            print(f"终止 mitmproxy 进程时发生错误: {e}")
-        finally:
-             mitmproxy_process = None
 
 def auto_get_cookie_cli() -> Optional[str]:
     """
-    启动 mitmproxy(如果未运行)，指导用户操作，并监控文件。
+    指导用户操作，并监控 Cookie 文件。
     返回 Cookie 字符串或 None。
     """
-    if not start_mitmproxy():
-        print("无法启动 mitmproxy，自动获取 Cookie 失败。")
-        return None
-
     print("\n请按以下步骤操作：")
-    print(f"  1. Mitmproxy 应该已在后台启动。")
-    if MITMPROXY_COMMAND == "mitmweb":
-         print("     (可在 http://127.0.0.1:8081 查看流量)")
-    print(f"  2. 【重要】请现在手动设置系统网络代理为: 127.0.0.1:8080")
+    print(f"  1. 确保已通过其他方式启动了抓包工具 (如 mitmproxy)。")
+    print(f"  2. 【重要】请手动设置系统网络代理。")
     print(f"  3. 打开【电脑版微信】并访问【图书馆小程序首页】以触发 Cookie 更新。")
     print(f"  4. 程序将自动检测位于 '{SCRIPT_DIR}' 目录下的 '{os.path.basename(COOKIE_FILE_PATH)}' 文件更新。")
 
     input("\n完成代理设置和微信操作后，请按 Enter 键开始监控 Cookie 文件...")
+
     print("\n正在等待 Cookie 文件更新...")
 
     start_time = time.time()

@@ -173,8 +173,21 @@ async def perform_seat_operation(
                 send_status(f"等待 {SLEEP_INTERVAL_ON_FAIL} 秒后重试...")
                 await asyncio.sleep(SLEEP_INTERVAL_ON_FAIL)
 
-            current_pre_header = pre_header_base.copy(); current_pre_header['Cookie'] = cookie
-            current_queue_header = queue_header_base.copy(); current_queue_header['Cookie'] = cookie
+            # httpx 的 header values 必须是可被 latin-1 编码的 (或 ascii)
+            # Cookie 可能包含 unicode 字符，如果不处理可能会在库内部抛出编码错误。
+            # 虽然 httpx 通常能处理，但为了稳健性，我们尝试将其编码为 latin-1。
+            # 最佳实践：确保 Cookie 字符串是纯 ASCII 或 latin-1 兼容的。
+            try:
+                safe_cookie = cookie.encode('latin-1').decode('latin-1')
+            except UnicodeEncodeError:
+                # 如果 Cookie 包含无法用 latin-1 表示的真实 Unicode 字符（不太可能，Session ID 通常是 ASCII），
+                # 我们则保留原样，由 httpx 处理或报错。
+                safe_cookie = cookie
+
+            current_pre_header = pre_header_base.copy()
+            current_pre_header['Cookie'] = safe_cookie
+            current_queue_header = queue_header_base.copy()
+            current_queue_header['Cookie'] = safe_cookie
             main_payload_template = data_template_tomorrow if mode == 1 else data_template_today
             main_payload = json.loads(json.dumps(main_payload_template))
             if mode == 1:
