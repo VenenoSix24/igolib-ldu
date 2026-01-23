@@ -2,6 +2,7 @@
   "name": "igolib-ldu",
   "private": true,
   "version": "4.2.23",
+  "homepage": ".",
   "type": "module",
   "scripts": {
     "dev": "vite",
