@@ -26,7 +26,10 @@ async def background_task_runner(
     cookie: str,
     lib_id: int,
     seat_key: str,
-    start_dt: Optional[datetime.datetime]
+    start_dt: Optional[datetime.datetime],
+    api_url: str = "",
+    origin: str = "",
+    referer: str = ""
 ):
     """
     异步后台任务执行器。
@@ -89,7 +92,8 @@ async def background_task_runner(
                 final_result = await perform_seat_operation(
                     mode, cookie, lib_id, seat_key, start_dt,
                     globals.ROOM_ID_TO_NAME, globals.SEAT_MAPPINGS,
-                    ws_status_callback_sync, client_id
+                    ws_status_callback_sync, client_id,
+                    api_url, origin, referer
                 )
                 break
             
@@ -120,7 +124,8 @@ async def background_task_runner(
         final_result = await perform_seat_operation(
             mode, cookie, lib_id, seat_key, start_dt,
             globals.ROOM_ID_TO_NAME, globals.SEAT_MAPPINGS,
-            ws_status_callback_sync, client_id
+            ws_status_callback_sync, client_id,
+            api_url, origin, referer
         )
 
     # --- 后续处理 ---

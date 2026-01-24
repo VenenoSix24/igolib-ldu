@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
   LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
-  KeyRound, Building2, Armchair
+  KeyRound, Building2, Armchair, Settings
 } from "lucide-react";
 import { getMappings, submitRequest, cancelTask, getDynamicRooms, getRoomSeats, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
+import { SettingsModal, loadApiConfig, saveApiConfig, type ApiConfig, DEFAULT_CONFIG } from "@/components/SettingsModal";
 
 interface LogEntry {
   id: string;
@@ -46,6 +47,21 @@ export default function Dashboard() {
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [seatInputMode, setSeatInputMode] = useState<'manual' | 'select'>('select');
   const [selectedSeatKey, setSelectedSeatKey] = useState<string>("");
+
+  // --- API 配置状态 ---
+  const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // 加载 API 配置
+  useEffect(() => {
+    setApiConfig(loadApiConfig());
+  }, []);
+
+  // 保存 API 配置
+  const handleSaveApiConfig = (config: ApiConfig) => {
+    setApiConfig(config);
+    saveApiConfig(config);
+  };
 
   // --- 表单状态 ---
   const [libId, setLibId] = useState<string>("");
@@ -119,7 +135,7 @@ export default function Dashboard() {
       setRoomsError(null);
 
       try {
-        const data = await getDynamicRooms(cookieStr.trim());
+        const data = await getDynamicRooms(cookieStr.trim(), apiConfig);
         setDynamicRooms(data.rooms);
 
         // 将动态数据转换为 RoomMapping 格式以兼容现有逻辑
@@ -147,7 +163,7 @@ export default function Dashboard() {
     // 防抖：只在用户停止输入 500ms 后请求
     const debounceTimer = setTimeout(fetchDynamicRoomsData, 500);
     return () => clearTimeout(debounceTimer);
-  }, [cookieStr]);
+  }, [cookieStr, apiConfig]); // apiConfig 变化时也重新获取
 
   useEffect(() => { localStorage.setItem("libId", libId); }, [libId]);
   useEffect(() => { localStorage.setItem("seatNumber", seatNumber); }, [seatNumber]);
@@ -178,7 +194,7 @@ export default function Dashboard() {
 
       setLoadingSeats(true);
       try {
-        const data = await getRoomSeats(parseInt(libId), cookieStr.trim());
+        const data = await getRoomSeats(parseInt(libId), cookieStr.trim(), apiConfig);
         // 只保留可用座位用于选择
         const availableSeats = data.seats.filter(s => s.available);
         setDynamicSeats(availableSeats);
@@ -409,7 +425,11 @@ export default function Dashboard() {
         seatNumber,
         mode,
         timeStr,
-        cookieStr
+        cookieStr,
+        seatKey: selectedSeatKey || undefined,
+        apiUrl: apiConfig.apiUrl,
+        origin: apiConfig.origin,
+        referer: apiConfig.referer
       });
 
       // 此后立即通过 WS 处理用户反馈
@@ -435,10 +455,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 flex flex-col font-sans overflow-hidden transition-colors duration-300">
+    <div className="fixed inset-0 h-[100dvh] w-full bg-slate-50 dark:bg-neutral-950 flex flex-col font-sans overflow-hidden transition-colors duration-300">
 
       {/* 移动端标签切换器 (Flex Item, Naturally Fixed at Top) */}
-      <div className="lg:hidden flex border-b bg-white dark:bg-slate-900 shrink-0 shadow-sm">
+      <div className="lg:hidden flex border-b bg-white dark:bg-neutral-900 shrink-0 shadow-sm">
         <button
           onClick={() => setActiveTab('config')}
           className={cn("flex-1 py-3 text-sm font-bold border-b-2 transition-colors", activeTab === 'config' ? "border-blue-500 text-blue-600" : "border-transparent text-slate-500")}
@@ -457,26 +477,37 @@ export default function Dashboard() {
 
         {/* ---------------- 左侧栏: 配置 ---------------- */}
         <div className={cn(
-          "w-full lg:w-[30%] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform lg:translate-x-0 h-full flex flex-col",
+          "w-full lg:w-[30%] bg-white dark:bg-neutral-900 border-r border-slate-200 dark:border-neutral-800 transition-transform lg:translate-x-0 h-full flex flex-col",
           activeTab === 'config' ? "flex" : "hidden lg:flex"
         )}>
           <div className="flex-1 overflow-y-auto pt-4 px-4 pb-4 md:px-6 md:pb-6 lg:px-8 lg:pb-8 custom-scrollbar flex flex-col min-h-0">
-            <div className="pb-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center mb-3">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="pb-2 border-b border-slate-100 dark:border-neutral-800 flex justify-between items-center mb-3">
+              <h2 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                 <Rocket className="w-5 h-5 text-blue-500" />
                 任务配置
               </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={cycleTheme}
-                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                title={theme === 'system' ? "跟随系统" : (theme === 'dark' ? "深色模式" : "浅色模式")}
-              >
-                {theme === "dark" ? <Moon className="w-5 h-5" /> :
-                  theme === "light" ? <Sun className="w-5 h-5" /> :
-                    <Laptop className="w-5 h-5" />}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={cycleTheme}
+                  className="text-slate-500 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-slate-100"
+                  title={theme === 'system' ? "跟随系统" : (theme === 'dark' ? "深色模式" : "浅色模式")}
+                >
+                  {theme === "dark" ? <Moon className="w-5 h-5" /> :
+                    theme === "light" ? <Sun className="w-5 h-5" /> :
+                      <Laptop className="w-5 h-5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowSettings(true)}
+                  className="text-slate-500 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-slate-100"
+                  title="API 设置"
+                >
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
 
             <form className="flex-1 flex flex-col justify-evenly gap-3 max-w-lg mx-auto w-full min-h-0" onSubmit={(e) => e.preventDefault()}>
@@ -493,7 +524,7 @@ export default function Dashboard() {
                       "py-3 px-4 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center gap-1",
                       opMode === 'scheduled'
                         ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                        : "border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                        : "border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-400"
                     )}
                   >
                     <Calendar className="w-4 h-4" />
@@ -505,7 +536,7 @@ export default function Dashboard() {
                       "py-3 px-4 rounded-xl text-sm font-bold transition-all border-2 flex flex-col items-center gap-1",
                       opMode === 'immediate'
                         ? "border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
-                        : "border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                        : "border-slate-100 bg-slate-50 text-slate-500 hover:bg-slate-100 dark:border-neutral-800 dark:bg-neutral-900 dark:text-slate-400"
                     )}
                   >
                     <Zap className="w-4 h-4" />
@@ -525,12 +556,12 @@ export default function Dashboard() {
                     placeholder="粘贴 JSESSIONID..."
                     value={cookieStr}
                     onChange={(e) => setCookieStr(e.target.value)}
-                    className="pr-10 h-10 font-mono text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors dark:bg-slate-950 dark:border-slate-700"
+                    className="pr-10 h-10 font-mono text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors dark:bg-neutral-950 dark:border-neutral-700"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCookie(!showCookie)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-neutral-600 p-1"
                   >
                     {showCookie ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -538,13 +569,13 @@ export default function Dashboard() {
               </div>
 
               {/* 3. 执行详情 */}
-              <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-neutral-800">
                 {/* 时间 */}
                 <div className="space-y-3">
                   <Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
                     <Clock className="w-3 h-3" /> 执行时间
                   </Label>
-                  <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                  <div className="flex gap-2 p-1 bg-slate-100 dark:bg-neutral-800 rounded-lg">
                     {['immediate', '2148', 'custom'].map((t) => (
                       <button
                         key={t}
@@ -552,8 +583,8 @@ export default function Dashboard() {
                         className={cn(
                           "flex-1 py-1.5 px-2 rounded-md text-xs font-bold transition-all capitalize",
                           execTime === t
-                            ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-300 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                            ? "bg-white dark:bg-neutral-600 text-blue-600 dark:text-blue-300 shadow-sm"
+                            : "text-slate-500 hover:text-neutral-700 dark:text-slate-400 dark:hover:text-slate-200"
                         )}
                       >
                         {t === 'immediate' ? '立即' : t === '2148' ? '21:48' : '自定义'}
@@ -585,12 +616,12 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <Label className="text-xs text-slate-500 font-bold uppercase flex items-center gap-2">
                       <Building2 className="w-3 h-3" /> 阅览室
-                      {dynamicRooms.length > 0 && (
+                      {dynamicRooms.length > 0 && !roomsError && (
                         <span className="text-green-500 text-[10px] font-normal">✓ 实时</span>
                       )}
                     </Label>
                     <select
-                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-700 dark:text-white"
+                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-neutral-950 dark:border-neutral-700 dark:text-white"
                       value={libId}
                       onChange={(e) => setLibId(e.target.value)}
                       disabled={loadingRooms}
@@ -621,7 +652,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <Label className="text-xs text-slate-500 font-bold uppercase flex items-center gap-2">
                         <Armchair className="w-3 h-3" /> 座位号
-                        {dynamicSeats.length > 0 && (
+                        {dynamicSeats.length > 0 && !roomsError && (
                           <span className="text-green-500 text-[10px] font-normal">({dynamicSeats.length}可用)</span>
                         )}
                       </Label>
@@ -650,12 +681,12 @@ export default function Dashboard() {
                         placeholder="001"
                         value={seatNumber}
                         onChange={(e) => setSeatNumber(e.target.value)}
-                        className="h-10 font-mono text-center tracking-widest dark:bg-slate-950 dark:border-slate-700"
+                        className="h-10 font-mono text-center tracking-widest dark:bg-neutral-950 dark:border-neutral-700"
                       />
                     ) : (
                       // 下拉选择模式
                       <select
-                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-700 dark:text-white font-mono"
+                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-neutral-950 dark:border-neutral-700 dark:text-white font-mono"
                         value={selectedSeatKey}
                         onChange={(e) => {
                           setSelectedSeatKey(e.target.value);
@@ -721,7 +752,7 @@ export default function Dashboard() {
           activeTab === 'console' ? "flex" : "hidden lg:flex"
         )}>
           {/* 头部 */}
-          <div className="shrink-0 p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm z-10 transition-colors duration-300">
+          <div className="shrink-0 p-6 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-neutral-800 shadow-sm z-10 transition-colors duration-300">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Activity className="w-3 h-3" /> 当前状态
@@ -735,12 +766,12 @@ export default function Dashboard() {
 
             {/* 实时倒计时显示 */}
             {countDownStr && (
-              <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 flex justify-between items-center animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="mb-4 p-3 bg-slate-50 dark:bg-neutral-800 rounded-lg border border-slate-100 dark:border-neutral-700 flex justify-between items-center animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <Clock className="w-3.5 h-3.5 text-blue-500" />
                   <span>距离计划执行</span>
                 </div>
-                <div className="font-mono text-xl font-black text-slate-700 dark:text-slate-200 tracking-widest tabular-nums">
+                <div className="font-mono text-xl font-black text-neutral-700 dark:text-slate-200 tracking-widest tabular-nums">
                   {countDownStr}
                 </div>
               </div>
@@ -751,7 +782,7 @@ export default function Dashboard() {
                 "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors",
                 status === 'running' ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" :
                   status === 'success' ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" :
-                    status === 'failed' ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-slate-100 text-slate-400 dark:bg-slate-800"
+                    status === 'failed' ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-slate-100 text-slate-400 dark:bg-neutral-800"
               )}>
                 {status === 'running' ? <Timer className="w-6 h-6 animate-pulse" /> :
                   status === 'success' ? <CheckCircle2 className="w-6 h-6" /> :
@@ -759,14 +790,14 @@ export default function Dashboard() {
                       <Terminal className="w-6 h-6" />}
               </div>
               <div>
-                <div className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none break-all line-clamp-2">
+                <div className="text-xl md:text-2xl font-black text-neutral-800 dark:text-slate-100 tracking-tight leading-none break-all line-clamp-2">
                   {formatStatusMessage(latestLog)}
                 </div>
                 {status === 'running' && (
                   <p className="text-xs text-blue-500 font-bold mt-1 animate-pulse">正在执行任务逻辑...</p>
                 )}
               </div>
-              <Button size="icon" variant="ghost" className="ml-auto text-slate-400 hover:text-slate-600" onClick={() => setLogs([])} title="清空日志">
+              <Button size="icon" variant="ghost" className="ml-auto text-slate-400 hover:text-neutral-600" onClick={() => setLogs([])} title="清空日志">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -779,7 +810,7 @@ export default function Dashboard() {
             {logs.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center opacity-30">
                 <div className="text-6xl grayscale mb-4">☕️</div>
-                <p className="text-slate-400 dark:text-slate-600 font-medium">Ready when you are</p>
+                <p className="text-slate-400 dark:text-neutral-600 font-medium">Ready when you are</p>
               </div>
             ) : (
               <div className="pb-10 space-y-3">
@@ -802,7 +833,7 @@ export default function Dashboard() {
                           if (log.message.includes("预约") || log.message.includes("trigger")) return "border-purple-400 bg-purple-50/30 dark:bg-purple-900/10 text-purple-700 dark:text-purple-300";
                           if (log.message.includes("模式")) return "border-pink-400 bg-pink-50/30 dark:bg-pink-900/10 text-pink-700 dark:text-pink-300";
                           if (log.message.includes("时间") || log.message.includes("倒计时")) return "border-cyan-400 bg-cyan-50/30 dark:bg-cyan-900/10 text-cyan-700 dark:text-cyan-300";
-                          return "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400";
+                          return "border-slate-300 dark:border-neutral-700 text-neutral-600 dark:text-slate-400";
                         })()
                       )}>
                         <span className="shrink-0 font-mono text-[10px] opacity-40 w-[55px] pt-1 select-none text-right">
@@ -822,7 +853,7 @@ export default function Dashboard() {
                         <span className="flex-1 text-sm font-medium leading-relaxed break-all font-sans tracking-wide">
                           {log.message}
                           {log.count && log.count > 1 && (
-                            <span className="ml-2 inline-flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 h-4 px-1.5 rounded-full text-[9px] font-bold">
+                            <span className="ml-2 inline-flex items-center justify-center bg-slate-200 dark:bg-neutral-700 text-neutral-700 dark:text-slate-200 h-4 px-1.5 rounded-full text-[9px] font-bold">
                               x{log.count}
                             </span>
                           )}
@@ -838,7 +869,7 @@ export default function Dashboard() {
 
           {/* 底部操作 - 仅移动端显示终止按钮 */}
           {status === 'running' && (
-            <div className="shrink-0 pt-6 pb-4 px-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-20 lg:hidden">
+            <div className="shrink-0 pt-6 pb-4 px-4 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm z-20 lg:hidden">
               <Button
                 variant="destructive"
                 onClick={handleStop}
@@ -850,7 +881,7 @@ export default function Dashboard() {
           )}
           {/* 移动端返回配置按钮 */}
           {status !== 'idle' && status !== 'running' && (
-            <div className="shrink-0 p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 shadow-xl z-20 lg:hidden">
+            <div className="shrink-0 p-4 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-neutral-800 shadow-xl z-20 lg:hidden">
               <Button
                 onClick={() => setActiveTab('config')}
                 className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98]"
@@ -870,7 +901,7 @@ export default function Dashboard() {
             <DialogTitle>确认启动任务</DialogTitle>
             <DialogDescription>请确认以下配置信息无误</DialogDescription>
           </DialogHeader>
-          <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg space-y-3 text-sm border dark:border-slate-800">
+          <div className="bg-slate-50 dark:bg-neutral-900 p-4 rounded-lg space-y-3 text-sm border dark:border-neutral-800">
             <div className="flex justify-between">
               <span className="text-slate-500">操作模式</span>
               <span className="font-bold dark:text-slate-200">
@@ -898,6 +929,14 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog >
+
+      {/* 设置弹窗 */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        config={apiConfig}
+        onSave={handleSaveApiConfig}
+      />
     </div >
   );
 }

@@ -20,8 +20,9 @@ from config import (
     URL, WEBSOCKET_URL, MAX_REQUEST_ATTEMPTS, SLEEP_INTERVAL_ON_FAIL,
     COOKIE_ERROR_PATTERN, SEAT_TAKEN_ERROR_CODE,
     TOMORROW_RESERVE_WINDOW_START, TOMORROW_RESERVE_WINDOW_END,
+    PRESETS, DEFAULT_PRESET, get_api_headers, get_ws_headers, get_websocket_url,
     data_template_tomorrow, data_template_today, data_validate,
-    data_lib_chosen_template, queue_header_base, pre_header_base
+    data_lib_chosen_template
 )
 
 # 获取一个以当前模块名命名的logger
@@ -42,9 +43,20 @@ def extract_error_msg(response_text: str) -> str:
     except Exception:
         return response_text[:200]
 
-async def pass_queue(mode: int, ws_headers: Dict[str, str], status_callback: Optional[Callable[[str], None]] = None) -> bool:
+async def pass_queue(
+    mode: int, 
+    ws_headers: Dict[str, str], 
+    websocket_url: str = "",
+    status_callback: Optional[Callable[[str], None]] = None
+) -> bool:
     """
     异步 WebSocket 排队函数
+    
+    Args:
+        mode: 操作模式 (1=明日预约, 2=立即抢座)
+        ws_headers: WebSocket 请求头
+        websocket_url: WebSocket 地址（可选，不传则使用默认值）
+        status_callback: 状态回调函数
     """
     def send_status_pq(msg: str):
         logger.info(msg)
@@ -65,7 +77,8 @@ async def pass_queue(mode: int, ws_headers: Dict[str, str], status_callback: Opt
     # Note: websockets.connect extra_headers accepts dict.
     
     try:
-        async with websockets.connect(WEBSOCKET_URL, extra_headers=ws_headers, close_timeout=10) as ws:
+        ws_url = websocket_url if websocket_url else WEBSOCKET_URL
+        async with websockets.connect(ws_url, extra_headers=ws_headers, close_timeout=10) as ws:
             send_status_pq('WebSocket 连接成功。')
             if mode == 1:
                 send_status_pq('明日预约模式：连接成功即视为排队完成。')
@@ -137,10 +150,25 @@ def calculate_execution_dt(time_str: str, check_window: bool = False) -> Optiona
 async def perform_seat_operation(
     mode: int, cookie: str, lib_id: int, seat_key: str, start_action_dt: Optional[datetime.datetime],
     room_mappings: Dict[str, str], seat_mappings: Dict[str, Dict[str, str]],
-    status_callback: Optional[Callable[[str], None]] = None, client_id: Optional[str] = None
+    status_callback: Optional[Callable[[str], None]] = None, client_id: Optional[str] = None,
+    api_url: str = "", origin: str = "", referer: str = ""
 ) -> str:
     """
     执行抢座或预约的核心逻辑 (Async)
+    
+    Args:
+        mode: 操作模式 (1=明日预约, 2=立即抢座)
+        cookie: 用户 Cookie
+        lib_id: 阅览室 ID
+        seat_key: 座位坐标 key
+        start_action_dt: 执行时间
+        room_mappings: 阅览室映射
+        seat_mappings: 座位映射
+        status_callback: 状态回调函数
+        client_id: 客户端 ID
+        api_url: GraphQL API 地址（可选）
+        origin: 请求头 Origin（可选）
+        referer: 请求头 Referer（可选）
     """
     def send_status(msg: str):
         logger.info(msg)
@@ -158,13 +186,17 @@ async def perform_seat_operation(
     
     last_error_msg = f"达到最大尝试次数({MAX_REQUEST_ATTEMPTS})仍未成功。"
     
+    # 获取 API 配置（如果未提供则使用默认预设）
+    default = PRESETS[DEFAULT_PRESET]
+    current_api_url = api_url if api_url else default['apiUrl']
+    current_origin = origin if origin else default['origin']
+    current_referer = referer if referer else default['referer']
+    current_ws_url = get_websocket_url(current_api_url)
+    
     # 使用 httpx.AsyncClient (类似于 requests.Session)
     # limits 调整连接池大小
     limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
-    async with httpx.AsyncClient(limits=limits, timeout=15.0, verify=False) as session: # verify=False for simplicity compatible with requests logic if needed, though requests verifies by default.
-        # Note: requests verifies SSL by default. httpx does too. 
-        # But some school sites have bad certs. If user didn't disable verify in requests, I should keep it enabled.
-        # Original code didn't specify verify=False in requests.post, so it was True. I'll remove verify=False to be safe.
+    async with httpx.AsyncClient(limits=limits, timeout=15.0, verify=False) as session:
         
         for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
             send_status(f"\n--- 第 {attempt}/{MAX_REQUEST_ATTEMPTS} 次尝试 ---")
@@ -174,20 +206,14 @@ async def perform_seat_operation(
                 await asyncio.sleep(SLEEP_INTERVAL_ON_FAIL)
 
             # httpx 的 header values 必须是可被 latin-1 编码的 (或 ascii)
-            # Cookie 可能包含 unicode 字符，如果不处理可能会在库内部抛出编码错误。
-            # 虽然 httpx 通常能处理，但为了稳健性，我们尝试将其编码为 latin-1。
-            # 最佳实践：确保 Cookie 字符串是纯 ASCII 或 latin-1 兼容的。
             try:
                 safe_cookie = cookie.encode('latin-1').decode('latin-1')
             except UnicodeEncodeError:
-                # 如果 Cookie 包含无法用 latin-1 表示的真实 Unicode 字符（不太可能，Session ID 通常是 ASCII），
-                # 我们则保留原样，由 httpx 处理或报错。
                 safe_cookie = cookie
 
-            current_pre_header = pre_header_base.copy()
-            current_pre_header['Cookie'] = safe_cookie
-            current_queue_header = queue_header_base.copy()
-            current_queue_header['Cookie'] = safe_cookie
+            # 使用动态生成的请求头
+            current_pre_header = get_api_headers(current_origin, current_referer, safe_cookie)
+            current_queue_header = get_ws_headers(current_origin, safe_cookie)
             main_payload_template = data_template_tomorrow if mode == 1 else data_template_today
             main_payload = json.loads(json.dumps(main_payload_template))
             if mode == 1:
@@ -201,24 +227,24 @@ async def perform_seat_operation(
                 if mode == 1:
                     send_status("步骤 1/5: 执行排队...");
                     # call async pass_queue
-                    queue_success = await pass_queue(mode, current_queue_header, status_callback=status_callback)
+                    queue_success = await pass_queue(mode, current_queue_header, current_ws_url, status_callback=status_callback)
                     if not queue_success: send_status("警告: 排队未确认成功，但将继续尝试后续HTTP操作...")
                     else: send_status("排队步骤完成。")
                 else:
                     send_status("步骤 1/5: 跳过排队 (立即抢座模式)")
 
                 send_status(f"步骤 2/5: 选择阅览室 ({room_name})...");
-                res_lib = await session.post(URL, headers=current_pre_header, json=data_lib_chosen, timeout=10.0)
+                res_lib = await session.post(current_api_url, headers=current_pre_header, json=data_lib_chosen, timeout=10.0)
                 send_status(f"  - 选择阅览室响应: {res_lib.status_code}")
                 res_lib.raise_for_status()
                 
                 send_status(f"步骤 3/5: 执行 {mode_str} (座位 {seat_number_str})...");
                 await asyncio.sleep(0.1)
-                res_main = await session.post(URL, headers=current_pre_header, json=main_payload, timeout=15.0)
+                res_main = await session.post(current_api_url, headers=current_pre_header, json=main_payload, timeout=15.0)
                 send_status(f"  - 主操作响应: {res_main.status_code}")
                 
                 send_status("步骤 4/5: 发送验证请求...");
-                res_val = await session.post(URL, headers=current_pre_header, json=data_validate_payload, timeout=10.0)
+                res_val = await session.post(current_api_url, headers=current_pre_header, json=data_validate_payload, timeout=10.0)
                 send_status(f"  - 验证响应: {res_val.status_code}")
 
                 send_status("步骤 5/5: 检查主操作结果...");

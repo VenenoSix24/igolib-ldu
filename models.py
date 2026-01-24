@@ -17,6 +17,10 @@ class SeatRequestWeb(BaseModel):
     seatNumber: str = Field(..., description="用户输入的座位号")
     seatKey: str = Field("", description="座位坐标 key（可选，从动态 API 获取时直接传入）")
     clientId: str = Field(..., description="WebSocket 客户端 ID")
+    # API 配置参数（可选，不传则使用默认配置）
+    apiUrl: str = Field("", description="GraphQL API 地址")
+    origin: str = Field("", description="请求头 Origin")
+    referer: str = Field("", description="请求头 Referer")
 
     @validator('mode')
     def mode_must_be_1_or_2(cls, v):

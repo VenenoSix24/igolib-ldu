@@ -7,9 +7,82 @@
 import os
 import datetime
 
-# --- 核心API与WebSocket地址 ---
+# --- 核心API与WebSocket地址（默认值，兼容旧代码） ---
 URL = 'https://libseats.ldu.edu.cn/index.php/graphql/'
 WEBSOCKET_URL = 'wss://libseats.ldu.edu.cn/ws?ns=prereserve/queue'
+
+# --- 预设配置 ---
+# 支持多学校/多平台配置
+PRESETS: dict[str, dict[str, str]] = {
+    'ldu': {
+        'name': '卤蛋大学',
+        'apiUrl': 'https://libseats.ldu.edu.cn/index.php/graphql/',
+        'origin': 'https://libseats.ldu.edu.cn',
+        'referer': 'https://libseats.ldu.edu.cn/web/index.html',
+    },
+    'official': {
+        'name': '官方原版',
+        'apiUrl': 'https://wechat.v2.traceint.com/index.php/graphql/',
+        'origin': 'https://web.traceint.com',
+        'referer': 'https://web.traceint.com/',
+    },
+}
+DEFAULT_PRESET = 'ldu'
+
+# --- 默认 User-Agent（在函数之前定义，供全局使用）---
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090c33) XWEB/13603 Flue'
+
+
+def get_host_from_url(url: str) -> str:
+    """从 URL 中提取 Host（域名部分）"""
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    return parsed.netloc
+
+
+def get_websocket_url(api_url: str) -> str:
+    """从 API URL 生成 WebSocket URL"""
+    host = get_host_from_url(api_url)
+    return f'wss://{host}/ws?ns=prereserve/queue'
+
+
+def get_api_headers(origin: str, referer: str, cookie: str) -> dict[str, str]:
+    """动态生成 API 请求头"""
+    host = get_host_from_url(origin)
+    return {
+        'Host': host,
+        'Connection': 'keep-alive',
+        'User-Agent': USER_AGENT,
+        'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'Origin': origin,
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Dest': 'empty',
+        'Referer': referer,
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Cookie': cookie
+    }
+
+
+def get_ws_headers(origin: str, cookie: str) -> dict[str, str]:
+    """动态生成 WebSocket 请求头"""
+    host = get_host_from_url(origin)
+    return {
+        'Host': host,
+        'Connection': 'Upgrade',
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache',
+        'User-Agent': USER_AGENT,
+        'Upgrade': 'websocket',
+        'Origin': origin,
+        'Sec-WebSocket-Version': '13',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Cookie': cookie
+    }
+
 
 # --- 预约逻辑相关配置 ---
 MAX_REQUEST_ATTEMPTS = 3
@@ -36,8 +109,7 @@ COOKIE_FILE_PATH = os.path.join(SCRIPT_DIR, COOKIE_FILENAME)
 FILE_CHECK_INTERVAL = 2
 MAX_WAIT_TIME = 120
 
-# --- 默认HTTP请求头模板 ---
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090c33) XWEB/13603 Flue'
+# --- 默认HTTP请求头模板（向后兼容，仍保留供旧代码使用）---
 
 queue_header_base: dict[str, str] = {
     'Host': 'libseats.ldu.edu.cn',

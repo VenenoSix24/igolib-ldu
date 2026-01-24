@@ -130,16 +130,27 @@ async def get_mappings():
 
 
 @app.post("/api/rooms")
-async def get_dynamic_rooms(cookie: str = Body(..., embed=True)):
+async def get_dynamic_rooms(
+    cookie: str = Body(...),
+    apiUrl: str = Body(""),
+    origin: str = Body(""),
+    referer: str = Body("")
+):
     """
     动态获取场馆列表（需要有效 Cookie）
     
     通过 GraphQL API 实时获取所有开放场馆的信息，包括剩余座位数。
+    支持自定义 API 配置（apiUrl, origin, referer）。
     """
     if not cookie or not cookie.strip():
         raise HTTPException(status_code=400, detail="Cookie 不能为空")
     
-    provider = LibraryDataProvider(cookie.strip())
+    provider = LibraryDataProvider(
+        cookie.strip(),
+        api_url=apiUrl,
+        origin=origin,
+        referer=referer
+    )
     rooms = await provider.fetch_all_rooms()
     
     if not rooms:
@@ -159,16 +170,28 @@ async def get_dynamic_rooms(cookie: str = Body(..., embed=True)):
 
 
 @app.post("/api/rooms/{room_id}/seats")
-async def get_room_seats(room_id: int, cookie: str = Body(..., embed=True)):
+async def get_room_seats(
+    room_id: int,
+    cookie: str = Body(...),
+    apiUrl: str = Body(""),
+    origin: str = Body(""),
+    referer: str = Body("")
+):
     """
     动态获取指定场馆的座位布局（需要有效 Cookie）
     
     通过 GraphQL API 获取场馆的座位分布，返回座位号和坐标 key。
+    支持自定义 API 配置（apiUrl, origin, referer）。
     """
     if not cookie or not cookie.strip():
         raise HTTPException(status_code=400, detail="Cookie 不能为空")
     
-    provider = LibraryDataProvider(cookie.strip())
+    provider = LibraryDataProvider(
+        cookie.strip(),
+        api_url=apiUrl,
+        origin=origin,
+        referer=referer
+    )
     seat_data = await provider.fetch_seats_for_room(room_id)
     
     if not seat_data.get('seats'):
@@ -210,7 +233,12 @@ async def handle_seat_request(request: SeatRequestWeb, background_tasks: Backgro
             # 尝试动态获取座位映射
             logger.info(f"静态映射未找到，尝试动态获取场馆 {request.libId} 的座位映射...")
             try:
-                provider = LibraryDataProvider(request.cookieStr)
+                provider = LibraryDataProvider(
+                    request.cookieStr,
+                    api_url=request.apiUrl,
+                    origin=request.origin,
+                    referer=request.referer
+                )
                 seat_data = await provider.fetch_seats_for_room(request.libId)
                 if seat_data.get('seatMapping'):
                     seat_key = seat_data['seatMapping'].get(request.seatNumber.strip())
@@ -233,7 +261,8 @@ async def handle_seat_request(request: SeatRequestWeb, background_tasks: Backgro
     background_tasks.add_task(
         background_task_runner,
         client_id=request.clientId, mode=request.mode, cookie=request.cookieStr,
-        lib_id=request.libId, seat_key=seat_key, start_dt=start_action_dt
+        lib_id=request.libId, seat_key=seat_key, start_dt=start_action_dt,
+        api_url=request.apiUrl, origin=request.origin, referer=request.referer
     )
     logger.info(f"任务已添加: Client={request.clientId}, Room={room_name}, Key={seat_key}")
     return JSONResponse(content={"status": "processing", "message": "请求已提交后台处理..."})

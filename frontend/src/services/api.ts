@@ -10,6 +10,11 @@ export interface SeatRequest {
   mode: number; // 1 = 预约模式, 2 = 即时模式
   timeStr: string;
   cookieStr: string;
+  seatKey?: string;
+  // API 配置参数
+  apiUrl?: string;
+  origin?: string;
+  referer?: string;
 }
 
 export interface ApiResponse<T> {
@@ -93,14 +98,24 @@ export interface SeatLayoutResponse {
 
 /**
  * 动态获取场馆列表（需要有效 Cookie）
+ * @param cookie 用户 Cookie
+ * @param apiConfig API 配置参数（可选）
  */
-export async function getDynamicRooms(cookie: string): Promise<{ rooms: DynamicRoom[]; total: number }> {
+export async function getDynamicRooms(
+  cookie: string,
+  apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
+): Promise<{ rooms: DynamicRoom[]; total: number }> {
   const response = await fetch('/api/rooms', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ cookie }),
+    body: JSON.stringify({
+      cookie,
+      apiUrl: apiConfig?.apiUrl || '',
+      origin: apiConfig?.origin || '',
+      referer: apiConfig?.referer || '',
+    }),
   });
 
   if (!response.ok) {
@@ -113,14 +128,26 @@ export async function getDynamicRooms(cookie: string): Promise<{ rooms: DynamicR
 
 /**
  * 动态获取指定场馆的座位布局（需要有效 Cookie）
+ * @param roomId 场馆 ID
+ * @param cookie 用户 Cookie  
+ * @param apiConfig API 配置参数（可选）
  */
-export async function getRoomSeats(roomId: number, cookie: string): Promise<SeatLayoutResponse> {
+export async function getRoomSeats(
+  roomId: number,
+  cookie: string,
+  apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
+): Promise<SeatLayoutResponse> {
   const response = await fetch(`/api/rooms/${roomId}/seats`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ cookie }),
+    body: JSON.stringify({
+      cookie,
+      apiUrl: apiConfig?.apiUrl || '',
+      origin: apiConfig?.origin || '',
+      referer: apiConfig?.referer || '',
+    }),
   });
 
   if (!response.ok) {

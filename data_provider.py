@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from config import (
-    URL, pre_header_base,
+    URL, PRESETS, DEFAULT_PRESET, get_api_headers,
     data_rooms_list_template, data_seats_layout_template
 )
 
@@ -27,27 +27,38 @@ class LibraryDataProvider:
     所有方法均为异步，需在 async 上下文中调用。
     """
     
-    def __init__(self, cookie_string: str):
+    def __init__(
+        self, 
+        cookie_string: str,
+        api_url: str = "",
+        origin: str = "",
+        referer: str = ""
+    ):
         """
         初始化数据提供者
         
         Args:
             cookie_string: 用户的登录 Cookie（包含 JWT）
+            api_url: GraphQL API 地址（可选，不传则使用默认值）
+            origin: 请求头 Origin（可选）
+            referer: 请求头 Referer（可选）
         """
-        self.url = URL
+        # 如果未提供配置，使用默认预设
+        default = PRESETS[DEFAULT_PRESET]
+        self.url = api_url if api_url else default['apiUrl']
+        self.origin = origin if origin else default['origin']
+        self.referer = referer if referer else default['referer']
         self.cookie = cookie_string
         self._client: Optional[httpx.AsyncClient] = None
     
     def _get_headers(self) -> Dict[str, str]:
-        """构建请求头"""
-        headers = pre_header_base.copy()
+        """构建请求头（使用动态配置）"""
         # 确保 Cookie 是 latin-1 兼容的
         try:
             safe_cookie = self.cookie.encode('latin-1').decode('latin-1')
         except UnicodeEncodeError:
             safe_cookie = self.cookie
-        headers['Cookie'] = safe_cookie
-        return headers
+        return get_api_headers(self.origin, self.referer, safe_cookie)
     
     async def _post_graphql(self, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """

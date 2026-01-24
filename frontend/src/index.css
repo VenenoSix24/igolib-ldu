@@ -36,33 +36,47 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* 全新深色主题 - 纯中性灰色调，参考 Notion/Arc 风格 */
+    --background: 0 0% 9%;
+    /* 纯深灰：#171717 */
+    --foreground: 0 0% 95%;
+    /* 纯浅白：#f2f2f2 */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 12%;
+    /* 卡片背景：#1f1f1f */
+    --card-foreground: 0 0% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 10%;
+    /* 弹窗背景：#1a1a1a */
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 142 76% 46%;
+    /* 清新绿色：#22c55e（不使用蓝色）*/
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 16%;
+    /* 次级背景：#292929 */
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 0 0% 18%;
+    /* 静音背景：#2e2e2e */
+    --muted-foreground: 0 0% 55%;
+    /* 静音文字：#8c8c8c */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 20%;
+    /* 强调背景：#333333 */
+    --accent-foreground: 0 0% 95%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    /* 错误红：#ef4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 0 0% 18%;
+    /* 边框：#2e2e2e */
+    --input: 0 0% 15%;
+    /* 输入框：#262626 */
+    --ring: 142 76% 46%;
+    /* 焦点环：同 primary 绿色 */
   }
 }
 
