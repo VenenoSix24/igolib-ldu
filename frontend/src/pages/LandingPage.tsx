@@ -82,7 +82,7 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
             </span>
-            v4.2.23 Stable 现已发布 !
+            v4.3.24 Stable 现已发布 !
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 max-w-5xl gradient-text-hero pb-2 leading-tight relative z-20">
             <span className="absolute inset-0 blur-3xl bg-brand/20 -z-10 opacity-50"></span>
@@ -184,7 +184,7 @@ export default function LandingPage() {
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                     <span className="text-xs text-gray-400">系统在线</span>
                   </div>
-                  <span className="text-xs text-gray-600">v4.2.23-stable</span>
+                  <span className="text-xs text-gray-600">v4.3.24-stable</span>
                 </div>
                 <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3 font-mono text-xs md:text-sm relative z-10">
                   <div className="flex gap-3 opacity-60">

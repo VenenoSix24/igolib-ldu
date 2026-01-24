@@ -15,6 +15,7 @@ class SeatRequestWeb(BaseModel):
     timeStr: str = Field("", description="执行时间 (HH:MM:SS)")
     libId: int = Field(..., description="阅览室 ID")
     seatNumber: str = Field(..., description="用户输入的座位号")
+    seatKey: str = Field("", description="座位坐标 key（可选，从动态 API 获取时直接传入）")
     clientId: str = Field(..., description="WebSocket 客户端 ID")
 
     @validator('mode')

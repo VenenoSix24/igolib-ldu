@@ -17,6 +17,7 @@ test.py
 /logs
 /templates
 /app_data
+/.agent
 
 ### macOS ###
 # 通用文件
@@ -233,3 +234,4 @@ pyrightconfig.json
 pyvenv.cfg
 pip-selfcheck.json
 DEPLOY.md
+.agent/workflows/work.md

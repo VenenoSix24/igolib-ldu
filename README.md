@@ -1,6 +1,6 @@
 # 我去抢个座 - iGoLib-LDU
 
-![版本](https://img.shields.io/badge/版本-4.2.23-blue.svg)
+![版本](https://img.shields.io/badge/版本-4.3.24-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.9+-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115.12-brightgreen.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.17-38B2AC.svg)
@@ -24,25 +24,25 @@
 **目前：**
 
 * 只支持卤蛋
-* 只支持特定场馆（因为我经常用）
+* ~~只支持特定场馆（因为我经常用）~~ （v4.3.24 已实现）
 
 **未来：**
 
 * 增加选择他校配置
-* 自动获取场馆数据信息（现在的获取方法蠢蠢的）
+* ~~自动获取场馆数据信息（现在的获取方法蠢蠢的）~~ （v4.3.24 已实现）
 
 *咕咕咕...咕咕..*
 
 ## 📆 我的待办集
 
 * [X] 重构拆分 beta.py 主程序，增强代码维护性
+* [X] 动态获取场馆、座位信息
 * [ ] Cookie 获取教程
 * [ ] 输入 Cookie 后，检验 Cookie 可用性（好像有些多余）
 * [ ] 占座模式（感觉 Cookie 活不到 30 分钟）
 * [ ] 取消预约座位（那岂不是还要先检测是否已有预约）
 * [ ] 增加动态签到码显示选项
 * [ ] 多用户性能优化
-* [ ] 动态获取场馆、座位信息
 
 ## ✨ 功能特性
 
@@ -50,6 +50,7 @@
 - 🔄 **明日预约模式**：在开放时间预约第二天的座位，支持 WebSocket 排队通道。
 - ⚡ **即时抢座模式**：实时抢占当天可用座位，智能优化等待策略。
 - 🌐 **精美Web界面**：基于 TailwindCSS 的响应式设计，操作丝滑。
+- 🔄 **动态数据获取**：通过 GraphQL API 实时获取场馆列表和可用座位，无需手动维护静态数据。
 - 🌙 **深色/浅色模式**：自动适应系统主题或手动切换。
 - 🕒 **智能定时**：支持立即执行、预设时间（21:48）或自定义时间（精确到秒）。
 - 📊 **实时状态反馈**：WebSocket 实时推送抢座日志和结果，零延迟。
@@ -108,6 +109,7 @@
 - `tasks.py`: **[Async]** 异步后台任务调度器，使用 `asyncio` 协程运行定时任务。
 - `cli.py`: **[Async]** 命令行版本，适配了异步核心。
 - `data_utils.py`: 负责加载阅览室、座位等静态映射数据。
+- `data_provider.py`: **[Async]** 动态数据提供器，通过 GraphQL API 实时获取场馆和座位信息。
 - `globals.py`: 存放跨模块共享的全局变量。
 - `models.py`: 定义 Pydantic 数据模型。
 - `data_process/`: 存放预处理的静态数据。
@@ -173,7 +175,7 @@ pnpm dev
 <p align="center">
   <img src="https://s2.loli.net/2026/01/24/m1qXWvlsOSxRwb6.jpg" width="35%" />
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://s2.loli.net/2026/01/24/m1qXWvlsOSxRwb6.jpg" width="35%" />
+  <img src="https://s2.loli.net/2026/01/24/pUsoX3WvQPCl62a.jpg" width="35%" />
 </p>
 
 

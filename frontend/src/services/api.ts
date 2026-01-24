@@ -53,3 +53,80 @@ export async function cancelTask(clientId: string): Promise<ApiResponse<void>> {
   }
   return response.json();
 }
+
+// --- 动态数据获取 API ---
+
+/**
+ * 动态场馆信息
+ */
+export interface DynamicRoom {
+  id: number;
+  name: string;
+  floor: string;
+  isOpen: boolean;
+  seatsTotal: number;
+  seatsUsed: number;
+  seatsAvailable: number;
+  openTime: string;
+  closeTime: string;
+}
+
+/**
+ * 动态座位信息
+ */
+export interface DynamicSeat {
+  key: string;
+  name: string;
+  status: number;
+  available: boolean;
+}
+
+/**
+ * 座位布局响应
+ */
+export interface SeatLayoutResponse {
+  roomId: number;
+  roomName: string;
+  seats: DynamicSeat[];
+  seatMapping: { [name: string]: string };
+}
+
+/**
+ * 动态获取场馆列表（需要有效 Cookie）
+ */
+export async function getDynamicRooms(cookie: string): Promise<{ rooms: DynamicRoom[]; total: number }> {
+  const response = await fetch('/api/rooms', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ cookie }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || '获取场馆列表失败');
+  }
+
+  return response.json();
+}
+
+/**
+ * 动态获取指定场馆的座位布局（需要有效 Cookie）
+ */
+export async function getRoomSeats(roomId: number, cookie: string): Promise<SeatLayoutResponse> {
+  const response = await fetch(`/api/rooms/${roomId}/seats`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ cookie }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || '获取座位布局失败');
+  }
+
+  return response.json();
+}

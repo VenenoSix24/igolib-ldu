@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
-  LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2
+  LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
+  KeyRound, Building2, Armchair
 } from "lucide-react";
-import { getMappings, submitRequest, cancelTask, type RoomMapping } from "../services/api";
+import { getMappings, submitRequest, cancelTask, getDynamicRooms, getRoomSeats, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +37,15 @@ export default function Dashboard() {
   const { theme, setTheme } = useTheme();
   // --- 全局数据 ---
   const [rooms, setRooms] = useState<RoomMapping>({});
+  const [dynamicRooms, setDynamicRooms] = useState<DynamicRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
+
+  // --- 座位数据 ---
+  const [dynamicSeats, setDynamicSeats] = useState<DynamicSeat[]>([]);
+  const [loadingSeats, setLoadingSeats] = useState(false);
+  const [seatInputMode, setSeatInputMode] = useState<'manual' | 'select'>('select');
+  const [selectedSeatKey, setSelectedSeatKey] = useState<string>("");
 
   // --- 表单状态 ---
   const [libId, setLibId] = useState<string>("");
@@ -69,7 +78,8 @@ export default function Dashboard() {
 
   // --- 初始化与持久化 ---
   useEffect(() => {
-    async function fetchRooms() {
+    // 初始化时加载静态场馆数据作为备用
+    async function fetchStaticRooms() {
       try {
         const data = await getMappings();
         setRooms(data.rooms);
@@ -78,12 +88,12 @@ export default function Dashboard() {
           setLibId(ids[0]);
         }
       } catch (error) {
-        console.error("加载阅览室失败:", error);
+        console.error("加载静态阅览室失败:", error);
       } finally {
         setLoadingRooms(false);
       }
     }
-    fetchRooms();
+    fetchStaticRooms();
 
     // 恢复状态
     const savedCookie = localStorage.getItem("cookieStr"); if (savedCookie) setCookieStr(savedCookie);
@@ -94,12 +104,101 @@ export default function Dashboard() {
     const savedTime = localStorage.getItem("customTime"); if (savedTime) setCustomTime(savedTime);
   }, []);
 
+  // Cookie 变更时尝试动态刷新场馆列表
+  useEffect(() => {
+    // 当用户输入 Cookie 后，尝试动态获取场馆列表
+    async function fetchDynamicRoomsData() {
+      if (!cookieStr || cookieStr.trim().length < 10) {
+        // Cookie 太短，可能无效，使用静态数据
+        setDynamicRooms([]);
+        setRoomsError(null);
+        return;
+      }
+
+      setLoadingRooms(true);
+      setRoomsError(null);
+
+      try {
+        const data = await getDynamicRooms(cookieStr.trim());
+        setDynamicRooms(data.rooms);
+
+        // 将动态数据转换为 RoomMapping 格式以兼容现有逻辑
+        const roomMapping: RoomMapping = {};
+        data.rooms.forEach(room => {
+          roomMapping[String(room.id)] = room.name;
+        });
+        setRooms(roomMapping);
+
+        // 如果有场馆且当前未选择，设置第一个
+        if (data.rooms.length > 0 && !libId) {
+          setLibId(String(data.rooms[0].id));
+        }
+
+        console.log(`✅ 动态加载 ${data.rooms.length} 个场馆`);
+      } catch (error) {
+        console.warn("动态加载场馆失败，使用静态数据:", error);
+        setRoomsError(error instanceof Error ? error.message : "加载失败");
+        // 失败时保留静态数据
+      } finally {
+        setLoadingRooms(false);
+      }
+    }
+
+    // 防抖：只在用户停止输入 500ms 后请求
+    const debounceTimer = setTimeout(fetchDynamicRoomsData, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [cookieStr]);
+
   useEffect(() => { localStorage.setItem("libId", libId); }, [libId]);
   useEffect(() => { localStorage.setItem("seatNumber", seatNumber); }, [seatNumber]);
   useEffect(() => { localStorage.setItem("cookieStr", cookieStr); }, [cookieStr]);
   useEffect(() => { localStorage.setItem("opMode", opMode); }, [opMode]);
   useEffect(() => { localStorage.setItem("execTime", execTime); }, [execTime]);
   useEffect(() => { localStorage.setItem("customTime", customTime); }, [customTime]);
+
+  // 根据操作模式自动切换执行时间默认值
+  useEffect(() => {
+    if (opMode === 'scheduled') {
+      // 明日预约模式 → 默认 21:48
+      setExecTime('2148');
+    } else {
+      // 立即抢座模式 → 默认 立即
+      setExecTime('immediate');
+    }
+  }, [opMode]);
+
+  // 场馆变更时加载座位列表
+  useEffect(() => {
+    async function fetchSeatsForRoom() {
+      // 需要有效的 Cookie 和 libId
+      if (!cookieStr || cookieStr.trim().length < 10 || !libId) {
+        setDynamicSeats([]);
+        return;
+      }
+
+      setLoadingSeats(true);
+      try {
+        const data = await getRoomSeats(parseInt(libId), cookieStr.trim());
+        // 只保留可用座位用于选择
+        const availableSeats = data.seats.filter(s => s.available);
+        setDynamicSeats(availableSeats);
+        // 如果当前选择的座位无效，重置
+        if (selectedSeatKey && !availableSeats.find(s => s.key === selectedSeatKey)) {
+          setSelectedSeatKey("");
+        }
+        console.log(`✅ 加载场馆 ${libId} 的 ${availableSeats.length} 个可用座位`);
+      } catch (error) {
+        console.warn("加载座位列表失败:", error);
+        setDynamicSeats([]);
+      } finally {
+        setLoadingSeats(false);
+      }
+    }
+
+    // 防抖：场馆切换后 300ms 加载座位
+    const debounceTimer = setTimeout(fetchSeatsForRoom, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [libId, cookieStr]);
 
   // 滚动日志
   useEffect(() => {
@@ -358,11 +457,11 @@ export default function Dashboard() {
 
         {/* ---------------- 左侧栏: 配置 ---------------- */}
         <div className={cn(
-          "w-full lg:w-[40%] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform lg:translate-x-0 h-full relative flex flex-col",
-          activeTab === 'config' ? "block" : "hidden lg:block"
+          "w-full lg:w-[30%] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-transform lg:translate-x-0 h-full flex flex-col",
+          activeTab === 'config' ? "flex" : "hidden lg:flex"
         )}>
-          <div className="flex-1 overflow-y-auto p-4 md:p-8 lg:pb-24 custom-scrollbar flex flex-col">
-            <div className="space-y-1 pb-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center mb-6">
+          <div className="flex-1 overflow-y-auto pt-4 px-4 pb-4 md:px-6 md:pb-6 lg:px-8 lg:pb-8 custom-scrollbar flex flex-col min-h-0">
+            <div className="pb-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center mb-3">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Rocket className="w-5 h-5 text-blue-500" />
                 任务配置
@@ -380,7 +479,7 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            <form className="flex-1 flex flex-col justify-center min-h-0 gap-4 sm:gap-6 lg:gap-8 pb-4" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex-1 flex flex-col justify-evenly gap-3 max-w-lg mx-auto w-full min-h-0" onSubmit={(e) => e.preventDefault()}>
 
               {/* 1. 操作模式 */}
               <div className="space-y-3">
@@ -418,7 +517,7 @@ export default function Dashboard() {
               {/* 2. 身份 (Cookie) */}
               <div className="space-y-3">
                 <Label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                  身份 Cookie
+                  <KeyRound className="w-3 h-3" /> 身份 Cookie
                 </Label>
                 <div className="relative">
                   <Input
@@ -482,52 +581,143 @@ export default function Dashboard() {
                 </div>
 
                 {/* 阅览室与座位 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 font-bold uppercase">阅览室</Label>
+                    <Label className="text-xs text-slate-500 font-bold uppercase flex items-center gap-2">
+                      <Building2 className="w-3 h-3" /> 阅览室
+                      {dynamicRooms.length > 0 && (
+                        <span className="text-green-500 text-[10px] font-normal">✓ 实时</span>
+                      )}
+                    </Label>
                     <select
                       className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-700 dark:text-white"
                       value={libId}
                       onChange={(e) => setLibId(e.target.value)}
                       disabled={loadingRooms}
                     >
-                      {loadingRooms ? <option>Loading...</option> :
-                        Object.entries(rooms).sort(([, a], [, b]) => a.localeCompare(b)).map(([id, name]) => (
-                          <option key={id} value={id}>{name}</option>
-                        ))
+                      {loadingRooms ? <option>加载中...</option> :
+                        dynamicRooms.length > 0 ? (
+                          // 使用动态数据：显示场馆名称和剩余座位数
+                          dynamicRooms
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((room) => (
+                              <option key={room.id} value={room.id}>
+                                {room.name} ({room.seatsAvailable}座)
+                              </option>
+                            ))
+                        ) : (
+                          // 降级到静态数据
+                          Object.entries(rooms).sort(([, a], [, b]) => a.localeCompare(b)).map(([id, name]) => (
+                            <option key={id} value={id}>{name}</option>
+                          ))
+                        )
                       }
                     </select>
+                    {roomsError && (
+                      <p className="text-xs text-amber-500">{roomsError}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 font-bold uppercase">座位号</Label>
-                    <Input
-                      placeholder="001"
-                      value={seatNumber}
-                      onChange={(e) => setSeatNumber(e.target.value)}
-                      className="h-10 font-mono text-center tracking-widest dark:bg-slate-950 dark:border-slate-700"
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-slate-500 font-bold uppercase flex items-center gap-2">
+                        <Armchair className="w-3 h-3" /> 座位号
+                        {dynamicSeats.length > 0 && (
+                          <span className="text-green-500 text-[10px] font-normal">({dynamicSeats.length}可用)</span>
+                        )}
+                      </Label>
+                      {/* 模式切换按钮 */}
+                      {dynamicSeats.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSeatInputMode(seatInputMode === 'manual' ? 'select' : 'manual');
+                            // 切换模式时同步数据
+                            if (seatInputMode === 'select' && selectedSeatKey) {
+                              const seat = dynamicSeats.find(s => s.key === selectedSeatKey);
+                              if (seat) setSeatNumber(seat.name);
+                            }
+                          }}
+                          className="text-[10px] text-blue-500 hover:text-blue-700 font-medium"
+                        >
+                          {seatInputMode === 'manual' ? '选择座位 →' : '← 手动输入'}
+                        </button>
+                      )}
+                    </div>
+
+                    {seatInputMode === 'manual' || dynamicSeats.length === 0 ? (
+                      // 手动输入模式
+                      <Input
+                        placeholder="001"
+                        value={seatNumber}
+                        onChange={(e) => setSeatNumber(e.target.value)}
+                        className="h-10 font-mono text-center tracking-widest dark:bg-slate-950 dark:border-slate-700"
+                      />
+                    ) : (
+                      // 下拉选择模式
+                      <select
+                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-700 dark:text-white font-mono"
+                        value={selectedSeatKey}
+                        onChange={(e) => {
+                          setSelectedSeatKey(e.target.value);
+                          // 同时更新 seatNumber
+                          const seat = dynamicSeats.find(s => s.key === e.target.value);
+                          if (seat) setSeatNumber(seat.name);
+                        }}
+                        disabled={loadingSeats}
+                      >
+                        {loadingSeats ? (
+                          <option>加载中...</option>
+                        ) : (
+                          <>
+                            <option value="">选择座位...</option>
+                            {dynamicSeats
+                              .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }))
+                              .map((seat) => (
+                                <option key={seat.key} value={seat.key}>
+                                  {seat.name}
+                                </option>
+                              ))}
+                          </>
+                        )}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>
             </form>
-          </div>
 
-          {/* 带启动按钮的底部 */}
-          <div className="shrink-0 p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 z-10 lg:absolute lg:bottom-0 lg:left-0 lg:w-full">
-            <Button
-              className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleStartRequest}
-              disabled={status === 'running' || status === 'connecting' || loadingRooms}
-            >
-              <Rocket className="w-5 h-5 mr-2" />
-              启动任务
-            </Button>
+            {/* 启动/终止按钮 - 桌面端合为一个 */}
+            <div className="shrink-0 pt-6 max-w-lg mx-auto w-full">
+              {status === 'running' ? (
+                // 桌面端显示终止按钮
+                <Button
+                  variant="destructive"
+                  onClick={handleStop}
+                  className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-red-500/20 hidden lg:flex items-center justify-center"
+                >
+                  <StopCircle className="w-5 h-5 mr-2" /> 终止任务
+                </Button>
+              ) : null}
+              {/* 启动按钮 - 非运行状态时显示 */}
+              <Button
+                className={cn(
+                  "w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed",
+                  status === 'running' && "lg:hidden" // 桌面端运行时隐藏
+                )}
+                onClick={handleStartRequest}
+                disabled={status === 'running' || status === 'connecting' || loadingRooms}
+              >
+                <Rocket className="w-5 h-5 mr-2" />
+                启动任务
+              </Button>
+            </div>
           </div>
         </div>
 
+
         {/* ---------------- 右侧栏: 控制台 ---------------- */}
         <div className={cn(
-          "w-full lg:w-[60%] bg-slate-50 dark:bg-black relative flex flex-col h-full overflow-hidden transition-transform",
+          "w-full lg:w-[70%] bg-slate-50 dark:bg-black relative flex flex-col h-full overflow-hidden transition-transform",
           activeTab === 'console' ? "flex" : "hidden lg:flex"
         )}>
           {/* 头部 */}
@@ -646,25 +836,27 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* 底部操作 */}
-          {(status === 'running' || status !== 'idle') && (
-            <div className="shrink-0 p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 shadow-xl z-20">
-              {status === 'running' ? (
-                <Button
-                  variant="destructive"
-                  onClick={handleStop}
-                  className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-red-500/20"
-                >
-                  <StopCircle className="w-5 h-5 mr-2" /> 终止任务
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => setActiveTab('config')}
-                  className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98] lg:hidden"
-                >
-                  <LayoutList className="w-5 h-5 mr-2" /> 返回配置
-                </Button>
-              )}
+          {/* 底部操作 - 仅移动端显示终止按钮 */}
+          {status === 'running' && (
+            <div className="shrink-0 pt-6 pb-4 px-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-20 lg:hidden">
+              <Button
+                variant="destructive"
+                onClick={handleStop}
+                className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-red-500/20"
+              >
+                <StopCircle className="w-5 h-5 mr-2" /> 终止任务
+              </Button>
+            </div>
+          )}
+          {/* 移动端返回配置按钮 */}
+          {status !== 'idle' && status !== 'running' && (
+            <div className="shrink-0 p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 shadow-xl z-20 lg:hidden">
+              <Button
+                onClick={() => setActiveTab('config')}
+                className="w-full h-12 text-lg font-bold rounded-xl shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-[0.98]"
+              >
+                <LayoutList className="w-5 h-5 mr-2" /> 返回配置
+              </Button>
             </div>
           )}
         </div>

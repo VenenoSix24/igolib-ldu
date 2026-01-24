@@ -98,7 +98,7 @@ async def background_task_runner(
             if remaining_seconds > 30:
                 # 距离还远，沉睡较久，但需定期醒来检查取消状态
                 if int(remaining_seconds) % 30 == 0:
-                    await send_status(f"预约任务挂起中，剩余 {int(remaining_seconds)} 秒...")
+                    await send_status(f"任务挂起中，剩余 {int(remaining_seconds)} 秒...")
                 await asyncio.sleep(1) 
             elif remaining_seconds > 10:
                 await asyncio.sleep(0.5)

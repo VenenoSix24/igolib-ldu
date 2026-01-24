@@ -39,10 +39,12 @@ def main():
             print("-" * 50)
             
             # 获取额外的 uvicorn 参数
+            # 优化: 排除 frontend/venv 等大目录的监控，防止开发模式下 CPU 占用过高
             uvicorn_args = {
                 "host": "127.0.0.1",
                 "port": 8000,
-                "reload": True
+                "reload": True,
+                "reload_excludes": ["frontend", "venv", ".git", "__pycache__", "logs"]
             }
 
             if "--host" in sys.argv:

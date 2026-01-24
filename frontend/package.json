@@ -1,7 +1,7 @@
 {
   "name": "igolib-ldu",
   "private": true,
-  "version": "4.2.23",
+  "version": "4.3.24",
   "homepage": ".",
   "type": "module",
   "scripts": {

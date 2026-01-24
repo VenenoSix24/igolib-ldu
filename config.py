@@ -102,3 +102,64 @@ data_lib_chosen_template: dict[str, any] = {
     "operationName": "libLayout", "variables": {"libId": 0},
     "query": _layout_query.strip()
 }
+
+# --- 动态数据获取查询模板 ---
+# 阶段一：获取所有场馆列表（包含剩余座位数）
+_rooms_list_query = """
+query list {
+    userAuth {
+        reserve {
+            libs(libType: -1) {
+                lib_id
+                lib_name
+                lib_floor
+                is_open
+                lib_rt {
+                    seats_total
+                    seats_used
+                    seats_has
+                    open_time_str
+                    close_time_str
+                }
+            }
+        }
+    }
+}
+"""
+data_rooms_list_template: dict[str, any] = {
+    "operationName": "list",
+    "query": _rooms_list_query.strip(),
+    "variables": {}
+}
+
+# 阶段二：获取指定场馆的座位布局
+_seats_layout_query = """
+query libLayout($libId: Int, $libType: Int) {
+    userAuth {
+        reserve {
+            libs(libType: $libType, libId: $libId) {
+                lib_id
+                lib_name
+                lib_layout {
+                    seats_total
+                    seats_used
+                    seats {
+                        x
+                        y
+                        key
+                        type
+                        name
+                        seat_status
+                        status
+                    }
+                }
+            }
+        }
+    }
+}
+"""
+data_seats_layout_template: dict[str, any] = {
+    "operationName": "libLayout",
+    "query": _seats_layout_query.strip(),
+    "variables": {"libId": 0, "libType": -1}
+}
