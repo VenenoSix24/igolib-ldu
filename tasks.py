@@ -8,6 +8,7 @@ import asyncio
 import datetime
 import time
 import logging
+import json
 import pytz
 from typing import Optional
 
@@ -16,6 +17,24 @@ from config import SEAT_TAKEN_ERROR_CODE
 import globals
 
 logger = logging.getLogger(__name__)
+
+
+def create_status_message(event: str, message: str, data: dict = None) -> str:
+    """
+    创建结构化状态消息 (JSON 格式)
+    
+    Args:
+        event: 事件类型 (countdown, phase, success, error, warning, info, retry, cancelled)
+        message: 用户友好的消息文案
+        data: 附加数据 (可选)
+    
+    Returns:
+        JSON 格式的消息字符串
+    """
+    payload = {"event": event, "message": message}
+    if data:
+        payload["data"] = data
+    return json.dumps(payload, ensure_ascii=False)
 
 # 定义北京时区
 BEIJING_TZ = pytz.timezone('Asia/Shanghai')
@@ -66,14 +85,25 @@ async def background_task_runner(
         start_dt = BEIJING_TZ.localize(start_dt)
 
     if start_dt and start_dt > now_dt:
-        # 立即发送一条状态，避免用户等待
+        # 计算剩余时间
         remaining_seconds = start_dt.timestamp() - now_dt.timestamp()
-        await send_status(f"预约任务已启动，距离计划执行时间还有 {remaining_seconds:.1f} 秒...")
+        target_time_str = start_dt.strftime("%H:%M:%S")
+        
+        # 发送任务启动消息
+        await send_status(create_status_message(
+            "phase", 
+            f"任务已启动，等待 {target_time_str} 执行",
+            {"phase": "waiting", "target_time": target_time_str}
+        ))
         
         while True:
             # 1. 检查任务取消
             if manager.is_task_cancelled(client_id):
-                await send_status("❌ 任务已被用户取消")
+                await send_status(create_status_message(
+                    "cancelled",
+                    "任务已取消",
+                    {"phase": "cancelled"}
+                ))
                 manager.clear_cancelled_task(client_id)
                 final_result = "任务已被用户取消"
                 break
@@ -81,13 +111,15 @@ async def background_task_runner(
             # 2. 计算剩余时间
             now_ts = time.time()
             remaining_seconds = start_dt.timestamp() - now_ts
-            
-            # 移除偏移量，严格与前端 Math.floor 保持一致，确保精确同步
             display_sec = int(remaining_seconds)
             
             # 3. 触发条件
             if remaining_seconds <= 0.01:
-                await send_status("\n时间到，开始执行！")
+                await send_status(create_status_message(
+                    "phase",
+                    "时间到，正在执行...",
+                    {"phase": "executing"}
+                ))
                 # 调用 Async core function
                 final_result = await perform_seat_operation(
                     mode, cookie, lib_id, seat_key, start_dt,
@@ -98,21 +130,34 @@ async def background_task_runner(
                 break
             
             # 4. 智能等待 (Smart Wait)
-            # 使用 asyncio.sleep 释放控制权
             if remaining_seconds > 30:
-                # 距离还远，沉睡较久，但需定期醒来检查取消状态
+                # 距离还远，沉睡较久，每30秒发送一次心跳
                 if int(remaining_seconds) % 30 == 0:
-                    await send_status(f"任务挂起中，剩余 {int(remaining_seconds)} 秒...")
+                    minutes = int(remaining_seconds) // 60
+                    secs = int(remaining_seconds) % 60
+                    if minutes > 0:
+                        time_str = f"{minutes}分{secs}秒"
+                    else:
+                        time_str = f"{secs}秒"
+                    await send_status(create_status_message(
+                        "countdown",
+                        f"等待中，还有 {time_str}",
+                        {"remaining": int(remaining_seconds), "phase": "waiting"}
+                    ))
                 await asyncio.sleep(1) 
             elif remaining_seconds > 10:
                 await asyncio.sleep(0.5)
             else:
-                # 倒计时显示逻辑 (带状态跟踪)
+                # 最后10秒倒计时 (带状态跟踪)
                 if 'last_logged_sec' not in locals():
                      last_logged_sec = -999
 
                 if display_sec != last_logged_sec and display_sec >= 0:
-                     await send_status(f"距离计划执行时间还有 {display_sec} 秒...")
+                     await send_status(create_status_message(
+                         "countdown",
+                         f"倒计时 {display_sec} 秒",
+                         {"remaining": display_sec, "phase": "countdown"}
+                     ))
                      last_logged_sec = display_sec
                 
                 # 高精度等待

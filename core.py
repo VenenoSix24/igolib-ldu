@@ -28,6 +28,25 @@ from config import (
 # 获取一个以当前模块名命名的logger
 logger = logging.getLogger(__name__)
 
+
+def create_status_message(event: str, message: str, data: dict = None) -> str:
+    """
+    创建结构化状态消息 (JSON 格式)
+    
+    Args:
+        event: 事件类型 (phase, success, error, warning, info, retry)
+        message: 用户友好的消息文案
+        data: 附加数据 (可选)
+    
+    Returns:
+        JSON 格式的消息字符串
+    """
+    payload = {"event": event, "message": message}
+    if data:
+        payload["data"] = data
+    return json.dumps(payload, ensure_ascii=False)
+
+
 # --- 辅助函数 ---
 def extract_error_msg(response_text: str) -> str:
     try:
@@ -174,6 +193,10 @@ async def perform_seat_operation(
         logger.info(msg)
         if status_callback: status_callback(msg.strip().replace('\r', ''))
     
+    def send_structured(event: str, message: str, data: dict = None):
+        """发送结构化状态消息"""
+        send_status(create_status_message(event, message, data))
+    
     mode_str = '预约' if mode == 1 else '抢座'
     room_name = room_mappings.get(str(lib_id), f"ID {lib_id}")
     seat_number_str = "未知"
@@ -181,10 +204,15 @@ async def perform_seat_operation(
         reverse_seat_map = {v: k for k, v in seat_mappings[room_name].items()}
         seat_number_str = reverse_seat_map.get(seat_key, "未知Key")
 
-    send_status(f"\n--- 开始执行 {mode_str} 操作 (Async) ---")
-    send_status(f"模式: {'明日预约' if mode == 1 else '立即抢座'} | 阅览室: {room_name} ({lib_id}) | 座位: {seat_number_str} (Key: {seat_key})")
+    # 发送任务开始消息（包含座位信息供前端显示结果卡片）
+    send_structured("phase", f"开始{mode_str}", {
+        "phase": "start",
+        "mode": mode_str,
+        "room": room_name,
+        "seat": seat_number_str
+    })
     
-    last_error_msg = f"达到最大尝试次数({MAX_REQUEST_ATTEMPTS})仍未成功。"
+    last_error_msg = f"多次尝试仍未成功"
     
     # 获取 API 配置（如果未提供则使用默认预设）
     default = PRESETS[DEFAULT_PRESET]
@@ -199,10 +227,12 @@ async def perform_seat_operation(
     async with httpx.AsyncClient(limits=limits, timeout=15.0, verify=False) as session:
         
         for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
-            send_status(f"\n--- 第 {attempt}/{MAX_REQUEST_ATTEMPTS} 次尝试 ---")
             current_attempt_error = None
             if attempt > 1:
-                send_status(f"等待 {SLEEP_INTERVAL_ON_FAIL} 秒后重试...")
+                send_structured("retry", f"正在重试 ({attempt}/{MAX_REQUEST_ATTEMPTS})", {
+                    "attempt": attempt,
+                    "max_attempts": MAX_REQUEST_ATTEMPTS
+                })
                 await asyncio.sleep(SLEEP_INTERVAL_ON_FAIL)
 
             # httpx 的 header values 必须是可被 latin-1 编码的 (或 ascii)
@@ -225,48 +255,56 @@ async def perform_seat_operation(
             
             try:
                 if mode == 1:
-                    send_status("步骤 1/5: 执行排队...");
-                    # call async pass_queue
-                    queue_success = await pass_queue(mode, current_queue_header, current_ws_url, status_callback=status_callback)
-                    if not queue_success: send_status("警告: 排队未确认成功，但将继续尝试后续HTTP操作...")
-                    else: send_status("排队步骤完成。")
-                else:
-                    send_status("步骤 1/5: 跳过排队 (立即抢座模式)")
-
-                send_status(f"步骤 2/5: 选择阅览室 ({room_name})...");
+                    send_structured("phase", "正在排队...", {"phase": "queuing"})
+                    # call async pass_queue (该函数内部也会发送消息，我们暂时保留)
+                    queue_success = await pass_queue(mode, current_queue_header, current_ws_url, status_callback=None)
+                    # NOTE: 我们不传 callback 给 pass_queue，避免输出技术细节
+                
+                send_structured("phase", f"正在{mode_str}座位...", {"phase": "reserving", "seat": seat_number_str})
+                
+                # 选择阅览室
                 res_lib = await session.post(current_api_url, headers=current_pre_header, json=data_lib_chosen, timeout=10.0)
-                send_status(f"  - 选择阅览室响应: {res_lib.status_code}")
                 res_lib.raise_for_status()
                 
-                send_status(f"步骤 3/5: 执行 {mode_str} (座位 {seat_number_str})...");
+                # 执行主操作
                 await asyncio.sleep(0.1)
                 res_main = await session.post(current_api_url, headers=current_pre_header, json=main_payload, timeout=15.0)
-                send_status(f"  - 主操作响应: {res_main.status_code}")
                 
-                send_status("步骤 4/5: 发送验证请求...");
+                # 发送验证请求
                 res_val = await session.post(current_api_url, headers=current_pre_header, json=data_validate_payload, timeout=10.0)
-                send_status(f"  - 验证响应: {res_val.status_code}")
-
-                send_status("步骤 5/5: 检查主操作结果...");
                 res_main.raise_for_status()
                 
                 if '"errors":' in res_main.text:
                     error_msg_main = extract_error_msg(res_main.text)
-                    last_error_msg = f"主操作错误: {error_msg_main}"
-                    send_status(f"  - {last_error_msg}")
+                    last_error_msg = error_msg_main
                     
+                    # 不可恢复的错误类型
                     permanent_errors = ["不在预约时间内", "日不开放"]
                     if any(err in error_msg_main for err in permanent_errors):
                         logger.warning("检测到不可恢复的业务错误，操作终止。")
+                        send_structured("error", "当前不在预约时间", {"reason": error_msg_main})
                         return f"操作失败: {error_msg_main}"
 
-                    if "access denied" in error_msg_main.lower(): return "Cookie无效或已过期，请更新。"
-                    if any(err in error_msg_main for err in ["该座位已经被人预定了", "您选择的座位已被预约", "已被占座"]): return SEAT_TAKEN_ERROR_CODE
-                    if any(keyword in error_msg_main for keyword in ["您已经预约了座位", "操作成功"]): return f"成功 ({error_msg_main})"
+                    if "access denied" in error_msg_main.lower():
+                        send_structured("error", "Cookie 已失效，请重新获取", {"reason": "cookie_expired"})
+                        return "Cookie无效或已过期，请更新。"
+                    if any(err in error_msg_main for err in ["该座位已经被人预定了", "您选择的座位已被预约", "已被占座"]):
+                        send_structured("warning", "座位已被其他人抢先预约", {"reason": "seat_taken"})
+                        return SEAT_TAKEN_ERROR_CODE
+                    if any(keyword in error_msg_main for keyword in ["您已经预约了座位", "操作成功"]):
+                        send_structured("success", f"{mode_str}成功！", {
+                            "room": room_name,
+                            "seat": seat_number_str
+                        })
+                        return f"成功 ({error_msg_main})"
                     
-                    send_status(f"❌ 第 {attempt} 次尝试失败: {last_error_msg}")
+                    # 其他错误，尝试重试
+                    logger.warning(f"第 {attempt} 次尝试失败: {last_error_msg}")
                 else:
-                    send_status(f"✅ {mode_str}成功！")
+                    send_structured("success", f"{mode_str}成功！", {
+                        "room": room_name,
+                        "seat": seat_number_str
+                    })
                     return "成功"
             
             except httpx.TimeoutException as e:
@@ -291,6 +329,5 @@ async def perform_seat_operation(
             if current_attempt_error:
                 last_error_msg = current_attempt_error
 
-    send_status(f"\n--- 达到最大尝试次数 ({MAX_REQUEST_ATTEMPTS}) ---")
-    send_status(f"最终未能成功，最后记录的错误: {last_error_msg}")
+    send_structured("error", "多次尝试仍未成功", {"reason": last_error_msg})
     return last_error_msg

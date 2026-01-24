@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
   LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
-  KeyRound, Building2, Armchair, Settings
+  KeyRound, Building2, Armchair, Settings, RefreshCw
 } from "lucide-react";
 import { getMappings, submitRequest, cancelTask, getDynamicRooms, getRoomSeats, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,32 @@ interface LogEntry {
   type: "info" | "success" | "error" | "warning";
   timestamp: string;
   count?: number;
+  event?: string; // 结构化消息事件类型
+  data?: Record<string, unknown>; // 附加数据
+}
+
+// 解析后端发送的结构化消息
+function parseStatusMessage(rawMessage: string): { event: string; message: string; data?: Record<string, unknown> } {
+  try {
+    const parsed = JSON.parse(rawMessage);
+    if (parsed.event && parsed.message) {
+      return parsed;
+    }
+  } catch {
+    // 非 JSON 消息，降级处理
+  }
+  return { event: "info", message: rawMessage };
+}
+
+// 事件类型到日志类型的映射
+function eventToLogType(event: string): LogEntry["type"] {
+  switch (event) {
+    case "success": return "success";
+    case "error": return "error";
+    case "warning":
+    case "cancelled": return "warning";
+    default: return "info";
+  }
 }
 
 
@@ -88,6 +114,10 @@ export default function Dashboard() {
   const wsRef = useRef<WebSocket | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showResultDialog, setShowResultDialog] = useState(false);
+
+  // 任务阶段追踪
+  const [currentPhase, setCurrentPhase] = useState<string>("idle");
 
   // --- 移动端状态 ---
   const [activeTab, setActiveTab] = useState<'config' | 'console'>('config');
@@ -289,28 +319,42 @@ export default function Dashboard() {
     setLatestLog(message);
   };
 
-  const addLog = (message: string, type: LogEntry["type"] = "info") => {
-    // 过滤干扰信息
-    const noisePatterns = ["===", "---", "步骤", "响应:", "Async", "Check", "通道"];
-    const isNoise = noisePatterns.some(p => message.includes(p));
-    // 即使部分匹配干扰模式，也始终显示重要状态、错误或成功信息
-    const isImportant = type === 'error' || type === 'success' || message.includes("Access Denied") || message.includes("开始执行");
-
-    if (isNoise && !isImportant) return;
-
+  const addLog = (
+    message: string,
+    type: LogEntry["type"] = "info",
+    event?: string,
+    data?: Record<string, unknown>
+  ) => {
     updateStatus(message);
+
+    // 根据事件类型更新当前阶段
+    if (event === "phase" && data?.phase) {
+      setCurrentPhase(data.phase as string);
+    } else if (event === "countdown") {
+      setCurrentPhase("countdown");
+    } else if (event === "success") {
+      setCurrentPhase("done");
+    } else if (event === "error") {
+      setCurrentPhase("failed");
+    } else if (event === "cancelled") {
+      setCurrentPhase("cancelled");
+    }
+
     setLogs(prev => {
       const lastLog = prev[prev.length - 1];
-      // 重复倒计时的折叠逻辑
-      const isCountdown = message.includes("距离计划执行时间") || message.includes("挂起中");
 
-      if (lastLog && isCountdown && lastLog.message.split(' ')[0] === message.split(' ')[0]) {
+      // 基于 event 类型的智能折叠：倒计时消息只更新最后一条
+      const isCountdown = event === "countdown";
+      const lastIsCountdown = lastLog?.event === "countdown";
+
+      if (isCountdown && lastIsCountdown) {
         const newLogs = [...prev];
         newLogs[newLogs.length - 1] = {
           ...lastLog,
           message: message,
           timestamp: new Date().toLocaleTimeString(),
-          count: (lastLog.count || 1) + 1
+          count: (lastLog.count || 1) + 1,
+          data: data
         };
         return newLogs;
       }
@@ -319,7 +363,9 @@ export default function Dashboard() {
         id: generateUUID(),
         message,
         type,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        event,
+        data
       }];
     });
   };
@@ -343,6 +389,7 @@ export default function Dashboard() {
     setLogs([]);
     setLatestLog("正在初始化...");
     setStatus("connecting");
+    setCurrentPhase("idle"); // 重置阶段状态
 
     const newClientId = generateUUID();
     setClientId(newClientId);
@@ -385,15 +432,23 @@ export default function Dashboard() {
         try {
           const data = JSON.parse(event.data);
           if (data.type === "status") {
-            addLog(data.message, "info");
+            // 解析结构化状态消息
+            const parsed = parseStatusMessage(data.message);
+            const logType = eventToLogType(parsed.event);
+            addLog(parsed.message, logType, parsed.event, parsed.data);
           } else if (data.type === "result") {
             if (data.status === "success") {
               setStatus("success");
-              addLog(data.message, "success");
+              addLog(data.message, "success", "result");
+            } else if (data.status === "cancelled") {
+              setStatus("cancelled");
+              addLog(data.message, "warning", "cancelled");
             } else {
               setStatus("failed");
-              addLog(data.message, "error");
+              addLog(data.message, "error", "result");
             }
+            // 任务完成后显示结果弹窗
+            setShowResultDialog(true);
           }
         } catch {
           addLog(event.data, "info");
@@ -752,17 +807,85 @@ export default function Dashboard() {
           activeTab === 'console' ? "flex" : "hidden lg:flex"
         )}>
           {/* 头部 */}
-          <div className="shrink-0 p-6 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-neutral-800 shadow-sm z-10 transition-colors duration-300">
-            <div className="flex items-center justify-between mb-2">
+          <div className="shrink-0 p-4 md:p-6 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-neutral-800 shadow-sm z-10 transition-colors duration-300">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <Activity className="w-3 h-3" /> 当前状态
+                <Activity className="w-3 h-3" /> 任务进度
               </h3>
               <div className="flex items-center gap-2">
                 <span className={cn("text-xs font-mono", wsRef.current?.readyState === 1 ? "text-green-500" : "text-slate-300")}>
-                  {wsRef.current?.readyState === 1 ? "LINK AP" : "OFFLINE"}
+                  {wsRef.current?.readyState === 1 ? "● 在线" : "○ 离线"}
                 </span>
               </div>
             </div>
+
+            {/* 任务阶段时间线 - 响应式设计 */}
+            {status !== 'idle' && (
+              <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* 桌面端：横向时间线 */}
+                <div className="hidden md:flex items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-neutral-800/50 rounded-xl">
+                  {[
+                    { key: "waiting", label: "等待中", icon: Timer },
+                    { key: "countdown", label: "倒计时", icon: Clock },
+                    { key: "queuing", label: "排队", icon: Activity },
+                    { key: "reserving", label: "预约", icon: Rocket },
+                    { key: "done", label: "完成", icon: CheckCircle2 }
+                  ].map((step, idx, arr) => {
+                    const isActive = currentPhase === step.key;
+                    const isPast = arr.slice(0, idx).map(s => s.key).includes(currentPhase) === false &&
+                      arr.findIndex(s => s.key === currentPhase) > idx;
+                    const isDone = currentPhase === "done";
+                    const Icon = step.icon;
+
+                    return (
+                      <div key={step.key} className="flex items-center flex-1">
+                        <div className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all",
+                          isActive && "bg-blue-500 text-white shadow-lg shadow-blue-500/30",
+                          isPast && "bg-slate-200 dark:bg-neutral-700 text-slate-400",
+                          isDone && step.key === "done" && "bg-green-500 text-white shadow-lg shadow-green-500/30",
+                          !isActive && !isPast && !(isDone && step.key === "done") && "text-slate-400 dark:text-neutral-500"
+                        )}>
+                          <Icon className={cn("w-3.5 h-3.5", isActive && "animate-pulse")} />
+                          <span className="hidden lg:inline">{step.label}</span>
+                        </div>
+                        {idx < arr.length - 1 && (
+                          <div className={cn(
+                            "flex-1 h-0.5 mx-2 rounded-full transition-colors",
+                            isPast || isDone ? "bg-green-400" : "bg-slate-200 dark:bg-neutral-700"
+                          )} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 移动端：紧凑显示当前阶段 */}
+                <div className="md:hidden flex items-center justify-center gap-3 p-3 bg-slate-50 dark:bg-neutral-800/50 rounded-xl">
+                  {(() => {
+                    const phaseMap: Record<string, { label: string; color: string }> = {
+                      idle: { label: "就绪", color: "text-slate-500" },
+                      waiting: { label: "等待执行", color: "text-blue-500" },
+                      countdown: { label: "倒计时中", color: "text-cyan-500" },
+                      queuing: { label: "正在排队", color: "text-purple-500" },
+                      reserving: { label: "正在预约", color: "text-blue-500" },
+                      executing: { label: "执行中", color: "text-orange-500" },
+                      start: { label: "开始", color: "text-blue-500" },
+                      done: { label: "已完成", color: "text-green-500" }
+                    };
+                    const phase = phaseMap[currentPhase] || { label: currentPhase, color: "text-slate-500" };
+                    return (
+                      <>
+                        <div className={cn("w-2 h-2 rounded-full animate-pulse",
+                          currentPhase === "done" ? "bg-green-500" : "bg-blue-500"
+                        )} />
+                        <span className={cn("text-sm font-bold", phase.color)}>{phase.label}</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* 实时倒计时显示 */}
             {countDownStr && (
@@ -804,7 +927,6 @@ export default function Dashboard() {
 
           </div>
 
-
           {/* 可滚动日志 */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 font-mono text-sm bg-slate-50 dark:bg-black/50">
             {logs.length === 0 ? (
@@ -822,39 +944,43 @@ export default function Dashboard() {
                       animate={{ opacity: 1, x: 0 }}
                       className="w-full"
                     >
-                      {/* 优化后的日志行 */}
+                      {/* 基于 event 类型的日志行样式 */}
                       <div className={cn(
-                        "flex items-start gap-3 py-2 px-3 rounded-r-md border-l-2 transition-all hover:bg-black/5 dark:hover:bg-white/5",
-                        log.type === "success" && "border-green-500 bg-green-50/30 dark:bg-green-900/10 text-green-800 dark:text-green-300",
-                        log.type === "error" && "border-red-500 bg-red-50/30 dark:bg-red-900/10 text-red-800 dark:text-red-300",
-                        log.type === "warning" && "border-amber-500 bg-amber-50/30 dark:bg-amber-900/10 text-amber-800 dark:text-amber-300",
-                        log.type === "info" && (() => {
-                          if (log.message.includes("连接") || log.message.includes("通道")) return "border-blue-400 bg-blue-50/30 dark:bg-blue-900/10 text-blue-700 dark:text-blue-300";
-                          if (log.message.includes("预约") || log.message.includes("trigger")) return "border-purple-400 bg-purple-50/30 dark:bg-purple-900/10 text-purple-700 dark:text-purple-300";
-                          if (log.message.includes("模式")) return "border-pink-400 bg-pink-50/30 dark:bg-pink-900/10 text-pink-700 dark:text-pink-300";
-                          if (log.message.includes("时间") || log.message.includes("倒计时")) return "border-cyan-400 bg-cyan-50/30 dark:bg-cyan-900/10 text-cyan-700 dark:text-cyan-300";
-                          return "border-slate-300 dark:border-neutral-700 text-neutral-600 dark:text-slate-400";
-                        })()
+                        "flex items-start gap-3 py-2.5 px-4 rounded-lg border-l-3 transition-all hover:bg-black/5 dark:hover:bg-white/5",
+                        // 成功
+                        log.event === "success" && "border-green-500 bg-gradient-to-r from-green-50/50 to-transparent dark:from-green-900/20 text-green-700 dark:text-green-300",
+                        // 错误
+                        log.event === "error" && "border-red-500 bg-gradient-to-r from-red-50/50 to-transparent dark:from-red-900/20 text-red-700 dark:text-red-300",
+                        // 警告 / 取消
+                        (log.event === "warning" || log.event === "cancelled") && "border-amber-500 bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-900/20 text-amber-700 dark:text-amber-300",
+                        // 倒计时
+                        log.event === "countdown" && "border-cyan-400 bg-gradient-to-r from-cyan-50/30 to-transparent dark:from-cyan-900/10 text-cyan-700 dark:text-cyan-300",
+                        // 阶段进度
+                        log.event === "phase" && "border-blue-500 bg-gradient-to-r from-blue-50/40 to-transparent dark:from-blue-900/15 text-blue-700 dark:text-blue-300",
+                        // 重试
+                        log.event === "retry" && "border-orange-400 bg-gradient-to-r from-orange-50/40 to-transparent dark:from-orange-900/15 text-orange-700 dark:text-orange-300",
+                        // 默认
+                        (!log.event || log.event === "info") && "border-slate-300 dark:border-neutral-600 text-neutral-600 dark:text-slate-400"
                       )}>
-                        <span className="shrink-0 font-mono text-[10px] opacity-40 w-[55px] pt-1 select-none text-right">
+                        <span className="shrink-0 font-mono text-[10px] opacity-40 w-[50px] pt-1 select-none text-right">
                           {log.timestamp.split(' ')[0]}
                         </span>
 
-                        <div className="shrink-0 pt-0.5 opacity-70">
-                          {log.type === 'success' ? <CheckCircle className="w-3.5 h-3.5" /> :
-                            log.type === 'error' ? <AlertCircle className="w-3.5 h-3.5" /> :
-                              log.type === 'warning' ? <AlertTriangle className="w-3.5 h-3.5" /> :
-                                (log.message.includes("连接") ? <Zap className="w-3.5 h-3.5" /> :
-                                  log.message.includes("预约") ? <Rocket className="w-3.5 h-3.5" /> :
-                                    log.message.includes("时间") ? <Clock className="w-3.5 h-3.5" /> :
-                                      <Info className="w-3.5 h-3.5" />)}
+                        <div className="shrink-0 pt-0.5">
+                          {log.event === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                            log.event === 'error' ? <AlertCircle className="w-4 h-4 text-red-500" /> :
+                              (log.event === 'warning' || log.event === 'cancelled') ? <AlertTriangle className="w-4 h-4 text-amber-500" /> :
+                                log.event === 'countdown' ? <Timer className="w-4 h-4 text-cyan-500 animate-pulse" /> :
+                                  log.event === 'phase' ? <Zap className="w-4 h-4 text-blue-500" /> :
+                                    log.event === 'retry' ? <RefreshCw className="w-4 h-4 text-orange-500 animate-spin" /> :
+                                      <Info className="w-4 h-4 opacity-50" />}
                         </div>
 
-                        <span className="flex-1 text-sm font-medium leading-relaxed break-all font-sans tracking-wide">
+                        <span className="flex-1 text-sm font-medium leading-relaxed break-all font-sans">
                           {log.message}
                           {log.count && log.count > 1 && (
-                            <span className="ml-2 inline-flex items-center justify-center bg-slate-200 dark:bg-neutral-700 text-neutral-700 dark:text-slate-200 h-4 px-1.5 rounded-full text-[9px] font-bold">
-                              x{log.count}
+                            <span className="ml-2 inline-flex items-center justify-center bg-slate-200/80 dark:bg-neutral-700/80 text-neutral-600 dark:text-slate-300 h-5 px-2 rounded-full text-[10px] font-bold">
+                              ×{log.count}
                             </span>
                           )}
                         </span>
@@ -937,6 +1063,94 @@ export default function Dashboard() {
         config={apiConfig}
         onSave={handleSaveApiConfig}
       />
+
+      {/* 结果弹窗 */}
+      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+        <DialogContent className="w-[90%] max-w-[340px] rounded-2xl p-4 sm:p-6" aria-describedby={undefined}>
+          {/* 无障碍：隐藏的标题 */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              {status === 'success' ? "任务成功" : status === 'cancelled' ? "任务已取消" : "任务失败"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* 居中的内容区域 */}
+          <div className="flex flex-col items-center pt-2 pb-1">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "w-14 h-14 rounded-full flex items-center justify-center mb-3 shadow-inner",
+                status === 'success' && "bg-green-100 dark:bg-green-900/30 text-green-600",
+                status === 'failed' && "bg-red-100 dark:bg-red-900/30 text-red-600",
+                status === 'cancelled' && "bg-amber-100 dark:bg-amber-900/30 text-amber-600"
+              )}
+            >
+              {status === 'success' ? <CheckCircle2 className="w-7 h-7" /> :
+                status === 'cancelled' ? <StopCircle className="w-7 h-7" /> :
+                  <AlertCircle className="w-7 h-7" />}
+            </motion.div>
+
+            <h2 className={cn(
+              "text-lg font-bold text-center tracking-tight",
+              status === 'success' && "text-green-700 dark:text-green-300",
+              status === 'failed' && "text-red-700 dark:text-red-300",
+              status === 'cancelled' && "text-amber-700 dark:text-amber-300"
+            )}>
+              {status === 'success' ? "🎉 任务成功！" :
+                status === 'cancelled' ? "任务已取消" :
+                  "任务失败"}
+            </h2>
+
+            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 text-center mt-1.5 px-2 leading-relaxed">
+              {status === 'success' ? "座位预约成功，请按时到馆" :
+                status === 'cancelled' ? "任务已被用户主动取消" :
+                  latestLog}
+            </p>
+          </div>
+
+          {/* 成功时显示座位信息 */}
+          {status === 'success' && (
+            <div className="bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-3 rounded-xl mt-1">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-slate-400">场馆</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">
+                    {rooms[libId] || '阅览室'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[13px]">
+                  <span className="text-slate-400">座位</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{seatNumber} 号</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 失败时显示改进建议 */}
+          {status === 'failed' && (
+            <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 p-3 rounded-xl mt-1">
+              <p className="text-red-600 dark:text-red-400 text-[12px] text-center font-medium">
+                {latestLog.includes('Cookie') ? '💡 请更新 Cookie 后重试' : '💡 请检查网络或配置后重试'}
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4 sm:mt-5">
+            <Button
+              onClick={() => setShowResultDialog(false)}
+              className={cn(
+                "w-full h-10 font-bold rounded-xl transition-all active:scale-[0.97]",
+                status === 'success' && "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/20",
+                status === 'failed' && "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20",
+                status === 'cancelled' && "bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20"
+              )}
+            >
+              知道了
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }

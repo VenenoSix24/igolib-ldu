@@ -37,7 +37,6 @@ file_handler.setLevel(logging.DEBUG)
 # --- 3. 获取根 Logger 并应用配置 ---
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-# 防止重复添加 handler
 if not logger.handlers:
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def load_mappings() -> Tuple[bool, Dict[str, str], Dict[str, str], Dict[str, Dict[str, str]]]:
     """
-    从JSON文件中加载阅览室和座位映射。
+    从JSON文件中加载阅览室和座位映射
     """
     logger.info("开始加载阅览室和座位映射数据...")
     room_id_to_name: Dict[str, str] = {}
