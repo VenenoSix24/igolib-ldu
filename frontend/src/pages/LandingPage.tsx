@@ -82,7 +82,7 @@ export default function LandingPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
             </span>
-            v4.3.24 Stable 现已发布 !
+            v4.5.24 Stable 现已发布 - 多学校支持 !
           </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 max-w-5xl gradient-text-hero pb-2 leading-tight relative z-20">
             <span className="absolute inset-0 blur-3xl bg-brand/20 -z-10 opacity-50"></span>
@@ -154,14 +154,14 @@ export default function LandingPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">阅览室</label>
+                      <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">阅览室 <span className="text-green-500">✓ 实时</span></label>
                       <div className="bg-surface-lighter border border-white/10 rounded px-3 py-2 text-sm text-gray-300 flex justify-between items-center">
-                        602自习室
+                        602自习室 (86座)
                         <span className="material-symbols-outlined text-xs">expand_more</span>
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 mb-1 block">座位号</label>
+                      <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">座位号 <span className="text-green-500">(158可用)</span></label>
                       <div className="bg-surface-lighter border border-white/10 rounded px-3 py-2 text-sm text-gray-300 text-center font-mono">
                         102
                       </div>
@@ -184,7 +184,7 @@ export default function LandingPage() {
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                     <span className="text-xs text-gray-400">系统在线</span>
                   </div>
-                  <span className="text-xs text-gray-600">v4.3.24-stable</span>
+                  <span className="text-xs text-gray-600">v4.5.24-stable</span>
                 </div>
                 <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3 font-mono text-xs md:text-sm relative z-10">
                   <div className="flex gap-3 opacity-60">
@@ -241,35 +241,45 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">为什么选择 我去抢个座？</h2>
             <p className="text-gray-400 max-w-2xl mx-auto">专为速度、可靠性和学习打造。我们的工具给你带来“不公平”的优势。</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-6 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 feature-card-spotlight"></div>
-              <div className="w-14 h-14 rounded-xl bg-brand/10 flex items-center justify-center mb-6 text-brand group-hover:bg-brand group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110 group-hover:-translate-y-1">
-                <span className="material-symbols-outlined text-3xl">schedule</span>
+              <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-4 text-brand group-hover:bg-brand group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110">
+                <span className="material-symbols-outlined text-2xl">schedule</span>
               </div>
-              <h3 className="text-xl font-bold mb-3 relative z-10 text-gray-100 group-hover:text-white">智能定时</h3>
-              <p className="text-gray-400 leading-relaxed relative z-10 group-hover:text-gray-300">
-                立即执行或设定特定时间（如晚上 21:48）自动运行。再也不用为了点个按钮苦苦等待了。
+              <h3 className="text-lg font-bold mb-2 relative z-10 text-gray-100 group-hover:text-white">智能定时</h3>
+              <p className="text-gray-400 text-sm leading-relaxed relative z-10 group-hover:text-gray-300">
+                立即执行或设定特定时间自动运行，带有精准倒计时。
               </p>
             </div>
-            <div className="p-8 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+            <div className="p-6 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 feature-card-spotlight"></div>
-              <div className="w-14 h-14 rounded-xl bg-brand/10 flex items-center justify-center mb-6 text-brand group-hover:bg-brand group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110 group-hover:-translate-y-1">
-                <span className="material-symbols-outlined text-3xl">terminal</span>
+              <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 text-green-400 group-hover:bg-green-500 group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110">
+                <span className="material-symbols-outlined text-2xl">sync</span>
               </div>
-              <h3 className="text-xl font-bold mb-3 relative z-10 text-gray-100 group-hover:text-white">实时日志</h3>
-              <p className="text-gray-400 leading-relaxed relative z-10 group-hover:text-gray-300">
-                在内置控制台中查看实时 WebSocket 反馈。以毫秒级精度确切知晓何时成功。
+              <h3 className="text-lg font-bold mb-2 relative z-10 text-gray-100 group-hover:text-white">动态数据</h3>
+              <p className="text-gray-400 text-sm leading-relaxed relative z-10 group-hover:text-gray-300">
+                实时获取场馆列表和可用座位，无需手动维护静态数据。
               </p>
             </div>
-            <div className="p-8 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+            <div className="p-6 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 feature-card-spotlight"></div>
-              <div className="w-14 h-14 rounded-xl bg-brand/10 flex items-center justify-center mb-6 text-brand group-hover:bg-brand group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110 group-hover:-translate-y-1">
-                <span className="material-symbols-outlined text-3xl">dark_mode</span>
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110">
+                <span className="material-symbols-outlined text-2xl">school</span>
               </div>
-              <h3 className="text-xl font-bold mb-3 relative z-10 text-gray-100 group-hover:text-white">深色模式</h3>
-              <p className="text-gray-400 leading-relaxed relative z-10 group-hover:text-gray-300">
-                跟随设备设置或手动切换界面的深色浅色。减少眼部疲劳，让你更专注于更重要的事情。
+              <h3 className="text-lg font-bold mb-2 relative z-10 text-gray-100 group-hover:text-white">多学校支持</h3>
+              <p className="text-gray-400 text-sm leading-relaxed relative z-10 group-hover:text-gray-300">
+                内置预设配置，支持自定义 API 地址、Origin 和 Referer。
+              </p>
+            </div>
+            <div className="p-6 group bg-[#1c2128] rounded-2xl border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-2 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 feature-card-spotlight"></div>
+              <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-4 text-brand group-hover:bg-brand group-hover:text-white transition-all duration-300 relative z-10 group-hover:scale-110">
+                <span className="material-symbols-outlined text-2xl">terminal</span>
+              </div>
+              <h3 className="text-lg font-bold mb-2 relative z-10 text-gray-100 group-hover:text-white">实时日志</h3>
+              <p className="text-gray-400 text-sm leading-relaxed relative z-10 group-hover:text-gray-300">
+                WebSocket 实时推送抢座日志，毫秒级精度反馈。
               </p>
             </div>
           </div>
