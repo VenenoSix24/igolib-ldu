@@ -1,11 +1,12 @@
 # 我去抢个座
 
-![Version](https://img.shields.io/badge/Version-4.6.25_TS-blue.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue.svg)
-![React](https://img.shields.io/badge/React-19.2.0-61DAAB.svg)
-![Tauri](https://img.shields.io/badge/Tauri-2.9.6-24C8DB.svg)
-![Android](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Desktop-brightgreen.svg)
-![LICENSE](https://img.shields.io/badge/LICENSE-MIT-yellow.svg)
+![App Version](https://img.shields.io/badge/App_Version-v1.0.25-2ea44f?style=flat-square&logo=tauri&logoColor=white)
+![Core Logic](https://img.shields.io/badge/Core_Logic-v4.6.25-E10098?style=flat-square&logo=graphql&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri-2.9.6-24C8DB?style=flat-square&logo=tauri&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Android_%7C_iOS_%7C_Windows_%7C_macOS-success?style=flat-square&logo=android&logoColor=white)
+![LICENSE](https://img.shields.io/badge/LICENSE-MIT-A31F34?style=flat-square&logo=open-source-initiative&logoColor=white)
 
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
 
