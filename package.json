@@ -5,7 +5,8 @@
   "homepage": ".",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
+    "tauri": "tauri",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

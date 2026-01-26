@@ -12,7 +12,17 @@ lerna-debug.log*
 # --- Tauri / Rust ---
 target/
 src-tauri/target/
-src-tauri/gen/
+
+# Tauri Gen (Android Essential Sync)
+# 允许跟踪 Android 源码与配置，但忽略本地编译产物与秘钥
+src-tauri/gen/schemas/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/build/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/local.properties
+src-tauri/gen/android/keystore.properties
+src-tauri/gen/android/*.jks
+src-tauri/gen/android/*.keystore
 # 我们建议上传 Cargo.lock 以锁定依赖版本
 # !src-tauri/Cargo.lock
 

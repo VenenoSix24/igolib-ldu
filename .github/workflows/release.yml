@@ -1,248 +1,174 @@
-name: Release Build
-
-permissions:
-  contents: write
+name: 'Release Build'
 
 on:
   push:
     tags:
-      - 'v*'
-  # 新增：允许在网页端手动点击按钮触发测试
-  workflow_dispatch:
+      - 'v*' # 推送 v 开头的标签触发构建发布
+  workflow_dispatch: # 允许网页手动点击运行
 
 jobs:
+  # 任务 1：创建 Release 占位
   create-release:
-    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
     outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
+      release_id: ${{ steps.create-release.outputs.result }}
+
     steps:
       - uses: actions/checkout@v4
-      
-      # 逻辑：如果是手动触发，版本号默认为 "manual-test"
-      # 如果是 Tag 触发，则使用 Tag 名
-      - name: Determine Version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "TAG_NAME=manual-test-$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
-            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
-          else
-            echo "TAG_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
-            if [[ "${{ github.ref_name }}" == *"-"* ]]; then
-              echo "IS_PRERELEASE=true" >> $GITHUB_ENV
-            else
-              echo "IS_PRERELEASE=false" >> $GITHUB_ENV
-            fi
-          fi
 
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
+      - name: Setup node
+        uses: actions/setup-node@v4
         with:
-          tag_name: ${{ env.TAG_NAME }} # 显式指定 Tag 名
-          name: Library Seat ${{ env.TAG_NAME }}
-          body: "Auto-generated release. \nTrigger: ${{ github.event_name }}"
-          draft: true # 默认为草稿，测试完如果不想要可以直接删掉
-          prerelease: ${{ env.IS_PRERELEASE }} # 如果是 beta 版则标记为预发布
+          node-version: lts/*
 
-  # ====================================================
-  # 1. Android 构建
-  # ====================================================
-  build-android:
+      - name: Get version
+        run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Create release
+        id: create-release
+        uses: actions/github-script@v6
+        env:
+          # 如果是 tag 触发，使用 tag 名；否则使用 manual-build
+          TAG_NAME: ${{ github.ref_type == 'tag' && github.ref_name || 'manual-build' }}
+          # 如果 tag 包含 "-" 则设为 pre-release
+          IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
+        with:
+          script: |
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: process.env.TAG_NAME,
+              name: `igolib-ldu ${process.env.TAG_NAME}`,
+              body: 'Release assets for igolib-ldu',
+              draft: true, // 初始必须为草稿，以便后续任务上传文件
+              prerelease: process.env.IS_PRERELEASE === 'true'
+            })
+            return data.id
+
+  # 任务 2：构建并上传
+  build-tauri:
     needs: create-release
-    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: aarch64-linux-android
-            arch_name: arm64-v8a
-          - target: x86_64-linux-android
-            arch_name: x86_64
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+          - platform: 'ubuntu-22.04'
+            args: '--apk true --split-per-abi --target aarch64'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk true --split-per-abi --target armv7'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk true --split-per-abi --target x86_64'
+            mobile: 'android'
+
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm install -g pnpm && pnpm install
-      - uses: actions/setup-java@v4
-        with: { distribution: 'zulu', java-version: '17' }
-      - uses: android-actions/setup-android@v3
-      - uses: dtolnay/rust-toolchain@stable
-        with: { targets: ${{ matrix.target }} }
 
-      # --- 自动修正 App 中文名 (双重保险) ---
-      # 这里的 sed 会去替换 strings.xml 里的 app_name
-      - name: Update App Name
-        run: |
-           sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">我去抢个座<\/string>/' src-tauri/gen/android/app/src/main/res/values/strings.xml || true
-
-      - name: Decode Keystore
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > src-tauri/gen/android/release.jks
-
-      - name: Build APK
-        run: pnpm tauri android build --apk --target ${{ matrix.target }}
-        env:
-          ANDROID_KEY_STORE_FILE: ../../../src-tauri/gen/android/release.jks
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-
-      - name: Rename and Checksum
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             VERSION="manual-test"
-          else
-             VERSION=${{ github.ref_name }}
-             VERSION=${VERSION#v}
-          fi
-          
-          NEW_NAME="LibrarySeat_android_${VERSION}_${{ matrix.arch_name }}.apk"
-          find src-tauri/gen/android/app/build/outputs/apk/*/release -name "app-*-release.apk" -exec mv {} $NEW_NAME \;
-          sha256sum $NEW_NAME > ${NEW_NAME}.sha256
-          
-      - name: Upload Assets
-        uses: softprops/action-gh-release@v1
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
-          tag_name: ${{ needs.create-release.outputs.tag_name }} # 使用前面生成的 Tag 名
-          releaseId: ${{ needs.create-release.outputs.release_id }}
-          files: |
-            *.apk
-            *.sha256
+          version: 9
 
-  # ====================================================
-  # 2. Linux 构建
-  # ====================================================
-  build-linux:
-    needs: create-release
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Dependencies
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'pnpm' # 开启 pnpm 缓存，加速构建
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || '') }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev rpm
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm install -g pnpm && pnpm install
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install frontend dependencies
+        run: pnpm install
 
-      - name: Build Linux
-        run: pnpm tauri build
-      
-      - name: Package and Rename
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             VERSION="manual-test"
-          else
-             VERSION=${{ github.ref_name }}
-             VERSION=${VERSION#v}
-          fi
-          BASE_NAME="LibrarySeat_linux_${VERSION}_amd64"
-
-          mv src-tauri/target/release/bundle/appimage/*.AppImage ${BASE_NAME}.AppImage || true
-          mv src-tauri/target/release/bundle/deb/*.deb ${BASE_NAME}.deb || true
-          mv src-tauri/target/release/bundle/rpm/*.rpm ${BASE_NAME}.rpm || true
-
-          # 打包二进制
-          cd src-tauri/target/release/
-          # 排除 bundle 目录，只打包二进制
-          tar -czvf ../../../${BASE_NAME}.tar.gz --exclude='bundle' *[^.] 
-          cd ../../../
-          
-          # 计算 hash (如果文件存在)
-          [ -f "${BASE_NAME}.AppImage" ] && sha256sum ${BASE_NAME}.AppImage > ${BASE_NAME}.AppImage.sha256
-          [ -f "${BASE_NAME}.deb" ] && sha256sum ${BASE_NAME}.deb > ${BASE_NAME}.deb.sha256
-          [ -f "${BASE_NAME}.rpm" ] && sha256sum ${BASE_NAME}.rpm > ${BASE_NAME}.rpm.sha256
-          [ -f "${BASE_NAME}.tar.gz" ] && sha256sum ${BASE_NAME}.tar.gz > ${BASE_NAME}.tar.gz.sha256
-
-      - name: Upload Assets
-        uses: softprops/action-gh-release@v1
+      - name: Setup java
+        if: matrix.mobile == 'android'
+        uses: actions/setup-java@v4
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
-          files: |
-            LibrarySeat_linux_*
+          distribution: 'zulu'
+          java-version: '17'
 
-  # ====================================================
-  # 3. Windows 构建
-  # ====================================================
-  build-windows:
-    needs: create-release
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm install -g pnpm && pnpm install
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup android sdk
+        if: matrix.mobile == 'android'
+        uses: android-actions/setup-android@v3
 
-      - name: Build Windows
-        run: pnpm tauri build
-
-      - name: Rename
+      # --- 安卓签名 ---
+      - name: Prepare android signing
+        if: matrix.mobile == 'android'
         shell: bash
+        env:
+          # 将 Secrets 映射为环境变量，比直接在 run 里拼接更安全
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             VERSION="manual-test"
-          else
-             VERSION=${{ github.ref_name }}
-             VERSION=${VERSION#v}
-          fi
-          BASE_NAME="LibrarySeat_windows_${VERSION}_x64"
-
-          mv src-tauri/target/release/bundle/nsis/*.exe ${BASE_NAME}_setup.exe
+          # 确保目录存在
+          mkdir -p src-tauri/gen/android/app
           
-          if ls src-tauri/target/release/bundle/nsis/*.zip 1> /dev/null 2>&1; then
-            mv src-tauri/target/release/bundle/nsis/*.zip ${BASE_NAME}.zip
-          fi
+          # 1. 解码 Keystore 文件
+          echo "$KEYSTORE_BASE64" | base64 --decode > src-tauri/gen/android/app/release.jks
+          
+          # 2. 生成 properties 文件
+          cat <<EOF > src-tauri/gen/android/keystore.properties
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.jks
+          EOF
 
-          sha256sum ${BASE_NAME}_setup.exe > ${BASE_NAME}_setup.exe.sha256
-          if [ -f "${BASE_NAME}.zip" ]; then
-            sha256sum ${BASE_NAME}.zip > ${BASE_NAME}.zip.sha256
-          fi
-
-      - name: Upload Assets
-        uses: softprops/action-gh-release@v1
+      # --- Tauri Action ---
+      - uses: tauri-apps/tauri-action@dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          files: |
-            LibrarySeat_windows_*
+          args: ${{ matrix.args }}
+          mobile: ${{ matrix.mobile }}
 
-  # ====================================================
-  # 4. macOS 构建 (DMG)
-  # ====================================================
-  build-macos:
-    needs: create-release
-    runs-on: macos-latest
+  # 任务 3：发布 (仅在 Tag 触发时运行)
+  publish-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [create-release, build-tauri]
+    # 如果是手动触发，不运行此步，Release 保持为 Draft
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm install -g pnpm && pnpm install
-      - uses: dtolnay/rust-toolchain@stable
+      - name: publish release
+        uses: actions/github-script@v6
+        env:
+          release_id: ${{ needs.create-release.outputs.release_id }}
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-      - name: Build macOS DMG
-        run: pnpm tauri build --target universal-apple-darwin
-
-      - name: Rename macOS
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-             VERSION="manual-test"
-          else
-             VERSION=${{ github.ref_name }}
-             VERSION=${VERSION#v}
-          fi
-          BASE_NAME="LibrarySeat_macos_${VERSION}_universal"
-
-          mv src-tauri/target/release/bundle/dmg/*.dmg ${BASE_NAME}.dmg
-          sha256sum ${BASE_NAME}.dmg > ${BASE_NAME}.dmg.sha256
-
-      - name: Upload Assets
-        uses: softprops/action-gh-release@v1
-        with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
-          files: |
-            *.dmg
-            *.sha256
+          script: |
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.release_id,
+              draft: false
+            })
