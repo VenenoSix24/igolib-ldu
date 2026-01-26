@@ -3,11 +3,11 @@ name: 'Release Build'
 on:
   push:
     tags:
-      - 'v*' # 推送 v 开头的标签触发构建发布
-  workflow_dispatch: # 允许网页手动点击运行
+      - 'v*'             # 推送 v 开头的标签触发构建发布
+  workflow_dispatch:     # 允许网页手动点击运行
 
 jobs:
-  # 任务 1：创建 Release 占位
+  # 任务 1：创建 Release
   create-release:
     permissions:
       contents: write
@@ -26,12 +26,12 @@ jobs:
       - name: Get version
         run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
-      - name: Create release
+      - name: Create Release
         id: create-release
         uses: actions/github-script@v6
         env:
           # 如果是 tag 触发，使用 tag 名；否则使用 manual-build
-          TAG_NAME: ${{ github.ref_type == 'tag' && github.ref_name || 'manual-build' }}
+          TAG_NAME: ${{ github.ref_type == 'tag' && github.ref_name || 'manual-test-build release' }}
           # 如果 tag 包含 "-" 则设为 pre-release
           IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
         with:
@@ -40,9 +40,9 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: process.env.TAG_NAME,
-              name: `igolib-ldu ${process.env.TAG_NAME}`,
-              body: 'Release assets for igolib-ldu',
-              draft: true, // 初始必须为草稿，以便后续任务上传文件
+              name: `我去抢个座 ${process.env.TAG_NAME}`,
+              body: 'Release assets for 我去抢个座',
+              draft: true,
               prerelease: process.env.IS_PRERELEASE === 'true'
             })
             return data.id
@@ -87,7 +87,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'pnpm' # 开启 pnpm 缓存，加速构建
+          cache: 'pnpm'
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -105,23 +105,22 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      - name: Setup java
+      - name: Setup Java
         if: matrix.mobile == 'android'
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup android sdk
+      - name: Setup Android SDK
         if: matrix.mobile == 'android'
         uses: android-actions/setup-android@v3
 
-      # --- 安卓签名 ---
-      - name: Prepare android signing
+      # --- 安卓签名 --- #
+      - name: Prepare Android Signing
         if: matrix.mobile == 'android'
         shell: bash
         env:
-          # 将 Secrets 映射为环境变量，比直接在 run 里拼接更安全
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -141,7 +140,7 @@ jobs:
           storeFile=release.jks
           EOF
 
-      # --- Tauri Action ---
+      # --- Tauri Action --- #
       - uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -149,6 +148,7 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
           mobile: ${{ matrix.mobile }}
+          releaseAssetNamePattern: '我去抢个座-[version]-[platform]-[arch][setup][ext]'
 
   # 任务 3：发布 (仅在 Tag 触发时运行)
   publish-release:
@@ -160,7 +160,7 @@ jobs:
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
 
     steps:
-      - name: publish release
+      - name: Publish Release
         uses: actions/github-script@v6
         env:
           release_id: ${{ needs.create-release.outputs.release_id }}

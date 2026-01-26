@@ -18,7 +18,6 @@ android {
     compileSdk = 36
     namespace = "com.igolib.ldu"
     
-    // --- 1. 添加签名配置块 ---
     signingConfigs {
         create("release") {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -56,7 +55,6 @@ android {
             }
         }
         getByName("release") {
-            // --- 2. 指定使用刚才定义的签名配置 ---
             signingConfig = signingConfigs.getByName("release")
             
             isMinifyEnabled = true
@@ -72,26 +70,6 @@ android {
     }
     buildFeatures {
         buildConfig = true
-    }
-
-    applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                // 1. 定义应用中文名
-                val appName = "我去抢个座"
-                
-                // 2. 获取版本号
-                val version = variant.versionName
-                
-                // 3. 获取架构名称，如果是通用包则为空
-                val abi = output.filters.find { it.identifier == com.android.build.OutputFile.ABI }?.value
-                val abiSuffix = if (!abi.isNullOrEmpty()) "-$abi" else "-universal"
-
-                // 4. 设置最终文件名: 我去抢个座-xxx-arm64-v8a.apk
-                output.outputFileName = "$appName-$version$abiSuffix.apk"
-            }
     }
 }
 
