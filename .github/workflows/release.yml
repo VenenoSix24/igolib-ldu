@@ -56,14 +56,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # --- macOS 构建 --- #
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
+          
+          # --- Linux 构建 --- #
           - platform: 'ubuntu-22.04'
             args: ''
+          
+          # --- Windows 64 构建 --- #
           - platform: 'windows-latest'
             args: ''
+          
+          # --- Windows 32 构建 --- #
+          - platform: 'windows-latest'
+            args: '--target i686-pc-windows-msvc' 
+
+          # --- Android 构建 --- #
           - platform: 'ubuntu-22.04'
             args: '--apk true --split-per-abi --target aarch64'
             mobile: 'android'
@@ -92,7 +103,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || '') }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || 'i686-pc-windows-msvc') }}
 
       - uses: Swatinem/rust-cache@v2
 
@@ -148,7 +159,8 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
           mobile: ${{ matrix.mobile }}
-          releaseAssetNamePattern: '我去抢个座-[version]-[platform]-[arch][setup][ext]'
+          uploadPlainBinary: true
+          releaseAssetNamePattern: 'igolib_ldu-[version]-[platform]-[arch][setup][ext]'
 
   # 任务 3：发布 (仅在 Tag 触发时运行)
   publish-release:
@@ -170,5 +182,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: process.env.release_id,
-              draft: false
+              draft: true
             })

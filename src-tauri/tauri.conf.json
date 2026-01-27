@@ -37,11 +37,20 @@
     "active": true,
     "targets": [
       "nsis",
+      "msi",
       "deb",
       "appimage",
       "rpm",
       "dmg"
     ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
