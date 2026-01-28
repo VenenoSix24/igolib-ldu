@@ -161,6 +161,7 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
           mobile: ${{ matrix.mobile }}
+          uploadUpdaterSignatures: false
           uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
           releaseAssetNamePattern: 'igolib_ldu-[version]-[platform]-[arch][setup][ext]'
 
