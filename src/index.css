@@ -7,7 +7,6 @@
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
-    /* Mobile Native Feel */
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
@@ -201,4 +200,11 @@
 
 .feature-card-spotlight {
   background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.06), transparent 40%);
+}
+
+.bg-grid-pattern {
+  background-size: 20px 20px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
