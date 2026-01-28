@@ -12,8 +12,17 @@ import {
 import { Sparkles, Download, ArrowUp, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { openUrl } from '@tauri-apps/plugin-opener';
+
+export interface ManualUpdate {
+  version: string;
+  body?: string;
+  isExternal: true;
+  downloadUrl: string;
+}
+
 interface UpdateDialogProps {
-  update: Update | null;
+  update: Update | ManualUpdate | null;
   onClose: () => void;
 }
 
@@ -36,10 +45,17 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({ update, onClose }) =
     if (!update) return;
 
     try {
-      setIsUpdating(true);
-      setError(null);
-      await update.downloadAndInstall();
-      await relaunch();
+      if ('isExternal' in update && update.isExternal) {
+        // 移动端/外部更新：跳转浏览器
+        await openUrl(update.downloadUrl);
+        onClose();
+      } else {
+        // 桌面端/原生更新
+        setIsUpdating(true);
+        setError(null);
+        await (update as Update).downloadAndInstall();
+        await relaunch();
+      }
     } catch (err: any) {
       console.error("更新失败:", err);
       setError(err.message || "更新过程中发生错误");

@@ -81,7 +81,9 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYzNUM1OTI0QTY2NTFBN0EKUldSNkdtV21KRmxjWXpCL2xYUzBPdHVtbkZkYzdtR09ZeDNEQTFHK3JXOGY1S0hHR2VZc1c0YmMK",
       "dialog": false,
       "endpoints": [
-        "http://127.0.0.1:8080/update.json"
+        "https://cdn.jsdelivr.net/gh/VenenoSix24/igolib-ldu@tauri-ts/docs/latest.json",
+        "https://hk.gh-proxy.org/https://raw.githubusercontent.com/VenenoSix24/igolib-ldu/refs/heads/tauri-ts/docs/latest.json",
+        "https://igolib.ivyris.top/latest.json"
       ]
     }
   }

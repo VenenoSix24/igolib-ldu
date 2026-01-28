@@ -9,6 +9,14 @@
     "core:default",
     "updater:default",
     {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "*:*"
+        }
+      ]
+    },
+    {
       "identifier": "http:default",
       "allow": [
         {

@@ -1,0 +1,14 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "visible": true,
+        "transparent": false
+      }
+    ]
+  },
+  "plugins": {
+    "updater": null
+  }
+}

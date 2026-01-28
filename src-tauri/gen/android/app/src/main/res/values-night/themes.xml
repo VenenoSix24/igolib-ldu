@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme (Night mode). -->
     <style name="Theme.app" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -7,5 +7,17 @@
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- 确保窗口背景与 Splash 一致，避免过渡闪烁 -->
+        <item name="android:windowBackground">@color/black</item>
+    </style>
+
+    <!-- Splash screen theme with SplashScreen API support (Night mode) -->
+    <style name="Theme.app.Splash" parent="Theme.SplashScreen">
+        <!-- Splash 背景色 (暗色) -->
+        <item name="windowSplashScreenBackground">@color/black</item>
+        <!-- Splash 图标 -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_scaled</item>
+        <!-- 切换到主题 -->
+        <item name="postSplashScreenTheme">@style/Theme.app</item>
     </style>
 </resources>
