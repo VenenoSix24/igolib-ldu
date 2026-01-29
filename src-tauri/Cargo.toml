@@ -1,6 +1,6 @@
 [package]
 name = "igolib-ldu"
-version = "1.0.25"
+version = "1.0.24"
 description = "Library seat reservation and auto booking tool"
 authors = ["VenenoSix24 <lagbqy@gmail.com>"]
 license = ""

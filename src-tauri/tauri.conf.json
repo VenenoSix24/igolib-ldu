@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "我去抢个座",
-  "version": "1.0.25",
+  "version": "1.0.24",
   "identifier": "com.igolib.ldu",
   "build": {
     "frontendDist": "../dist",
