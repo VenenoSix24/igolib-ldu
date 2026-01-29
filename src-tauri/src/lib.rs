@@ -1,27 +1,6 @@
-#[cfg(not(mobile))]
-use tauri::Manager;
 
-#[tauri::command]
-async fn close_splashscreen(app: tauri::AppHandle) {
-    // 仅在桌面端执行：关闭启动画面窗口，显示主窗口
-    #[cfg(not(mobile))]
-    {
-        let _ = app;
-        if let Some(splash_window) = app.get_webview_window("splashscreen") {
-            let _ = splash_window.close();
-        }
 
-        if let Some(main_window) = app.get_webview_window("main") {
-            let _ = main_window.show();
-            let _ = main_window.set_focus();
-        }
-    }
-    
-    #[cfg(mobile)]
-    {
-        let _ = app;
-    }
-}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -32,7 +11,6 @@ pub fn run() {
     let builder = builder.plugin(tauri_plugin_process::init());
 
     builder
-        .invoke_handler(tauri::generate_handler![close_splashscreen])
         .setup(|app| {
             // Debug 模式下启用日志
             if cfg!(debug_assertions) {
