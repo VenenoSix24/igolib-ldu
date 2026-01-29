@@ -6,7 +6,6 @@ import Dashboard from "./pages/Dashboard";
 import { ThemeProvider } from "./components/theme-provider";
 import { UpdateDialog } from "./components/UpdateDialog";
 
-import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { check, Update } from '@tauri-apps/plugin-updater';
@@ -15,12 +14,6 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
 
   useEffect(() => {
-    // 启动画面控制
-    const initApp = async () => {
-      invoke("close_splashscreen");
-    };
-    initApp();
-
     const checkForUpdates = async () => {
       try {
         const update = await check();

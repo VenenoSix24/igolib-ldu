@@ -20,7 +20,7 @@
         "resizable": true,
         "decorations": true,
         "transparent": true,
-        "visible": false,
+        "visible": true,
         "windowEffects": {
           "effects": [
             "mica",
@@ -29,19 +29,6 @@
           ],
           "state": "active"
         }
-      },
-      {
-        "label": "splashscreen",
-        "title": "Loading",
-        "url": "splashscreen.html",
-        "width": 400,
-        "height": 300,
-        "decorations": false,
-        "center": true,
-        "resizable": false,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "transparent": true
       }
     ],
     "security": {
