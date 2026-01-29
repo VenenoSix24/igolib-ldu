@@ -30,7 +30,7 @@ function App() {
         const currentVer = await getVersion();
 
         // 获取远程版本信息
-        const response = await fetch("https://cdn.jsdelivr.net/gh/VenenoSix24/igolib-ldu@tauri-ts/docs/latest.json", {
+        const response = await fetch("https://cdn.jsdelivr.net/gh/VenenoSix24/igolib-ldu-web@main/public/latest.json", {
           method: 'GET',
           headers: {
             'User-Agent': 'igolib-ldu-updater'
@@ -50,7 +50,7 @@ function App() {
               version: latestVer,
               body: data.notes,
               isExternal: true,
-              downloadUrl: "https://gh-proxy.org/https://github.com/VenenoSix24/igolib-ldu/releases/latest"
+              downloadUrl: "https://igolib.ivyris.top/download"
             } as any);
           }
         }
