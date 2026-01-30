@@ -1,16 +1,16 @@
 # 我去抢个座
 
 ![App Version](https://img.shields.io/badge/App_Version-v1.0.25-2ea44f?style=flat-square&logo=tauri&logoColor=white)
-![Core Logic](https://img.shields.io/badge/Core_Logic-v4.6.25-E10098?style=flat-square&logo=graphql&logoColor=white)
+![Core Logic](https://img.shields.io/badge/Core_Logic-v4.6.25_TS-E10098?style=flat-square&logo=graphql&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white)
 ![Tauri](https://img.shields.io/badge/Tauri-2.9.6-24C8DB?style=flat-square&logo=tauri&logoColor=white)
-![Platform](https://img.shields.io/badge/Platform-Android_%7C_iOS_%7C_Windows_%7C_macOS-success?style=flat-square&logo=android&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Android_%7C_Windows_%7C_macOS_%7C_Linux-success?style=flat-square&logo=android&logoColor=white)
 ![LICENSE](https://img.shields.io/badge/LICENSE-MIT-A31F34?style=flat-square&logo=open-source-initiative&logoColor=white)
 
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
 
-本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心业务逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、iOS、Windows、macOS 以及 Linux** 平台，提供一致的体验。
+本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心业务逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、Windows、macOS 以及 Linux** 平台，提供一致的体验。
 
 > 如果你**需要 Python 做为后端**的版本，请切换到 [**dev 分支**](https://github.com/VenenoSix24/igolib-ldu/tree/dev)。Python 版本可能会更新不及时！
 
@@ -20,7 +20,7 @@
 
 ## ✨ 功能特性
 
-- 📱 **全平台覆盖**：完美运行于手机（Android/iOS）与桌面端（Win/Mac/Linux）。
+- 📱 **全平台覆盖**：完美运行于手机（Android）与桌面端（Win/Mac/Linux）。
 - 🚀 **纯单机驱动**：核心逻辑异步化重写，无需额外部署 Python 后端，本地直接与图书馆服务器通信。
 - 🔄 **明日预约模式**：支持 WebSocket 排队通道模拟，在开放瞬间精准抢占次日座席。
 - ⚡ **即时抢座模式**：实时抢占当天可用座位，智能优化重试策略。
@@ -37,7 +37,6 @@
 - **Windows**: 下载 `.msi` 或 `.exe` 安装包。
 - **macOS**: 下载 `.dmg` 文件。
 - **Linux**: 下载 `.AppImage` 或 `.deb` 包。
-- **iOS**: (需自行签名安装)。
 
 ## 🛠️ 编译运行
 

@@ -50,7 +50,7 @@ function App() {
               version: latestVer,
               body: data.notes,
               isExternal: true,
-              downloadUrl: "https://igolib.ivyris.top/download"
+              downloadUrl: "https://igolib.ivyris.top/#/download"
             } as any);
           }
         }
