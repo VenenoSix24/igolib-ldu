@@ -1,18 +1,27 @@
 # 我去抢个座
 
-![App Version](https://img.shields.io/badge/App_Version-v1.0.25-2ea44f?style=flat-square&logo=tauri&logoColor=white)
-![Core Logic](https://img.shields.io/badge/Core_Logic-v4.6.25_TS-E10098?style=flat-square&logo=graphql&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white)
-![Tauri](https://img.shields.io/badge/Tauri-2.9.6-24C8DB?style=flat-square&logo=tauri&logoColor=white)
-![Platform](https://img.shields.io/badge/Platform-Android_%7C_Windows_%7C_macOS_%7C_Linux-success?style=flat-square&logo=android&logoColor=white)
-![LICENSE](https://img.shields.io/badge/LICENSE-MIT-A31F34?style=flat-square&logo=open-source-initiative&logoColor=white)
+<p align="center">
+  <img src="public/app-icon.png" width="128" height="128" alt="igolib-ldu Icon" />
+  <br /><br />
+  <a href="https://igolib.ivyris.top"><b>🌐 项目官网</b></a> •
+  <a href="https://igolib.ivyris.top/#/download"><b>⬇️ 官网下载</b></a> •
+  <a href="https://github.com/VenenoSix24/igolib-ldu/releases/latest"><b>⭐ GitHub下载</b></a>
+  <br /><br />
+  <img src="https://img.shields.io/badge/App_Version-v1.0.25-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
+  <img src="https://img.shields.io/badge/Core_Logic-v4.6.25_TS-E10098?style=flat-square&logo=graphql&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tauri-2.9.6-24C8DB?style=flat-square&logo=tauri&logoColor=white" />
+  <img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-red?style=flat-square&logo=open-source-initiative&logoColor=white" />
+</p>
 
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
 
 本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心业务逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、Windows、macOS 以及 Linux** 平台，提供一致的体验。
 
 > 如果你**需要 Python 做为后端**的版本，请切换到 [**dev 分支**](https://github.com/VenenoSix24/igolib-ldu/tree/dev)。Python 版本可能会更新不及时！
+> 
+> **如果对你有帮助，请 Star 一下项目吧！** ⭐
 
 ![igolib-ts-p1.jpg](https://s2.loli.net/2026/01/25/YaLWsrDVJHZwITf.jpg)
 
@@ -31,7 +40,7 @@
 
 ## 📥 快速下载 (推荐)
 
-如果您只是单纯想使用本软件，可以直接从 [Releases 页面](https://github.com/VenenoSix24/igolib-ldu/releases) 下载对应平台的安装包：
+如果您只是单纯想使用本软件，可以直接从 [Releases 页面](https://github.com/VenenoSix24/igolib-ldu/releases) 或 [官网页面](https://igolib.ivyris.top/#/download) 下载对应平台的安装包：
 
 - **Android**: 下载 `.apk` 文件。
 - **Windows**: 下载 `.msi` 或 `.exe` 安装包。
@@ -89,7 +98,7 @@ pnpm tauri android build        # 打包 Android
 
 ## 🖼️ 界面预览
 
-![igolib-ts-p2.jpg](https://s2.loli.net/2026/01/25/r16QduYiBlFDJEm.jpg)
+![igolib-ldu-web-home.png](https://files.seeusercontent.com/2026/03/10/1dzV/igolib-ldu-web-home.png)
 
 ![igolib-ts-p4.jpg](https://s2.loli.net/2026/01/25/tYDSefbR5quG8my.jpg)
 
@@ -98,8 +107,15 @@ pnpm tauri android build        # 打包 Android
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证。
+本项目采用 **AGPL-3.0** 开源许可证。
+
+
+- 任何使用本项目代码的衍生项目 **必须开源**
+- 修改后的代码 **必须以 AGPL-3.0 进行发布**
+- 即使作为 **网络服务运行** 也需要提供源代码
+
+详情请查看 [LICENSE](./LICENSE) 文件。
 
 ---
 
-**声明**：本项目仅供学术交流与编程技术研究使用，请自觉遵守各高校图书馆座位管理规定。严禁用于任何商业用途。
+**声明**：本项目仅供学术交流与编程技术研究使用，请自觉遵守各高校图书馆座位管理规定！严禁用于任何商业用途！！
