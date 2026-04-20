@@ -15,21 +15,27 @@ interface Seat {
 }
 
 export class LibraryService {
-  private baseUrl = "https://libseats.ldu.edu.cn/index.php/graphql/";
+  private baseUrl: string;
   private headers: Record<string, string>;
   private cookie: string;
 
-  constructor(cookie: string, apiUrl?: string, origin?: string, referer?: string) {
+  constructor(cookie: string, apiUrl: string, origin?: string, referer?: string) {
     this.cookie = cookie;
-    if (apiUrl) this.baseUrl = apiUrl;
+    this.baseUrl = apiUrl;
+
+    const urlObj = new URL(apiUrl);
+    const derivedOrigin = urlObj.protocol + "//" + urlObj.host;
+    const derivedReferer = derivedOrigin + "/web/index.html";
 
     this.headers = {
       "Content-Type": "application/json",
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Referer": referer || "https://libseats.ldu.edu.cn/web/index.html",
-      "Origin": origin || "https://libseats.ldu.edu.cn",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090719) XWEB/8391 Flue",
+      "Referer": referer || derivedReferer,
+      "Origin": origin || derivedOrigin,
       "Cookie": cookie
     };
+    
+    console.log(`[LibraryService] 初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
   }
 
   // 带重试逻辑的通用 GraphQL 发送器
@@ -148,8 +154,10 @@ export class LibraryService {
   async bookSeat(libId: number, seatKey: string, mode: number = 2, captcha = ""): Promise<any> {
     // Phase 1: WebSocket Queue
     try {
-      const wsService = new WebSocketService(this.cookie);
-      console.log("[Booking] 1. Starting WebSocket Queue...");
+      const wsService = new WebSocketService(this.cookie, this.baseUrl);
+      console.log("[Booking] 1. Starting WebSocket Queue (Step 1/2)...");
+      await wsService.passQueue(mode);
+      console.log("[Booking] 1. Starting WebSocket Queue (Step 2/2)...");
       await wsService.passQueue(mode);
     } catch (e) {
       console.warn("[Booking] WebSocket queue bypassed/failed, proceeding to HTTP...", e);

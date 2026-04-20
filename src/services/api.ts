@@ -37,7 +37,8 @@ export async function submitRequest(
   request: SeatRequest,
   onStatusUpdate?: (message: string, event?: string, data?: any) => void
 ): Promise<ApiResponse<void>> {
-  const service = new LibraryService(request.cookieStr, request.apiUrl, request.origin, request.referer);
+  const apiUrl = request.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+  const service = new LibraryService(request.cookieStr, apiUrl, request.origin, request.referer);
 
   // 为此请求创建 AbortController
   const controller = new AbortController();
@@ -195,24 +196,29 @@ export interface SeatLayoutResponse {
   seatMapping: { [name: string]: string };
 }
 
+const DEFAULT_API_CONFIG = {
+  apiUrl: "https://libseats.ldu.edu.cn/index.php/graphql/",
+  origin: "https://libseats.ldu.edu.cn",
+  referer: "https://libseats.ldu.edu.cn/web/index.html"
+};
+
 /**
  * 动态获取场馆列表（需要有效 Cookie）
- * @param cookie 用户 Cookie
- * @param apiConfig API 配置参数（可选）
  */
 export async function getDynamicRooms(
   cookie: string,
   apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
 ): Promise<{ rooms: DynamicRoom[]; total: number }> {
-  const service = new LibraryService(cookie, apiConfig?.apiUrl, apiConfig?.origin, apiConfig?.referer);
+  const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+  const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
   const rawRooms = await service.getRoomList();
 
   const rooms: DynamicRoom[] = rawRooms.map(r => ({
     id: r.id,
     name: r.name,
-    floor: "3", // 默认楼层，实际应从API获取或后续完善
+    floor: r.name.match(/\d+/)?.at(0) || "1", 
     isOpen: true,
-    seatsTotal: r.available, // 暂时用 available 填充 (数据缺失)
+    seatsTotal: r.available,
     seatsUsed: 0,
     seatsAvailable: r.available,
     openTime: "08:00",
@@ -224,23 +230,21 @@ export async function getDynamicRooms(
 
 /**
  * 动态获取指定场馆的座位布局（需要有效 Cookie）
- * @param roomId 场馆 ID
- * @param cookie 用户 Cookie  
- * @param apiConfig API 配置参数（可选）
  */
 export async function getRoomSeats(
   roomId: number,
   cookie: string,
   apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
 ): Promise<SeatLayoutResponse> {
-  const service = new LibraryService(cookie, apiConfig?.apiUrl, apiConfig?.origin, apiConfig?.referer);
+  const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+  const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
   const rawSeats = await service.getSeatLayout(roomId);
 
   const seats: DynamicSeat[] = rawSeats.map(s => ({
     key: s.key,
     name: s.name,
-    status: 1, // Default visible status
-    available: true // Python logic: all visible seats are locally valid targets
+    status: 1, 
+    available: true 
   }));
 
   const seatMapping: { [name: string]: string } = {};
@@ -250,7 +254,7 @@ export async function getRoomSeats(
 
   return {
     roomId,
-    roomName: "阅览室", // 动态获取场景下，名称通常由调用方已知或从其他 API 获取
+    roomName: "阅览室",
     seats,
     seatMapping
   };
@@ -261,7 +265,8 @@ export async function validateUser(
   apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
 ): Promise<{ valid: boolean; name?: string }> {
   try {
-    const service = new LibraryService(cookie, apiConfig?.apiUrl, apiConfig?.origin, apiConfig?.referer);
+    const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+    const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
     const info = await service.getUserInfo();
     if (info) {
       return { valid: true, name: info.name };

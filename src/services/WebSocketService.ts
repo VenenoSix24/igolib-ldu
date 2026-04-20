@@ -1,15 +1,24 @@
 import WebSocket from '@tauri-apps/plugin-websocket';
 
 export class WebSocketService {
-  private url = "wss://libseats.ldu.edu.cn/ws?ns=prereserve/queue";
+  private url: string;
   private headers: Record<string, string>;
 
-  constructor(cookie: string) {
+  constructor(cookie: string, apiUrl: string) {
+    const urlObj = new URL(apiUrl);
+    
+    // 自动构造 WSS 地址: 把 /index.php/graphql/ 替换为 /ws?ns=prereserve/queue
+    this.url = `wss://${urlObj.host}/ws?ns=prereserve/queue`;
+    
+    const origin = urlObj.protocol + "//" + urlObj.host;
+
     this.headers = {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Origin": "https://libseats.ldu.edu.cn",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090719) XWEB/8391 Flue",
+      "Origin": origin,
       "Cookie": cookie
     };
+    
+    console.log(`[WS] 动态初始化成功: URL=${this.url}, Origin=${origin}`);
   }
 
   async passQueue(mode: number, onStatus?: (msg: string) => void): Promise<boolean> {
