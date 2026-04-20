@@ -32,7 +32,7 @@ async fn exchange_cookie(auth_url: String) -> Result<String, String> {
         .collect();
 
     if cookies.is_empty() {
-        return Err("服务器未返回 Cookie，请检查 Code 是否已过期。".to_string());
+        return Err("服务器未返回 Cookie，请检查链接是否已过期。".to_string());
     }
 
     let cookie_string = cookies.join("; ");
@@ -63,6 +63,8 @@ pub fn run() {
             app.handle().plugin(tauri_plugin_http::init())?;
             // Opener 插件
             app.handle().plugin(tauri_plugin_opener::init())?;
+            // 剪贴板插件
+            app.handle().plugin(tauri_plugin_clipboard_manager::init())?;
             
             // 仅桌面端加载以下插件
             #[cfg(not(mobile))]

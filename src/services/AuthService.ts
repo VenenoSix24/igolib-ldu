@@ -13,7 +13,9 @@ export class AuthService {
    */
   static buildAuthUrl(appId: string, apiUrl: string): string {
     const urlObj = new URL(apiUrl);
-    const redirectUri = encodeURIComponent(`${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`);
+    // 移除 pathname 末尾的斜杠，防止微信移动端校验失败
+    const cleanPath = urlObj.pathname.replace(/\/$/, '');
+    const redirectUri = encodeURIComponent(`${urlObj.protocol}//${urlObj.host}${cleanPath}`);
     
     return `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${appId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_userinfo&state=1#wechat_redirect`;
   }
@@ -25,7 +27,12 @@ export class AuthService {
   static async exchangeCodeForCookie(callbackUrl: string): Promise<string> {
     // 规范化并解析 URL
     const cleanUrl = callbackUrl.replace(/\\/g, '');
-    const urlObj = new URL(cleanUrl);
+    let urlObj: URL;
+    try {
+      urlObj = new URL(cleanUrl);
+    } catch {
+      throw new Error("请输入有效的回调链接！");
+    }
     const code = urlObj.searchParams.get("code");
     const host = urlObj.host;
 

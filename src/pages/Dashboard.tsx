@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
   LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
-  KeyRound, Building2, Armchair, Settings, RefreshCw, X, QrCode
+  KeyRound, Building2, Armchair, Settings, RefreshCw, X, QrCode, ClipboardPaste
 } from "lucide-react";
 import { submitRequest, cancelTask, getDynamicRooms, getRoomSeats, validateUser, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ export default function Dashboard() {
     try {
       const cookie = await AuthService.exchangeCodeForCookie(authInputUrl);
       setCookieStr(cookie);
-      addLog("🎉 身份 Cookie 已自动更新并保存", "success");
+      addLog("🎉 Cookie 已更新并保存", "success");
       setShowAuthDialog(false);
       setAuthInputUrl("");
       setAuthError(null);
@@ -519,10 +520,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full bg-slate-50/85 dark:bg-neutral-950/85 flex flex-col font-sans overflow-hidden transition-colors duration-300">
+    <div className="fixed inset-0 h-screen w-full font-sans overflow-hidden transition-colors duration-300">
+      {/* 真正的底层背景 */}
+      <div className="fixed inset-0 bg-slate-50 dark:bg-neutral-950 -z-20" />
 
+      {/* 背景装饰层 */}
+      <div className="fixed inset-0 bg-slate-50/85 dark:bg-neutral-950/85 -z-10" />
 
-      <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+      {/* 主内容容器 */}
+      <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden relative z-0">
+
 
         {/* ---------------- 左侧栏: 配置 ---------------- */}
         <div className={cn(
@@ -686,7 +693,7 @@ export default function Dashboard() {
                       )}
                     </Label>
                     <select
-                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       value={libId}
                       onChange={(e) => setLibId(e.target.value)}
                       disabled={loadingRooms || dynamicRooms.length === 0}
@@ -748,7 +755,7 @@ export default function Dashboard() {
                     ) : (
                       // 下拉选择模式
                       <select
-                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white font-mono"
+                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white font-mono"
                         value={selectedSeatKey}
                         onChange={(e) => {
                           setSelectedSeatKey(e.target.value);
@@ -1151,22 +1158,41 @@ export default function Dashboard() {
                     <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
                     <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">粘贴复制的回调链接</span>
                   </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="https://.../?code=..."
-                      value={authInputUrl}
-                      onChange={(e) => setAuthInputUrl(e.target.value)}
-                      className="flex-1 text-xs font-mono dark:bg-[rgb(16,16,16)] dark:border-neutral-700"
-                    />
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Input
+                        placeholder="https://xxxx/graphql/?code=xxx&state=1"
+                        value={authInputUrl}
+                        onChange={(e) => setAuthInputUrl(e.target.value)}
+                        className="w-full pr-9 text-xs font-mono dark:bg-[rgb(16,16,16)] dark:border-neutral-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const text = await readText();
+                            if (text) setAuthInputUrl(text.trim());
+                          } catch (err: any) {
+                            console.warn("[Auth] 粘贴失败:", err);
+                            alert("无法获取剪贴板内容，请手动长按输入框粘贴");
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 p-1 transition-colors"
+                        title="从剪贴板粘贴"
+                      >
+                        <ClipboardPaste className="w-4 h-4" />
+                      </button>
+                    </div>
                     <Button
                       size="sm"
                       onClick={handleAuthExchange}
                       disabled={authLoading || !authInputUrl}
-                      className="min-w-[64px]"
+                      className="w-full"
                     >
                       {authLoading ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : "解析"}
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
+                      {authLoading ? "解析中..." : "解析并粘贴 Cookie"}
                     </Button>
                   </div>
                 </div>
