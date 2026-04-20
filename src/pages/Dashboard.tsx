@@ -1050,9 +1050,9 @@ export default function Dashboard() {
       </div >
 
       {/* 确认对话框 */}
-      < Dialog open={showConfirm} onOpenChange={setShowConfirm} >
-        <DialogContent className="bg-white dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 shadow-2xl">
-          {/* ... 对话框内容  ... */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="w-[90%] max-w-sm !rounded-2xl overflow-hidden bg-white dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 shadow-2xl p-0">
+          <div className="p-6">
           <DialogHeader>
             <DialogTitle>确认启动任务</DialogTitle>
             <DialogDescription>请确认以下配置信息无误</DialogDescription>
@@ -1079,12 +1079,13 @@ export default function Dashboard() {
               <span className="font-bold font-mono dark:text-slate-200">{seatNumber}</span>
             </div>
           </div>
-          <DialogFooter className="gap-3 sm:gap-0">
+          <DialogFooter className="gap-3 sm:gap-0 mt-2">
             <Button variant="outline" onClick={() => setShowConfirm(false)}>取消</Button>
             <Button onClick={confirmAndLaunch} className="bg-blue-600 hover:bg-blue-700 text-white">确认</Button>
           </DialogFooter>
+          </div>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       {/* 设置弹窗 */}
       <SettingsModal
