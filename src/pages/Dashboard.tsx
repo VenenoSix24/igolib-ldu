@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
   LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
-  KeyRound, Building2, Armchair, Settings, RefreshCw
+  KeyRound, Building2, Armchair, Settings, RefreshCw, X, QrCode
 } from "lucide-react";
 import { submitRequest, cancelTask, getDynamicRooms, getRoomSeats, validateUser, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import { SettingsModal, loadApiConfig, saveApiConfig, type ApiConfig, DEFAULT_CONFIG } from "@/components/SettingsModal";
+import { QRCodeCanvas } from "qrcode.react";
+import { AuthService } from "../services/AuthService";
 
 interface LogEntry {
   id: string;
@@ -63,6 +65,10 @@ export default function Dashboard() {
   // --- API 配置状态 ---
   const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authInputUrl, setAuthInputUrl] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // 加载 API 配置
   useEffect(() => {
@@ -73,6 +79,26 @@ export default function Dashboard() {
   const handleSaveApiConfig = (config: ApiConfig) => {
     setApiConfig(config);
     saveApiConfig(config);
+  };
+
+  // 解析微信回调 URL 并自动填充 Cookie
+  const handleAuthExchange = async () => {
+    if (!authInputUrl) return;
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const cookie = await AuthService.exchangeCodeForCookie(authInputUrl);
+      setCookieStr(cookie);
+      addLog("🎉 身份 Cookie 已自动更新并保存", "success");
+      setShowAuthDialog(false);
+      setAuthInputUrl("");
+      setAuthError(null);
+    } catch (e: any) {
+      const msg = e.message || String(e);
+      setAuthError(msg);
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   // --- 表单状态 ---
@@ -533,7 +559,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <form className="flex-1 flex flex-col justify-start gap-5 max-w-lg mx-auto w-full min-h-0 overflow-y-auto py-2 custom-scrollbar pt-6" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex-1 flex flex-col justify-start gap-5 max-w-lg mx-auto w-full min-h-0 overflow-y-auto py-2 custom-scrollbar pt-4" onSubmit={(e) => e.preventDefault()}>
 
               {/* 1. 操作模式 */}
               <div className="space-y-3 shrink-0">
@@ -579,7 +605,7 @@ export default function Dashboard() {
                 <div className="relative">
                   <Input
                     type={showCookie ? "text" : "password"}
-                    placeholder="粘贴 Cookie..."
+                    placeholder="粘贴 Cookie 或使用扫码获取..."
                     value={cookieStr}
                     onChange={(e) => setCookieStr(e.target.value)}
                     autoComplete="off"
@@ -597,6 +623,14 @@ export default function Dashboard() {
                     {showCookie ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAuthDialog(true)}
+                  className="text-[11px] text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+                >
+                  <QrCode className="w-3 h-3" />
+                  没有 Cookie？点击扫码获取吧
+                </button>
               </div>
 
               {/* 3. 执行详情 */}
@@ -1052,6 +1086,112 @@ export default function Dashboard() {
         config={apiConfig}
         onSave={handleSaveApiConfig}
       />
+
+      {/* 微信扫码授权弹窗 */}
+      <AnimatePresence>
+        {showAuthDialog && (
+          <>
+            {/* 遮罩层 */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={() => setShowAuthDialog(false)}
+            />
+
+            {/* 弹窗主体 */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              style={{ x: "-50%", y: "-50%" }}
+              className="fixed left-1/2 top-1/2 w-[90%] max-w-sm bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800"
+            >
+              {/* 头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-neutral-800">
+                <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-blue-500" />
+                  扫码获取 Cookie
+                </h2>
+                <button
+                  onClick={() => setShowAuthDialog(false)}
+                  className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              {/* 内容 */}
+              <div className="p-5 space-y-5">
+                {/* 步骤 1: 扫码 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">使用微信扫描下方二维码</span>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100">
+                      <QRCodeCanvas
+                        value={AuthService.buildAuthUrl(apiConfig.wxAppId, apiConfig.apiUrl)}
+                        size={160}
+                        level="H"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 text-center">
+                    扫码后在微信中完成授权，然后点击右上角「···」复制链接
+                  </p>
+                </div>
+
+                {/* 步骤 2: 粘贴链接 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">粘贴复制的回调链接</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="https://.../?code=..."
+                      value={authInputUrl}
+                      onChange={(e) => setAuthInputUrl(e.target.value)}
+                      className="flex-1 text-xs font-mono dark:bg-[rgb(16,16,16)] dark:border-neutral-700"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleAuthExchange}
+                      disabled={authLoading || !authInputUrl}
+                      className="min-w-[64px]"
+                    >
+                      {authLoading ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : "解析"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 错误提示 */}
+              {authError && (
+                <div className="mx-5 mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                  <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {authError}
+                  </p>
+                </div>
+              )}
+
+              {/* 底部 */}
+              <div className="px-5 py-3 border-t border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-800/50">
+                <p className="text-[10px] text-slate-400 text-center">
+                  链接仅用于本地解析 Code，不会向第三方上传
+                </p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* 结果弹窗 */}
       <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
