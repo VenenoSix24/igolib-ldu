@@ -23,7 +23,7 @@ export interface ApiResponse<T> {
   data?: T;
 }
 
-// 移除静态 Mappings，改为全动态获取
+// 全动态获取
 export async function getMappings(): Promise<{ rooms: RoomMapping }> {
   return { rooms: {} };
 }
@@ -48,14 +48,12 @@ export async function submitRequest(
     // 检查是否已取消
     if (controller.signal.aborted) throw new Error("Task cancelled");
 
-    // 1. Seat Key Resolution
     if (!request.seatKey) {
       if (request.seatNumber) {
         const msg = `[解析] 正在为您查找座位号 ${request.seatNumber} 的系统标识...`;
         console.log(msg);
         if (onStatusUpdate) onStatusUpdate(msg, "info");
         try {
-          // 如果服务方法支持信号，则将信号传递给它们
           const resolvedKey = await service.findSeatKeyByNumber(request.libId, request.seatNumber);
 
           if (controller.signal.aborted) throw new Error("Task cancelled");
@@ -76,7 +74,6 @@ export async function submitRequest(
       }
     }
 
-    // 2. Scheduler
     if (request.timeStr) {
       const msg = `执行时间 ${request.timeStr} 已设定`;
       console.log(msg);
@@ -86,7 +83,6 @@ export async function submitRequest(
         await SchedulerService.scheduleTask(request.timeStr, (remaining) => {
           if (controller.signal.aborted) return; // 停止回调
 
-          // 匹配 tasks.py 的日志格式
           if (remaining > 30) {
             const m = Math.floor(remaining / 60);
             const s = Math.floor(remaining % 60);
@@ -111,7 +107,6 @@ export async function submitRequest(
       }
     }
 
-    // 3. Execution
     if (controller.signal.aborted) throw new Error("Task cancelled");
 
     try {
@@ -120,10 +115,9 @@ export async function submitRequest(
       const result = await service.bookSeat(request.libId, request.seatKey as string, request.mode || 2);
 
       if (result.errors) {
-        // 简单错误解析（可以优化以匹配 perform_seat_operation 逻辑）
+        // 简单错误解析
         const errorMsg = result.errors[0]?.message || result.errors[0]?.msg || 'Booking failed';
 
-        // 类似 core.py 的特定检查
         if (errorMsg.includes("access denied")) {
           throw new Error("Cookie无效或已过期，请更新。");
         }

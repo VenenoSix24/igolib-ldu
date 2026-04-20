@@ -37,18 +37,18 @@ export class WebSocketService {
 
       log("WebSocket 连接成功");
 
-      // 模式 1: 明日预约 - 在 core.py 中仅连接成功即视为成功
+      // 模式 1: 明日预约
       if (mode === 1) {
         log("明日预约模式：连接成功即视为排队完成");
         await ws.disconnect();
         return true;
       }
 
-      // 模式 2: 当日抢座 - 需要发送握手消息
+      // 模式 2: 当日抢座
       return new Promise<boolean>((resolve) => {
         let isResolved = false;
 
-        // 超时机制 (原 Python 优化设定为 3s)
+        // 超时机制
         const timeout = setTimeout(async () => {
           if (!isResolved) {
             log("等待队列消息超时(正常)，将尝试直接并发请求...");
@@ -61,8 +61,6 @@ export class WebSocketService {
         ws.addListener((msg) => {
           if (isResolved) return;
 
-          // 根据实现，msg.data 通常是字符串或简单字节数组
-          // plugin-websocket 通常返回 Text 或 Binary 消息
           try {
             // 检查 msg 是否包含数据
             const payload = typeof msg === 'string' ? msg : (msg as any).data;
@@ -92,10 +90,6 @@ export class WebSocketService {
 
     } catch (e) {
       log(`WebSocket 连接失败: ${e}`);
-      // 根据 core.py 的逻辑，连接失败可能会警告但仍返回 false (或允许容错？)
-      // Python：如果 Cookie 无效则抛出错误，否则返回 false/true
-      // 我们稍后将验证 Cookie 逻辑，目前返回 true 以便在 WebSocket 失败时尝试回退到 HTTP？
-      // 注意：如果排队失败，在高峰期 HTTP 可能也会失败。但除非极其严格，否则我们将返回 true 以尝试 HTTP。
       return true;
     }
   }

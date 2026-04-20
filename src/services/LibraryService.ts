@@ -34,7 +34,7 @@ export class LibraryService {
       "Origin": origin || derivedOrigin,
       "Cookie": cookie
     };
-    
+
     console.log(`[LibraryService] 初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
   }
 
@@ -67,13 +67,10 @@ export class LibraryService {
         }
 
         const json = await response.json();
-        // 如果需要，可以检查常见的 GraphQL 错误并决定是否重试（可选）
         return json;
       } catch (error) {
         console.error(`[HTTP] 请求失败 (第 ${attempt} 次):`, error);
         lastError = error;
-        // 如果是致命错误（如认证失败），也许不应该重试？
-        // 目前，针对所有网络/服务器错误进行重试。
       }
     }
     throw lastError;
@@ -84,12 +81,10 @@ export class LibraryService {
     const query = `query list { userAuth { reserve { libs(libType: -1) { lib_id lib_name is_open lib_rt { seats_has } } } } }`;
     const data = await this.sendGraphql("list", query);
     console.log("[HTTP] list response:", data);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const libs = data?.data?.userAuth?.reserve?.libs || [];
 
     // 过滤开放的场馆并映射字段
     console.log("[HTTP] 原始场馆数据:", libs);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return libs.map((l: any) => ({
       id: l.lib_id,
       name: l.lib_name,
@@ -97,36 +92,28 @@ export class LibraryService {
     }));
   }
 
-  // 2. Get Seat Layout (Parity with Python: Filter by seat_status)
+  // 2. Get Seat Layout
   async getSeatLayout(libId: number): Promise<Seat[]> {
     const query = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_layout { seats { key name status seat_status type } } } } } }`;
     const data = await this.sendGraphql("libLayout", query, { libId, libType: -1 });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const seats = data?.data?.userAuth?.reserve?.libs?.[0]?.lib_layout?.seats || [];
 
-    // 参考 data_provider.py 的过滤逻辑:
-    // seat_status = 1 -> 可见
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return seats.filter((s: any) => {
       const seatStatus = s.seat_status !== undefined ? s.seat_status : 1;
       return seatStatus === 1;
     }).map((s: any) => ({
       key: s.key,
       name: s.name,
-      status: s.status, // 保留原始 status 字段用于可用性检查，但是 Python 在可见性判断中忽略了它，插个眼
+      status: s.status,
       type: s.type
     }));
   }
 
-  // 3. Get User Info (Cookie Validation)
-  // Reverting to checking GetRoomList for validity as 'prereserve' query might fail for users without history/auth issues not captured correctly.
-  // Actually, data_provider.py validate_cookie calls fetch_all_rooms (getRoomList) -> len(rooms) > 0.
-  // We will do the same.
+  // 3. Get User Info
   async getUserInfo(): Promise<{ name: string; id: string } | null> {
     try {
       const rooms = await this.getRoomList();
       if (rooms && rooms.length > 0) {
-        // Cannot retrieve name easily from room list, but we know auth is valid.
         return { name: "已登录用户", id: "0000" };
       }
       return null;
@@ -136,8 +123,7 @@ export class LibraryService {
     }
   }
 
-  // 4. Find Seat Key by Number (Smart Resolution)
-  // 动态获取布局信息以查找指定编号（如 "001"）对应的 key。
+  // 4. Find Seat Key by Number
   async findSeatKeyByNumber(libId: number, seatNumber: string): Promise<string | null> {
     try {
       const seats = await this.getSeatLayout(libId);
@@ -149,10 +135,8 @@ export class LibraryService {
     }
   }
 
-  // 5. Book Seat (Supports both Today and Tomorrow) with WebSocket Queue
-  // 5. Book Seat (Full 3-Step Flow)
+  // 5. Book Seat
   async bookSeat(libId: number, seatKey: string, mode: number = 2, captcha = ""): Promise<any> {
-    // Phase 1: WebSocket Queue
     try {
       const wsService = new WebSocketService(this.cookie, this.baseUrl);
       console.log("[Booking] 1. Starting WebSocket Queue (Step 1/2)...");
@@ -163,20 +147,13 @@ export class LibraryService {
       console.warn("[Booking] WebSocket queue bypassed/failed, proceeding to HTTP...", e);
     }
 
-    // Phase 2: HTTP Sequence (Step 1 -> Step 2 -> Step 3)
-
-    // Step 1: Pre-flight (Choose Library / Set Scope)
-    // Matches Python 'data_lib_chosen_template' logic
     const preflightQuery = `query libLayout($libId: Int!) { userAuth { prereserve { libLayout(libId: $libId) { seats_booking seats_total seats_used } } } }`;
     try {
       console.log("[Booking] 2. Pre-flight (Choosing Library)...");
       await this.sendGraphql("libLayout", preflightQuery, { libId });
-      // We don't strictly check the result here, just ensuring the server session 'sees' we are in this lib
     } catch (e) {
       console.warn("[Booking] Pre-flight warning (non-fatal):", e);
     }
-
-    // 步骤 2: 执行（主要预约请求）
     console.log("[预约] 3. 正在执行最终预约请求...");
     let result;
     if (mode === 2) {
@@ -193,11 +170,9 @@ export class LibraryService {
 
     // 检查响应中的显式错误
     if (result.errors && result.errors.length > 0) {
-      // 如果失败立即返回，避免后面产生混乱的验证错误
       return result;
     }
 
-    // 步骤 3: 验证（确认结果）
     try {
       console.log("[预约] 4. 正在验证预约结果...");
       const validateQuery = `query prereserve { userAuth { prereserve { prereserve { day lib_id seat_key seat_name is_used } } } }`;

@@ -20,8 +20,8 @@ interface LogEntry {
   type: "info" | "success" | "error" | "warning";
   timestamp: string;
   count?: number;
-  event?: string; // 结构化消息事件类型
-  data?: Record<string, unknown>; // 附加数据
+  event?: string;
+  data?: Record<string, unknown>;
 }
 
 // 事件类型到日志类型的映射
@@ -36,8 +36,6 @@ function eventToLogType(event: string): LogEntry["type"] {
   }
 }
 
-
-// 适用于非安全上下文 (HTTP) 的 UUID 生成辅助函数
 function generateUUID() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -87,7 +85,6 @@ export default function Dashboard() {
 
   // Cookie 验证
   useEffect(() => {
-    // 依赖项变化时立即重置状态，避免显示旧的验证信息
     setUserInfo(null);
     setValidatingCookie(false);
 
@@ -111,13 +108,12 @@ export default function Dashboard() {
     }
     const timer = setTimeout(checkCookie, 800);
     return () => clearTimeout(timer);
-  }, [cookieStr, apiConfig]); // 添加 apiConfig 依赖
+  }, [cookieStr, apiConfig]);
 
-  // 解耦逻辑:
-  // opMode: 执行什么动作？(1=明日预约, 2=立即抢座)
+  // opMode: 执行模式(1=明日预约, 2=立即抢座)
   const [opMode, setOpMode] = useState<'scheduled' | 'immediate'>('scheduled');
 
-  // execTime: 何时触发？
+  // execTime: 触发时间
   const [execTime, setExecTime] = useState<'immediate' | '2148' | 'custom'>('2148');
   const [customTime, setCustomTime] = useState(() => {
     const now = new Date();
@@ -253,7 +249,7 @@ export default function Dashboard() {
       }
     }
 
-    // 防抖：场馆切换后 300ms 加载座位
+    // 场馆切换后 300ms 加载座位
     const debounceTimer = setTimeout(fetchSeatsForRoom, 300);
     return () => clearTimeout(debounceTimer);
   }, [libId, cookieStr, apiConfig]); // 添加 apiConfig 依赖
@@ -375,7 +371,7 @@ export default function Dashboard() {
     setLogs(prev => {
       const lastLog = prev[prev.length - 1];
 
-      // 基于 event 类型的智能折叠：倒计时消息只更新最后一条
+      // 基于 event 类型的折叠：倒计时消息只更新最后一条
       const isCountdown = event === "countdown";
       const lastIsCountdown = lastLog?.event === "countdown";
 
@@ -402,7 +398,7 @@ export default function Dashboard() {
     });
   };
 
-  // --- 任务控制逻辑 (Direct Service Call) ---
+  // --- 任务控制逻辑 ---
   const handleStartRequest = async () => {
     if (!libId || !seatNumber || !cookieStr) return;
     setShowConfirm(true);
@@ -418,14 +414,14 @@ export default function Dashboard() {
     setShowConfirm(false);
     setActiveTab('console'); // 切换视图
     try {
-      // 1. 设置状态
+      // 设置状态
       setLogs([]);
       setStatus("connecting");
       setCurrentPhase("idle");
       const newClientId = generateUUID();
       activeClientIdRef.current = newClientId;
 
-      // --- 用户友好化任务启动日志 ---
+      // --- 任务启动日志 ---
       const timeStrDisplay = execTime === 'immediate' ? "立即开始" : (execTime === '2148' ? "21:48:00" : customTime);
       const modeDisplay = opMode === 'scheduled' ? "明日预约模式" : "立即抢座模式";
 
@@ -433,7 +429,7 @@ export default function Dashboard() {
       addLog(`任务清单: 模式 [${modeDisplay}] | 场馆 [${rooms[libId] || '加载中'}] | 座位 [${seatNumber}] | 计划执行 [${timeStrDisplay}]`, "info", "phase");
       addLog("正在进行环境检查与身份校验...", "info");
 
-      // 2. 准备参数
+      // 准备参数
       const mode = opMode === 'immediate' ? 2 : 1;
       let timeStr = "";
       if (execTime === '2148') timeStr = "21:48:00";
@@ -443,9 +439,7 @@ export default function Dashboard() {
         addLog(`计划执行时间: ${timeStr} (等待中...)`, "info", "countdown");
       }
 
-      // 3. 直接调用 API (这会阻塞直到完成或失败)
-      // 注意：getRoomSeats 和 getDynamicRooms 已经使用了新的 LibraryService
-      // submitRequest 也被重构为使用 LibraryService 和 SchedulerService
+      // 直接调用 API
       await submitRequest({
         clientId: newClientId,
         libId: parseInt(libId),
@@ -463,13 +457,13 @@ export default function Dashboard() {
         addLog(message, type, event, data);
       });
 
-      // 4. 成功处理
+      // 成功处理
       setStatus("success");
       addLog("任务成功！座位已锁定。", "success", "success");
       setShowResultDialog(true);
 
     } catch (error: any) {
-      // 5. 失败处理
+      // 失败处理
       const isCancelled = error.message === "Task cancelled";
       setStatus(isCancelled ? "cancelled" : "failed");
       const errorMsg = error.message || "未知错误";
@@ -798,7 +792,7 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            {/* 任务阶段时间线 - 响应式设计 */}
+            {/* 任务阶段时间线 */}
             {(status !== 'idle') && (
               <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 {/* 桌面端：横向时间线 */}
@@ -817,7 +811,6 @@ export default function Dashboard() {
                     const isTerminal = currentPhase === 'done' || currentPhase === 'failed' || currentPhase === 'cancelled';
                     const isActive = currentPhase === step.key;
 
-                    // 如果进入了终止状态，且这是最后一步，则它是活跃的
                     const isLastStep = idx === arr.length - 1;
                     const finalIsActive = isActive || (isLastStep && isTerminal);
 
@@ -989,7 +982,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* 底部操作 - 移动端进行中显示终止按钮 (连接中或运行中) */}
+          {/* 底部操作 - 移动端进行中显示终止按钮 */}
           {(status === 'running' || status === 'connecting') && (
             <div className="shrink-0 pt-0 pb-32 px-4 backdrop-blur-sm z-20 lg:hidden">
               <Button
