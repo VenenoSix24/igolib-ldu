@@ -58,7 +58,10 @@ export class AuthService {
       authUrl: authEndpoint
     });
 
-    console.log(`[Auth] Cookie 获取成功: ${cookieString}`);
+    console.log(`[Auth] 核心提取成功: ${cookieString}`);
+
+    console.log(`[Auth] 核心提取成功: ${cookieString}`);
+
     return cookieString;
   }
 }

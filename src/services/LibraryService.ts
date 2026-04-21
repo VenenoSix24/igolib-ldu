@@ -39,7 +39,7 @@ export class LibraryService {
       "Referer": referer || derivedReferer,
       "Origin": origin || derivedOrigin,
       "Cookie": cookie,
-      "App-Version": "2.0.14"
+      "app-version": "2.2.5"
     };
 
     console.log(`[LibraryService] 初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
@@ -189,7 +189,10 @@ export class LibraryService {
     } else {
       // 明日预约 (Tomorrow)
       const query = `mutation save($key: String!, $libid: Int!, $captchaCode: String, $captcha: String) { userAuth { prereserve { save(key: $key, libId: $libid, captcha: $captcha, captchaCode: $captchaCode) } } }`;
-      const variables = { key: seatKey, libid: libId, captchaCode: "", captcha };
+      // 官方 Traceint 的 save 接口 key 尾部带一个 '.'
+      const isOfficial = this.baseUrl.includes("wechat.v2.traceint.com");
+      const finalKey = isOfficial ? seatKey + "." : seatKey;
+      const variables = { key: finalKey, libid: libId, captchaCode: "", captcha };
       result = await this.sendGraphql("save", query, variables);
     }
 

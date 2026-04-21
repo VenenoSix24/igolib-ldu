@@ -76,7 +76,7 @@ export class WebSocketService {
 
               const lowerMsg = String(serverMsg).toLowerCase();
 
-              if (["不在", "未开始", "结束", "已闭馆"].some(k => lowerMsg.includes(k))) {
+              if (["不在", "未开始", "结束", "已闭馆", "登记了", "已登记"].some(k => lowerMsg.includes(k))) {
                 if (mode === 2) {
                   log(`当日推断: 当前时段无需排队 (${serverMsg})，直接放行...`);
                   isResolved = true;
@@ -85,8 +85,8 @@ export class WebSocketService {
                   ws.disconnect().then(() => resolve(true));
                   return;
                 } else {
-                  // 对于明日预约
-                  log(`服务器明确阻断排队: ${serverMsg}`);
+                  // 对于明日预约，这就代表提前返回已知状态
+                  log(`排队通道提前返回状态: ${serverMsg}`);
                   isResolved = true;
                   clearTimeout(timeout);
                   clearInterval(pollTimer);

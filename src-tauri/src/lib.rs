@@ -1,5 +1,6 @@
 use reqwest::redirect::Policy;
 use std::time::Duration;
+use std::collections::HashSet;
 
 /// 从微信回调链接中获取 Cookie
 #[tauri::command]
@@ -10,6 +11,28 @@ async fn exchange_cookie(auth_url: String) -> Result<String, String> {
         .build()
         .map_err(|e| format!("HTTP 客户端创建失败: {}", e))?;
 
+    let mut cookies_set = HashSet::new();
+
+    // 1. 先访问根域名，获取初始网关分发的 Cookie（wechatSESS_ID）
+    if let Ok(parsed_url) = reqwest::Url::parse(&auth_url) {
+        if let Some(host) = parsed_url.host_str() {
+            let base_url = format!("{}://{}/", parsed_url.scheme(), host);
+            if let Ok(base_res) = client.get(&base_url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090719) XWEB/8391 Flue")
+                .send()
+                .await 
+            {
+                for full_cookie in base_res.headers().get_all("set-cookie").iter().filter_map(|v| v.to_str().ok()) {
+                    let kv = full_cookie.split(';').next().unwrap_or("").trim().to_string();
+                    if !kv.is_empty() {
+                        cookies_set.insert(kv);
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. 访问认证网关 auth.html 获取身份型 Cookie（Authorization, SERVERID）
     let response = client
         .get(&auth_url)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090719) XWEB/8391 Flue")
@@ -18,25 +41,23 @@ async fn exchange_cookie(auth_url: String) -> Result<String, String> {
         .await
         .map_err(|e| format!("请求发送失败: {}", e))?;
 
-    // 提取所有 Set-Cookie 头
-    let cookies: Vec<String> = response
-        .headers()
-        .get_all("set-cookie")
-        .iter()
-        .filter_map(|v| v.to_str().ok())
-        .map(|full| {
-            // 只取 key=value 部分，忽略 Path, HttpOnly 等属性
-            full.split(';').next().unwrap_or("").trim().to_string()
-        })
-        .filter(|s| !s.is_empty())
-        .collect();
+    for full_cookie in response.headers().get_all("set-cookie").iter().filter_map(|v| v.to_str().ok()) {
+        let kv = full_cookie.split(';').next().unwrap_or("").trim().to_string();
+        if !kv.is_empty() && (!kv.starts_with("SERVERID=") || !cookies_set.iter().any(|c: &String| c.starts_with("SERVERID="))) {
+            let key = kv.split('=').next().unwrap_or("").to_string();
+            cookies_set.retain(|c| !c.starts_with(&key));
+            cookies_set.insert(kv);
+        }
+    }
 
-    if cookies.is_empty() {
+    if cookies_set.is_empty() {
         return Err("服务器未返回 Cookie，请检查链接是否已过期。".to_string());
     }
 
-    let cookie_string = cookies.join("; ");
-    Ok(cookie_string)
+    let mut cookie_list: Vec<String> = cookies_set.into_iter().collect();
+    cookie_list.sort();
+    
+    Ok(cookie_list.join("; "))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
