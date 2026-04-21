@@ -24,15 +24,22 @@ export class LibraryService {
     this.baseUrl = apiUrl;
 
     const urlObj = new URL(apiUrl);
-    const derivedOrigin = urlObj.protocol + "//" + urlObj.host;
-    const derivedReferer = derivedOrigin + "/web/index.html";
+    let derivedOrigin = urlObj.protocol + "//" + urlObj.host;
+    let derivedReferer = derivedOrigin + "/web/index.html";
+
+    // 针对「我去图书馆官方版」的识别与跨域头修正
+    if (urlObj.host.includes("wechat.v2.traceint.com")) {
+      derivedOrigin = "https://web.traceint.com";
+      derivedReferer = "https://web.traceint.com/";
+    }
 
     this.headers = {
       "Content-Type": "application/json",
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090719) XWEB/8391 Flue",
       "Referer": referer || derivedReferer,
       "Origin": origin || derivedOrigin,
-      "Cookie": cookie
+      "Cookie": cookie,
+      "App-Version": "2.0.14"
     };
 
     console.log(`[LibraryService] 初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
@@ -137,20 +144,38 @@ export class LibraryService {
 
   // 5. Book Seat
   async bookSeat(libId: number, seatKey: string, mode: number = 2, captcha = ""): Promise<any> {
-    try {
-      const wsService = new WebSocketService(this.cookie, this.baseUrl);
-      console.log("[Booking] 1. Starting WebSocket Queue (Step 1/2)...");
-      await wsService.passQueue(mode);
-      console.log("[Booking] 1. Starting WebSocket Queue (Step 2/2)...");
-      await wsService.passQueue(mode);
-    } catch (e) {
-      console.warn("[Booking] WebSocket queue bypassed/failed, proceeding to HTTP...", e);
+    if (mode === 1) {
+      // 只有明日预约需要强制排队
+      try {
+        const wsService = new WebSocketService(this.cookie, this.baseUrl, this.headers["Origin"]);
+        console.log("[Booking] 1. Starting WebSocket Queue (Tomorrow Mode)...");
+        await wsService.passQueue(mode);
+      } catch (e: any) {
+        if (e && e.message && e.message.includes("FATAL:")) {
+          throw new Error(e.message.replace("FATAL: ", "排队被拦截: "));
+        }
+        console.warn("[Booking] WebSocket queue bypassed/failed, proceeding to HTTP...", e);
+      }
+    } else {
+      console.log("[Booking] 1. Today Mode: Skipping WebSocket Queue entirely (Not needed).");
     }
 
-    const preflightQuery = `query libLayout($libId: Int!) { userAuth { prereserve { libLayout(libId: $libId) { seats_booking seats_total seats_used } } } }`;
+    let preflightQuery = "";
+    let preflightVars: any = {};
+    if (mode === 1) {
+      preflightQuery = `query libLayout($libId: Int!) { userAuth { prereserve { libLayout(libId: $libId) { seats_booking seats_total seats_used } } } }`;
+      preflightVars = { libId };
+    } else {
+      preflightQuery = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_layout { seats_total seats_booking seats_used } } } } }`;
+      preflightVars = { libId, libType: -1 };
+    }
+
     try {
-      console.log("[Booking] 2. Pre-flight (Choosing Library)...");
-      await this.sendGraphql("libLayout", preflightQuery, { libId });
+      console.log(`[Booking] 2. Pre-flight (Choosing Library for Mode ${mode})...`);
+      await this.sendGraphql("libLayout", preflightQuery, preflightVars);
+      
+      // 添加一个短暂的停顿
+      await new Promise(resolve => setTimeout(resolve, 200));
     } catch (e) {
       console.warn("[Booking] Pre-flight warning (non-fatal):", e);
     }
@@ -175,10 +200,16 @@ export class LibraryService {
 
     try {
       console.log("[预约] 4. 正在验证预约结果...");
-      const validateQuery = `query prereserve { userAuth { prereserve { prereserve { day lib_id seat_key seat_name is_used } } } }`;
-      await this.sendGraphql("prereserve", validateQuery);
+      let validateQuery = "";
+      if (mode === 1) {
+        validateQuery = `query prereserve { userAuth { prereserve { prereserve { day lib_id seat_key seat_name is_used } } } }`;
+        await this.sendGraphql("prereserve", validateQuery);
+      } else {
+        validateQuery = `query reserve { userAuth { reserve { reserve { status seat_name lib_name } } } }`;
+        await this.sendGraphql("reserve", validateQuery);
+      }
     } catch (e) {
-      console.warn("[预约] 验证请求失败（网络问题），但主请求已完成。", e);
+      console.warn("[预约] 验证请求失败（非致命网络问题），但主请求已完成。", e);
     }
 
     return result;
