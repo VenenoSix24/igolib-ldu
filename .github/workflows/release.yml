@@ -36,16 +36,30 @@ jobs:
           IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
         with:
           script: |
-            const { data } = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: process.env.TAG_NAME,
-              name: `我去抢个座 ${process.env.TAG_NAME}`,
-              body: 'Release assets for 我去抢个座',
-              draft: true,
-              prerelease: process.env.IS_PRERELEASE === 'true'
-            })
-            return data.id
+            try {
+              // 尝试获取已经存在的 Release
+              const { data } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: process.env.TAG_NAME
+              })
+              return data.id
+            } catch (error) {
+              // 如果没有找到，新建一个 Draft Release
+              if (error.status === 404) {
+                const { data } = await github.rest.repos.createRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_name: process.env.TAG_NAME,
+                  name: `我去抢个座 ${process.env.TAG_NAME}`,
+                  body: 'Release assets for 我去抢个座',
+                  draft: true,
+                  prerelease: process.env.IS_PRERELEASE === 'true'
+                })
+                return data.id
+              }
+              throw error
+            }
 
   # 任务 2：构建并上传
   build-tauri:
