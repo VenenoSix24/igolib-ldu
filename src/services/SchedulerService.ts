@@ -39,14 +39,14 @@ export class SchedulerService {
         const remainingSeconds = diff / 1000;
         const displaySec = Math.floor(remainingSeconds);
 
-        // 3. 触发条件
+        // 触发条件
         if (remainingSeconds <= TRIGGER_THRESHOLD) {
           cleanup();
           resolve(); // 时间到达
           return;
         }
 
-        // 4. 智能等待 (Smart Wait)
+        // 等待
         let nextInterval = 50; // 默认短间隔
         if (remainingSeconds > 30) {
           // 距离还远，沉睡较久
@@ -63,7 +63,7 @@ export class SchedulerService {
             onTick?.(displaySec);
             lastLoggedSec = displaySec;
           }
-          // 高精度等待
+          // 等待
           nextInterval = Math.max(10, Math.min(50, (remainingSeconds * 1000) / 5));
         }
 
@@ -88,7 +88,7 @@ export class SchedulerService {
     const target = new Date(now);
     target.setHours(parts[0], parts[1], parts[2], 0);
 
-    // 如果目标时间早于当前时间（带微小缓冲），则假定为明天
+    // 如果目标时间早于当前时间，则假定为明天
     if (target.getTime() <= now.getTime()) {
       target.setDate(target.getDate() + 1);
     }

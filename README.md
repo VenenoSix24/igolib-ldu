@@ -7,7 +7,7 @@
   <a href="https://igolib.ivyris.top/#/download"><b>⬇️ 官网下载</b></a> •
   <a href="https://github.com/VenenoSix24/igolib-ldu/releases/latest"><b>⭐ GitHub下载</b></a>
   <br /><br />
-  <img src="https://img.shields.io/badge/App_Version-v1.0.25-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
+  <img src="https://img.shields.io/badge/App_Version-v1.0.26-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
   <img src="https://img.shields.io/badge/Core_Logic-v4.6.25_TS-E10098?style=flat-square&logo=graphql&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white" />
@@ -15,9 +15,10 @@
   <img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-red?style=flat-square&logo=open-source-initiative&logoColor=white" />
 </p>
 
+
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
 
-本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心业务逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、Windows、macOS 以及 Linux** 平台，提供一致的体验。
+本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、Windows、macOS 以及 Linux** 平台，提供一致的体验。
 
 > 如果你**需要 Python 做为后端**的版本，请切换到 [**dev 分支**](https://github.com/VenenoSix24/igolib-ldu/tree/dev)。Python 版本可能会更新不及时！
 > 
@@ -29,14 +30,15 @@
 
 ## ✨ 功能特性
 
-- 📱 **全平台覆盖**：完美运行于手机（Android）与桌面端（Win/Mac/Linux）。
+- 📱 **全平台覆盖**：支持运行在手机端（Android）与桌面端（Win/Mac/Linux）。
 - 🚀 **纯单机驱动**：核心逻辑异步化重写，无需额外部署 Python 后端，本地直接与图书馆服务器通信。
-- 🔄 **明日预约模式**：支持 WebSocket 排队通道模拟，在开放瞬间精准抢占次日座席。
+- 🔑 **自动获取凭证**：支持微信扫码解析凭证，通过简单的二维码扫描即可自动获取 Cookie，无需手动抓包。
+- 🔄 **明日预约模式**：支持 WebSocket 排队通道模拟，在开放瞬间精准抢占次日座位。
 - ⚡ **即时抢座模式**：实时抢占当天可用座位，智能优化重试策略。
-- 🌐 **精美 Web UI**：采用 TailwindCSS 和 Framer Motion，支持流畅的微交互与响应式布局。
-- 🌙 **深色模式支持**：完美适配系统主题，自由切换主题或跟随系统设置。
-- 🔄 **动态数据获取**：实时动态获取场馆状态，彻底告别静态场馆映射数据。
-- 🏫 **多校区自由配置**：支持自定义 API 域名、Origin 与 Referer，轻松适配不同学校系统。
+- 🌐 **精美 Web UI**：采用 TailwindCSS 和 Framer Motion，支持流畅的交互与响应式布局。
+- 🌙 **深色模式支持**：适配系统主题，自由切换主题或跟随系统设置。
+- 🔄 **动态数据获取**：实时动态获取场馆状态，告别静态场馆映射数据。
+- 🏫 **多校区自由配置**：支持自定义 API 域名、Origin 与 Referer，适配不同学校系统。
 
 ## 📥 快速下载 (推荐)
 
@@ -53,7 +55,7 @@
 
 ### 环境要求
 - [Node.js](https://nodejs.org/) (推荐 v22+) & [pnpm](https://pnpm.io/)
-- [Rust](https://www.rust-lang.org/) (Tauri 编译核心)
+- [Rust](https://www.rust-lang.org/)
 - **移动端编译额外要求**: [Android Studio](https://developer.android.com/studio) (Android) 或 [Xcode](https://developer.apple.com/xcode/) (iOS)
 
 ### 开发运行
@@ -84,7 +86,7 @@ pnpm tauri android build        # 打包 Android
 - `src/`:
   - `services/`:
     - `LibraryService.ts`: **核心逻辑** - 封装 GraphQL 协议。
-    - `SchedulerService.ts`: **毫秒级调度** - 负责精准抢座触发。
+    - `SchedulerService.ts`: **进程调度** - 负责精准抢座触发。
     - `WebSocketService.ts`: 模拟 WebSocket 排队协议。
   - `pages/`: 应用主视图 (Dashboard, LandingPage)。
   - `components/`: UI 组件仓库。
@@ -92,9 +94,9 @@ pnpm tauri android build        # 打包 Android
 ## 🚀 使用流程
 
 1. **配置学校**：点击设置图标，确认/修改当前学校的 API 全局路径。
-2. **凭证加载**：粘贴您的 Cookie 。应用会自动实时校验并识别您的身份。
+2. **凭证获取**：点击输入框侧边的“扫码获取”按钮，跟随指引使用微信扫描二维码并复制链接。粘贴链接并解析 Cookie。
 3. **智能选座**：从动态列表选择场馆，手动或通过列表指定座位号。
-4. **启动任务**：设定好时间点击“开始”，保持应用在前台运行，系统将接管后续所有排队与请求。
+4. **启动任务**：设定好执行时间，点击“开始任务”，保持应用运行，系统将自动接管后续的排队与抢占逻辑。
 
 ## 🖼️ 界面预览
 

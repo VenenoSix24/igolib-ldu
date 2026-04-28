@@ -13,12 +13,14 @@ export const PRESETS = {
     apiUrl: "https://libseats.ldu.edu.cn/index.php/graphql/",
     origin: "https://libseats.ldu.edu.cn",
     referer: "https://libseats.ldu.edu.cn/web/index.html",
+    wxAppId: "wx79d0fc3c9dd1da03"
   },
   official: {
     name: "官方原版",
     apiUrl: "https://wechat.v2.traceint.com/index.php/graphql/",
     origin: "https://web.traceint.com",
     referer: "https://web.traceint.com/",
+    wxAppId: "wx2996d437cd442527"
   },
 } as const;
 
@@ -29,6 +31,7 @@ export interface ApiConfig {
   apiUrl: string;
   origin: string;
   referer: string;
+  wxAppId: string;
 }
 
 // 默认配置
@@ -210,6 +213,17 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
                         placeholder="https://example.com/"
                         value={localConfig.referer}
                         onChange={(e) => setLocalConfig({ ...localConfig, referer: e.target.value })}
+                        className="font-mono text-sm dark:border-neutral-700"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-slate-500 uppercase">
+                        微信 AppID
+                      </Label>
+                      <Input
+                        placeholder="wx..."
+                        value={localConfig.wxAppId}
+                        onChange={(e) => setLocalConfig({ ...localConfig, wxAppId: e.target.value })}
                         className="font-mono text-sm dark:border-neutral-700"
                       />
                     </div>

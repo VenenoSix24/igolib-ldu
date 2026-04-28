@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
   LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
-  KeyRound, Building2, Armchair, Settings, RefreshCw
+  KeyRound, Building2, Armchair, Settings, RefreshCw, X, QrCode, ClipboardPaste
 } from "lucide-react";
 import { submitRequest, cancelTask, getDynamicRooms, getRoomSeats, validateUser, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 import { SettingsModal, loadApiConfig, saveApiConfig, type ApiConfig, DEFAULT_CONFIG } from "@/components/SettingsModal";
+import { QRCodeCanvas } from "qrcode.react";
+import { AuthService } from "../services/AuthService";
 
 interface LogEntry {
   id: string;
@@ -20,8 +23,8 @@ interface LogEntry {
   type: "info" | "success" | "error" | "warning";
   timestamp: string;
   count?: number;
-  event?: string; // 结构化消息事件类型
-  data?: Record<string, unknown>; // 附加数据
+  event?: string;
+  data?: Record<string, unknown>;
 }
 
 // 事件类型到日志类型的映射
@@ -36,8 +39,6 @@ function eventToLogType(event: string): LogEntry["type"] {
   }
 }
 
-
-// 适用于非安全上下文 (HTTP) 的 UUID 生成辅助函数
 function generateUUID() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -65,6 +66,10 @@ export default function Dashboard() {
   // --- API 配置状态 ---
   const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authInputUrl, setAuthInputUrl] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // 加载 API 配置
   useEffect(() => {
@@ -77,6 +82,26 @@ export default function Dashboard() {
     saveApiConfig(config);
   };
 
+  // 解析微信回调 URL 并自动填充 Cookie
+  const handleAuthExchange = async () => {
+    if (!authInputUrl) return;
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const cookie = await AuthService.exchangeCodeForCookie(authInputUrl);
+      setCookieStr(cookie);
+      addLog("🎉 Cookie 已更新并保存", "success");
+      setShowAuthDialog(false);
+      setAuthInputUrl("");
+      setAuthError(null);
+    } catch (e: any) {
+      const msg = e.message || String(e);
+      setAuthError(msg);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   // --- 表单状态 ---
   const [libId, setLibId] = useState<string>("");
   const [seatNumber, setSeatNumber] = useState("");
@@ -87,7 +112,6 @@ export default function Dashboard() {
 
   // Cookie 验证
   useEffect(() => {
-    // 依赖项变化时立即重置状态，避免显示旧的验证信息
     setUserInfo(null);
     setValidatingCookie(false);
 
@@ -111,13 +135,12 @@ export default function Dashboard() {
     }
     const timer = setTimeout(checkCookie, 800);
     return () => clearTimeout(timer);
-  }, [cookieStr, apiConfig]); // 添加 apiConfig 依赖
+  }, [cookieStr, apiConfig]);
 
-  // 解耦逻辑:
-  // opMode: 执行什么动作？(1=明日预约, 2=立即抢座)
+  // opMode: 执行模式(1=明日预约, 2=立即抢座)
   const [opMode, setOpMode] = useState<'scheduled' | 'immediate'>('scheduled');
 
-  // execTime: 何时触发？
+  // execTime: 触发时间
   const [execTime, setExecTime] = useState<'immediate' | '2148' | 'custom'>('2148');
   const [customTime, setCustomTime] = useState(() => {
     const now = new Date();
@@ -253,7 +276,7 @@ export default function Dashboard() {
       }
     }
 
-    // 防抖：场馆切换后 300ms 加载座位
+    // 场馆切换后 300ms 加载座位
     const debounceTimer = setTimeout(fetchSeatsForRoom, 300);
     return () => clearTimeout(debounceTimer);
   }, [libId, cookieStr, apiConfig]); // 添加 apiConfig 依赖
@@ -375,7 +398,7 @@ export default function Dashboard() {
     setLogs(prev => {
       const lastLog = prev[prev.length - 1];
 
-      // 基于 event 类型的智能折叠：倒计时消息只更新最后一条
+      // 基于 event 类型的折叠：倒计时消息只更新最后一条
       const isCountdown = event === "countdown";
       const lastIsCountdown = lastLog?.event === "countdown";
 
@@ -402,7 +425,7 @@ export default function Dashboard() {
     });
   };
 
-  // --- 任务控制逻辑 (Direct Service Call) ---
+  // --- 任务控制逻辑 ---
   const handleStartRequest = async () => {
     if (!libId || !seatNumber || !cookieStr) return;
     setShowConfirm(true);
@@ -418,14 +441,14 @@ export default function Dashboard() {
     setShowConfirm(false);
     setActiveTab('console'); // 切换视图
     try {
-      // 1. 设置状态
+      // 设置状态
       setLogs([]);
       setStatus("connecting");
       setCurrentPhase("idle");
       const newClientId = generateUUID();
       activeClientIdRef.current = newClientId;
 
-      // --- 用户友好化任务启动日志 ---
+      // --- 任务启动日志 ---
       const timeStrDisplay = execTime === 'immediate' ? "立即开始" : (execTime === '2148' ? "21:48:00" : customTime);
       const modeDisplay = opMode === 'scheduled' ? "明日预约模式" : "立即抢座模式";
 
@@ -433,7 +456,7 @@ export default function Dashboard() {
       addLog(`任务清单: 模式 [${modeDisplay}] | 场馆 [${rooms[libId] || '加载中'}] | 座位 [${seatNumber}] | 计划执行 [${timeStrDisplay}]`, "info", "phase");
       addLog("正在进行环境检查与身份校验...", "info");
 
-      // 2. 准备参数
+      // 准备参数
       const mode = opMode === 'immediate' ? 2 : 1;
       let timeStr = "";
       if (execTime === '2148') timeStr = "21:48:00";
@@ -443,9 +466,7 @@ export default function Dashboard() {
         addLog(`计划执行时间: ${timeStr} (等待中...)`, "info", "countdown");
       }
 
-      // 3. 直接调用 API (这会阻塞直到完成或失败)
-      // 注意：getRoomSeats 和 getDynamicRooms 已经使用了新的 LibraryService
-      // submitRequest 也被重构为使用 LibraryService 和 SchedulerService
+      // 直接调用 API
       await submitRequest({
         clientId: newClientId,
         libId: parseInt(libId),
@@ -463,13 +484,13 @@ export default function Dashboard() {
         addLog(message, type, event, data);
       });
 
-      // 4. 成功处理
+      // 成功处理
       setStatus("success");
       addLog("任务成功！座位已锁定。", "success", "success");
       setShowResultDialog(true);
 
     } catch (error: any) {
-      // 5. 失败处理
+      // 失败处理
       const isCancelled = error.message === "Task cancelled";
       setStatus(isCancelled ? "cancelled" : "failed");
       const errorMsg = error.message || "未知错误";
@@ -499,10 +520,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full bg-slate-50/85 dark:bg-neutral-950/85 flex flex-col font-sans overflow-hidden transition-colors duration-300">
+    <div className="fixed inset-0 h-screen w-full font-sans overflow-hidden transition-colors duration-300">
+      {/* 真正的底层背景 */}
+      <div className="fixed inset-0 bg-slate-50 dark:bg-neutral-950 -z-20" />
 
+      {/* 背景装饰层 */}
+      <div className="fixed inset-0 bg-slate-50/85 dark:bg-neutral-950/85 -z-10" />
 
-      <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+      {/* 主内容容器 */}
+      <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden relative z-0">
+
 
         {/* ---------------- 左侧栏: 配置 ---------------- */}
         <div className={cn(
@@ -539,7 +566,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <form className="flex-1 flex flex-col justify-start gap-5 max-w-lg mx-auto w-full min-h-0 overflow-y-auto py-2 custom-scrollbar pt-6" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex-1 flex flex-col justify-start gap-5 max-w-lg mx-auto w-full min-h-0 overflow-y-auto py-2 custom-scrollbar pt-4" onSubmit={(e) => e.preventDefault()}>
 
               {/* 1. 操作模式 */}
               <div className="space-y-3 shrink-0">
@@ -585,7 +612,7 @@ export default function Dashboard() {
                 <div className="relative">
                   <Input
                     type={showCookie ? "text" : "password"}
-                    placeholder="粘贴 Cookie..."
+                    placeholder="粘贴 Cookie 或使用扫码获取..."
                     value={cookieStr}
                     onChange={(e) => setCookieStr(e.target.value)}
                     autoComplete="off"
@@ -603,6 +630,14 @@ export default function Dashboard() {
                     {showCookie ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAuthDialog(true)}
+                  className="text-[11px] text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+                >
+                  <QrCode className="w-3 h-3" />
+                  没有 Cookie？点击扫码获取吧
+                </button>
               </div>
 
               {/* 3. 执行详情 */}
@@ -658,7 +693,7 @@ export default function Dashboard() {
                       )}
                     </Label>
                     <select
-                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       value={libId}
                       onChange={(e) => setLibId(e.target.value)}
                       disabled={loadingRooms || dynamicRooms.length === 0}
@@ -720,7 +755,7 @@ export default function Dashboard() {
                     ) : (
                       // 下拉选择模式
                       <select
-                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white font-mono"
+                        className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:border-blue-500 dark:bg-[rgb(16,16,16)] dark:border-neutral-700 dark:text-white font-mono"
                         value={selectedSeatKey}
                         onChange={(e) => {
                           setSelectedSeatKey(e.target.value);
@@ -798,7 +833,7 @@ export default function Dashboard() {
                 </span>
               </div>
             </div>
-            {/* 任务阶段时间线 - 响应式设计 */}
+            {/* 任务阶段时间线 */}
             {(status !== 'idle') && (
               <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
                 {/* 桌面端：横向时间线 */}
@@ -817,7 +852,6 @@ export default function Dashboard() {
                     const isTerminal = currentPhase === 'done' || currentPhase === 'failed' || currentPhase === 'cancelled';
                     const isActive = currentPhase === step.key;
 
-                    // 如果进入了终止状态，且这是最后一步，则它是活跃的
                     const isLastStep = idx === arr.length - 1;
                     const finalIsActive = isActive || (isLastStep && isTerminal);
 
@@ -989,7 +1023,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* 底部操作 - 移动端进行中显示终止按钮 (连接中或运行中) */}
+          {/* 底部操作 - 移动端进行中显示终止按钮 */}
           {(status === 'running' || status === 'connecting') && (
             <div className="shrink-0 pt-0 pb-32 px-4 backdrop-blur-sm z-20 lg:hidden">
               <Button
@@ -1016,9 +1050,9 @@ export default function Dashboard() {
       </div >
 
       {/* 确认对话框 */}
-      < Dialog open={showConfirm} onOpenChange={setShowConfirm} >
-        <DialogContent className="bg-white dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 shadow-2xl">
-          {/* ... 对话框内容  ... */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="w-[90%] max-w-sm !rounded-2xl overflow-hidden bg-white dark:bg-neutral-950 border-slate-200 dark:border-neutral-800 shadow-2xl p-0">
+          <div className="p-6">
           <DialogHeader>
             <DialogTitle>确认启动任务</DialogTitle>
             <DialogDescription>请确认以下配置信息无误</DialogDescription>
@@ -1045,12 +1079,13 @@ export default function Dashboard() {
               <span className="font-bold font-mono dark:text-slate-200">{seatNumber}</span>
             </div>
           </div>
-          <DialogFooter className="gap-3 sm:gap-0">
+          <DialogFooter className="gap-3 sm:gap-0 mt-2">
             <Button variant="outline" onClick={() => setShowConfirm(false)}>取消</Button>
             <Button onClick={confirmAndLaunch} className="bg-blue-600 hover:bg-blue-700 text-white">确认</Button>
           </DialogFooter>
+          </div>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       {/* 设置弹窗 */}
       <SettingsModal
@@ -1059,6 +1094,131 @@ export default function Dashboard() {
         config={apiConfig}
         onSave={handleSaveApiConfig}
       />
+
+      {/* 微信扫码授权弹窗 */}
+      <AnimatePresence>
+        {showAuthDialog && (
+          <>
+            {/* 遮罩层 */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={() => setShowAuthDialog(false)}
+            />
+
+            {/* 弹窗主体 */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              style={{ x: "-50%", y: "-50%" }}
+              className="fixed left-1/2 top-1/2 w-[90%] max-w-sm bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800"
+            >
+              {/* 头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-neutral-800">
+                <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-blue-500" />
+                  扫码获取 Cookie
+                </h2>
+                <button
+                  onClick={() => setShowAuthDialog(false)}
+                  className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+
+              {/* 内容 */}
+              <div className="p-5 space-y-5">
+                {/* 步骤 1: 扫码 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">使用微信扫描下方二维码</span>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100">
+                      <QRCodeCanvas
+                        value={AuthService.buildAuthUrl(apiConfig.wxAppId, apiConfig.apiUrl)}
+                        size={160}
+                        level="H"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 text-center">
+                    扫码后在微信中完成授权，然后点击右上角「···」复制链接
+                  </p>
+                </div>
+
+                {/* 步骤 2: 粘贴链接 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">粘贴复制的回调链接</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Input
+                        placeholder="https://xxxx/graphql/?code=xxx&state=1"
+                        value={authInputUrl}
+                        onChange={(e) => setAuthInputUrl(e.target.value)}
+                        className="w-full pr-9 text-xs font-mono dark:bg-[rgb(16,16,16)] dark:border-neutral-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const text = await readText();
+                            if (text) setAuthInputUrl(text.trim());
+                          } catch (err: any) {
+                            console.warn("[Auth] 粘贴失败:", err);
+                            alert("无法获取剪贴板内容，请手动长按输入框粘贴");
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 p-1 transition-colors"
+                        title="从剪贴板粘贴"
+                      >
+                        <ClipboardPaste className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleAuthExchange}
+                      disabled={authLoading || !authInputUrl}
+                      className="w-full"
+                    >
+                      {authLoading ? (
+                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
+                      {authLoading ? "解析中..." : "解析并粘贴 Cookie"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 错误提示 */}
+              {authError && (
+                <div className="mx-5 mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                  <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {authError}
+                  </p>
+                </div>
+              )}
+
+              {/* 底部 */}
+              <div className="px-5 py-3 border-t border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-800/50">
+                <p className="text-[10px] text-slate-400 text-center">
+                  链接仅用于本地解析 Code，不会向第三方上传
+                </p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* 结果弹窗 */}
       <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>

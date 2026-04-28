@@ -9,16 +9,16 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
   plugins: [react()],
 
-  // 1. 防止 Vite 隐藏 Rust 编译阶段的错误
+  // 防止 Vite 隐藏 Rust 编译阶段的错误
   clearScreen: false,
 
-  // 2. 为 Tauri 开发环境配置服务器
+  // 为 Tauri 开发环境配置服务器
   server: {
     // 确保这里的端口与 tauri.conf.json 中的 devUrl 端口一致
     port: 5173,
     // Tauri 预期一个固定端口，如果端口被占用则直接报错
     strictPort: true,
-    // 如果设置了 TAURI_DEV_HOST（用于移动端 Android 开发），则使用它
+    // 如果设置了 TAURI_DEV_HOST，则使用它
     host: host || false,
     hmr: host
       ? {
@@ -28,7 +28,7 @@ export default defineConfig({
       }
       : undefined,
     watch: {
-      // 3. 告诉 Vite 忽略监听 src-tauri 文件夹
+      // 告诉 Vite 忽略监听 src-tauri 文件夹
       ignored: ["**/src-tauri/**"],
     },
   },
@@ -40,7 +40,7 @@ export default defineConfig({
     },
   },
 
-  // 3. 以 VITE_ 或 TAURI_ENV_ 开头的环境变量将通过 import.meta.env 暴露给前端
+  // 以 VITE_ 或 TAURI_ENV_ 开头的环境变量将通过 import.meta.env 暴露给前端
   envPrefix: ["VITE_", "TAURI_ENV_*"],
 
   build: {
