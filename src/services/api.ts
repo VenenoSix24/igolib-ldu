@@ -54,7 +54,9 @@ export async function submitRequest(
         console.log(msg);
         if (onStatusUpdate) onStatusUpdate(msg, "info");
         try {
-          const resolvedKey = await service.findSeatKeyByNumber(request.libId, request.seatNumber);
+          // 明日预约模式(mode=1)需要包含今日被占用的座位，否则解析不到 Key
+          const includeOccupied = request.mode === 1;
+          const resolvedKey = await service.findSeatKeyByNumber(request.libId, request.seatNumber, includeOccupied);
 
           if (controller.signal.aborted) throw new Error("Task cancelled");
 
@@ -224,15 +226,18 @@ export async function getDynamicRooms(
 
 /**
  * 动态获取指定场馆的座位布局（需要有效 Cookie）
+ * @param mode 预约模式：1=明日预约（返回全部座位），2=今日抢座（仅返回空闲座位）
  */
 export async function getRoomSeats(
   roomId: number,
   cookie: string,
-  apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
+  apiConfig?: { apiUrl?: string; origin?: string; referer?: string },
+  mode: number = 2
 ): Promise<SeatLayoutResponse> {
   const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
   const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
-  const rawSeats = await service.getSeatLayout(roomId);
+  const includeOccupied = mode === 1;
+  const rawSeats = await service.getSeatLayout(roomId, includeOccupied);
 
   const seats: DynamicSeat[] = rawSeats.map(s => ({
     key: s.key,
