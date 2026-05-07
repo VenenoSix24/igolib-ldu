@@ -100,12 +100,17 @@ export class LibraryService {
   }
 
   // 2. Get Seat Layout
-  async getSeatLayout(libId: number): Promise<Seat[]> {
+  // 明日预约需要展示全部座位
+  async getSeatLayout(libId: number, includeOccupied = false): Promise<Seat[]> {
     const query = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_layout { seats { key name status seat_status type } } } } } }`;
     const data = await this.sendGraphql("libLayout", query, { libId, libType: -1 });
     const seats = data?.data?.userAuth?.reserve?.libs?.[0]?.lib_layout?.seats || [];
 
     return seats.filter((s: any) => {
+      // 过滤掉 name 为空的无效元素
+      if (!s.name) return false;
+      // 明日预约模式下不过滤占用状态，返回全部座位
+      if (includeOccupied) return true;
       const seatStatus = s.seat_status !== undefined ? s.seat_status : 1;
       return seatStatus === 1;
     }).map((s: any) => ({
@@ -131,9 +136,10 @@ export class LibraryService {
   }
 
   // 4. Find Seat Key by Number
-  async findSeatKeyByNumber(libId: number, seatNumber: string): Promise<string | null> {
+  // includeOccupied 传给 getSeatLayout，确保明日预约时也能解析被占用座位的 Key
+  async findSeatKeyByNumber(libId: number, seatNumber: string, includeOccupied = false): Promise<string | null> {
     try {
-      const seats = await this.getSeatLayout(libId);
+      const seats = await this.getSeatLayout(libId, includeOccupied);
       const match = seats.find(s => s.name === seatNumber);
       return match ? match.key : null;
     } catch (e) {

@@ -248,7 +248,7 @@ export default function Dashboard() {
     }
   }, [opMode]);
 
-  // 场馆变更时加载座位列表
+  // 场馆变更或模式切换时加载座位列表
   useEffect(() => {
     async function fetchSeatsForRoom() {
       // 需要有效的 Cookie 和 libId
@@ -259,7 +259,9 @@ export default function Dashboard() {
 
       setLoadingSeats(true);
       try {
-        const data = await getRoomSeats(parseInt(libId), cookieStr.trim(), apiConfig);
+        // 明日预约模式(mode=1)返回全部座位，今日抢座(mode=2)仅返回空闲
+        const mode = opMode === 'scheduled' ? 1 : 2;
+        const data = await getRoomSeats(parseInt(libId), cookieStr.trim(), apiConfig, mode);
         // 只保留可用座位用于选择
         const availableSeats = data.seats.filter(s => s.available);
         setDynamicSeats(availableSeats);
@@ -267,7 +269,7 @@ export default function Dashboard() {
         if (selectedSeatKey && !availableSeats.find(s => s.key === selectedSeatKey)) {
           setSelectedSeatKey("");
         }
-        console.log(`✅ 加载场馆 ${libId} 的 ${availableSeats.length} 个可用座位`);
+        console.log(`✅ 加载场馆 ${libId} 的 ${availableSeats.length} 个可用座位 (模式: ${opMode})`);
       } catch (error) {
         console.warn("加载座位列表失败:", error);
         setDynamicSeats([]);
@@ -276,10 +278,10 @@ export default function Dashboard() {
       }
     }
 
-    // 场馆切换后 300ms 加载座位
+    // 场馆切换或模式切换后 300ms 加载座位
     const debounceTimer = setTimeout(fetchSeatsForRoom, 300);
     return () => clearTimeout(debounceTimer);
-  }, [libId, cookieStr, apiConfig]); // 添加 apiConfig 依赖
+  }, [libId, cookieStr, apiConfig, opMode]); // opMode 变化时也要刷新座位列表
 
   // 滚动日志
   useEffect(() => {
@@ -771,7 +773,7 @@ export default function Dashboard() {
                           <>
                             <option value="">选择座位...</option>
                             {dynamicSeats
-                              .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }))
+                              .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh-CN', { numeric: true }))
                               .map((seat) => (
                                 <option key={seat.key} value={seat.key}>
                                   {seat.name}
