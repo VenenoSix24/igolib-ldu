@@ -7,13 +7,14 @@
   <a href="https://igolib.ivyris.top/#/download"><b>⬇️ 官网下载</b></a> •
   <a href="https://github.com/VenenoSix24/igolib-ldu/releases/latest"><b>⭐ GitHub下载</b></a>
   <br /><br />
-  <img src="https://img.shields.io/badge/App_Version-v1.0.26-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
+  <img src="https://img.shields.io/badge/App_Version-v1.0.27-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
   <img src="https://img.shields.io/badge/Core_Logic-v4.6.25_TS-E10098?style=flat-square&logo=graphql&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white" />
   <img src="https://img.shields.io/badge/Tauri-2.9.6-24C8DB?style=flat-square&logo=tauri&logoColor=white" />
   <img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-red?style=flat-square&logo=open-source-initiative&logoColor=white" />
 </p>
+
 
 
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
