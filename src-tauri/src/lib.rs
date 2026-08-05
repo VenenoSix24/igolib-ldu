@@ -86,11 +86,12 @@ pub fn run() {
             app.handle().plugin(tauri_plugin_opener::init())?;
             // 剪贴板插件
             app.handle().plugin(tauri_plugin_clipboard_manager::init())?;
-            
+            // WebSocket 插件（明日预约排队通道，桌面与 Android 均需注册）
+            app.handle().plugin(tauri_plugin_websocket::init())?;
+
             // 仅桌面端加载以下插件
             #[cfg(not(mobile))]
             {
-                app.handle().plugin(tauri_plugin_websocket::init())?;
                 app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
             }
