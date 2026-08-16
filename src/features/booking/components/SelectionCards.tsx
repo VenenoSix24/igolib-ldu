@@ -232,7 +232,7 @@ export function SeatSelect({
 
 /** 执行时间卡：立即 / 模式默认 / 自定义（按页面取用不同选项） */
 export function TimeCard({
-  options, execTime, onExecTime, customTime, onCustomTime, hint, defaultTime = "21:48",
+  options, execTime, onExecTime, customTime, onCustomTime, hint, defaultTime = "21:48", onDefaultTime,
 }: {
   options: ExecTime[];
   execTime: ExecTime;
@@ -241,6 +241,8 @@ export function TimeCard({
   onCustomTime: (t: string) => void;
   hint?: string;
   defaultTime?: string;
+  /** 内联修改默认时间（选中默认档时展开） */
+  onDefaultTime?: (t: string) => void;
 }) {
   return (
     <div className="space-y-2.5">
@@ -266,6 +268,29 @@ export function TimeCard({
         ))}
       </div>
       <AnimatePresence>
+        {execTime === "2148" && onDefaultTime && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-white/[0.08] dark:bg-white/[0.03]">
+              <span className="text-[11.5px] font-semibold text-slate-600 dark:text-slate-200">默认时间</span>
+              <Input
+                type="time"
+                value={defaultTime}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d{2}:\d{2}$/.test(v)) onDefaultTime(v);
+                }}
+                aria-label="修改默认执行时间"
+                className="ml-auto h-8 w-28 border-none bg-transparent text-center font-mono text-[13px] tabular-nums focus-visible:ring-0 dark:bg-transparent"
+              />
+              <span className="text-[10px] text-slate-400 dark:text-slate-300">到点自动排队</span>
+            </div>
+          </motion.div>
+        )}
         {execTime === "custom" && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}

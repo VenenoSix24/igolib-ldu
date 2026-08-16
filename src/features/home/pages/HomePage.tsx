@@ -8,6 +8,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { useSettingsStore } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
+import { BUILTIN_WALLPAPERS, thumbOf } from "@/lib/wallpapers";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useCookieExpiry } from "@/lib/useCookieExpiry";
@@ -29,6 +30,7 @@ export function HomePage() {
   const setPrefs = useSettingsStore((s) => s.setPrefs);
   const themeMode = useThemeStore((s) => s.mode);
   const setThemeMode = useThemeStore((s) => s.setMode);
+  const wallpaper = useThemeStore((s) => s.wallpaper);
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
   const { expiry, remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
@@ -215,6 +217,49 @@ export function HomePage() {
             ))}
           </span>
         </div>
+        {themeMode === "wallpaper" && (
+          <div className="mt-2 space-y-2">
+            <p className="px-0.5 text-[10.5px] text-slate-400 dark:text-slate-300">选择壁纸</p>
+            <div className="flex gap-2">
+              {BUILTIN_WALLPAPERS.map((url) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => { setThemeMode("wallpaper"); useThemeStore.getState().setWallpaper(url); }}
+                  aria-label="内置壁纸"
+                  className="h-14 w-14 cursor-pointer overflow-hidden rounded-xl border-2 transition-all hover:scale-105 active:scale-95"
+                  style={{
+                    backgroundImage: `url(${thumbOf(url)})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    borderColor: wallpaper === url ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.15)",
+                  }}
+                />
+              ))}
+              <label className="flex h-14 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed transition-colors hover:border-white/40 active:scale-95" style={{ borderColor: wallpaper.startsWith("data:") ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)" }}>
+                <span className="text-[16px] leading-none">+</span>
+                <span className="text-[9px] text-slate-400 dark:text-slate-300">自定义</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      if (typeof reader.result === "string") {
+                        useThemeStore.getState().setWallpaper(reader.result);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        )}
 
           <button
             type="button"

@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { SideNav } from "./SideNav";
+import { CookieStatusCard } from "./CookieStatusCard";
 import { Dock } from "./Dock";
 import { WallpaperLayer } from "./WallpaperLayer";
 
@@ -9,7 +10,10 @@ export function AppShell() {
     <div className="app-root">
       <WallpaperLayer />
       <div className="mx-auto flex w-full max-w-[1080px] gap-4 px-6 pb-32 pt-7 md:pb-10">
-        <SideNav />
+        <div className="hidden w-[196px] shrink-0 flex-col gap-3 md:sticky md:top-7 md:flex md:self-start">
+          <SideNav />
+          <CookieStatusCard />
+        </div>
         <main className="flex min-w-0 flex-1 flex-col gap-4">
           <Outlet />
         </main>
