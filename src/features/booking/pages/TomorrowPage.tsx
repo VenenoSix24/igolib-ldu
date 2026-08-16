@@ -79,7 +79,7 @@ export function TomorrowPage() {
             <div className="bg-gradient-to-b from-slate-700 to-slate-900 bg-clip-text text-[34px] font-extrabold tracking-widest tabular-nums text-transparent md:text-[38px] dark:from-white dark:to-[#aebadc]">
               {countDownStr ?? "--:--:--"}
             </div>
-            <div className="mt-0.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="mt-0.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
               距 {booking.execTime === "2148" ? defaultTime : booking.execTime === "custom" ? booking.customTime : "立即"} 自动执行
             </div>
           </div>

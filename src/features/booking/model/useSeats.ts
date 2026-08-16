@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getRoomSeats, type DynamicSeat } from "@/services/api";
 import type { ApiConfig } from "@/lib/api-config";
+import { useAuthStore, cookieBlocked } from "@/stores/auth";
 
 /** 指定场馆的座位列表：明日模式返回全部，即时模式仅空闲（300ms 防抖） */
 export function useSeats(
@@ -15,6 +16,10 @@ export function useSeats(
   useEffect(() => {
     async function fetchSeatsForRoom() {
       if (!cookieStr || cookieStr.trim().length < 10 || !libId) {
+        setDynamicSeats([]);
+        return;
+      }
+      if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
         setDynamicSeats([]);
         return;
       }

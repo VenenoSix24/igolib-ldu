@@ -112,7 +112,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({ update, onClose }) =
                     </DialogTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50">
-                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">v{currentVersion}</span>
+                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-300">v{currentVersion}</span>
                         <ArrowUp className="w-3 h-3 text-blue-500 rotate-45 transform" />
                         <span className="text-[10px] font-bold text-slate-900 dark:text-slate-200">v{update?.version}</span>
                       </div>
@@ -174,7 +174,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({ update, onClose }) =
 
                   <div className="space-y-2">
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">正在更新...</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 px-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-300 px-4">
                       正在下载并安装新版本，完成后应用将自动重启。
                     </p>
                   </div>

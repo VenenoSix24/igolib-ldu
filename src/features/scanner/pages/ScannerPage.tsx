@@ -7,6 +7,7 @@ import { getDynamicRooms, type DynamicRoom } from "@/services/api";
 import { useSettingsStore } from "@/stores/settings";
 import { useScannerStore } from "@/stores/scanner";
 import { useScannerLoop } from "../model/useScannerLoop";
+import { useAuthStore, cookieBlocked } from "@/stores/auth";
 
 function formatTime(ts: number) {
   const d = new Date(ts);
@@ -34,6 +35,10 @@ export function ScannerPage() {
         setAllRooms([]);
         return;
       }
+      if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
+        setAllRooms([]);
+        return;
+      }
       setLoadingRooms(true);
       try {
         const data = await getDynamicRooms(cookieStr.trim(), apiConfig);
@@ -58,13 +63,13 @@ export function ScannerPage() {
         <div className="flex items-center gap-3">
           <div className={cn(
             "flex h-10 w-10 items-center justify-center rounded-xl",
-            running ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-slate-500/10 text-slate-500"
+            running ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/15 text-amber-600 dark:text-amber-300"
           )}>
             <Radar className={cn("h-5 w-5", running && "animate-pulse")} />
           </div>
           <div className="flex-1">
             <h2 className="text-[15px] font-bold">场馆捡漏</h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] text-slate-500 dark:text-slate-300">
               {running
                 ? `第 ${rounds} 轮 · 正在扫描 ${venues.find((v) => v.libId === currentLibId)?.name ?? "…"} · 间隔 ${interval}s`
                 : `按优先级轮询勾选场馆的余位，命中即自动预约并通知 · 间隔 ${interval}s（可在首页更多设置调整）`}
@@ -100,7 +105,7 @@ export function ScannerPage() {
                   "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
                   v.libId === currentLibId && "border-sky-500/50 bg-sky-500/10 text-sky-700 dark:text-sky-300",
                   v.libId !== currentLibId && v.available > 0 && "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-                  v.libId !== currentLibId && v.available <= 0 && "border-slate-300/60 bg-slate-500/5 text-slate-500 dark:border-white/10 dark:text-slate-400"
+                  v.libId !== currentLibId && v.available <= 0 && "border-slate-300/60 bg-slate-500/5 text-slate-500 dark:border-white/10 dark:text-slate-300"
                 )}
               >
                 {v.name}
@@ -113,7 +118,7 @@ export function ScannerPage() {
 
       {/* 场馆配置 */}
       <GlassCard className="p-4 md:p-5">
-        <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
           <Activity className="h-3.5 w-3.5" />监控场馆（自上而下扫描）
           {venues.length > 0 && (
             <button
@@ -206,7 +211,7 @@ export function ScannerPage() {
 
       {/* 命中历史 */}
       <GlassCard className="p-4 md:p-5">
-        <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
           <History className="h-3.5 w-3.5" />命中记录
           {hits.length > 0 && (
             <button
@@ -235,7 +240,7 @@ export function ScannerPage() {
                 <span className="font-mono text-[10.5px] text-slate-400">{formatTime(hit.time)}</span>
                 <span className="font-semibold">{hit.libName}</span>
                 {hit.seatName && <span className="font-mono font-bold">{hit.seatName} 号</span>}
-                <span className="ml-auto text-slate-500 dark:text-slate-400">{hit.message}</span>
+                <span className="ml-auto text-slate-500 dark:text-slate-300">{hit.message}</span>
               </li>
             ))}
           </ul>

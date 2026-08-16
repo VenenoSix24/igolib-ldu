@@ -19,6 +19,8 @@ export function AppRouter() {
         <Route path="scanner" element={<ScannerPage />} />
         <Route path="renewal" element={<RenewalPage />} />
       </Route>
+      {/* 未知路径兜底回首页，避免 No routes matched 警告 */}
+      <Route path="*" element={<Navigate to="/app/home" replace />} />
     </Routes>
   );
 }

@@ -10,6 +10,7 @@ import {
 import type { ReservationInfo, LibRuleInfo } from "@/services/LibraryService";
 import { useSettingsStore } from "@/stores/settings";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
+import { useAuthStore, cookieBlocked } from "@/stores/auth";
 import { notify } from "@/lib/notify";
 import { createLogger } from "@/lib/logger";
 
@@ -55,6 +56,7 @@ export function useRenewalLoop() {
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
   const [reservation, setReservation] = useState<ReservationInfo | null>(null);
+  const cookieStatus = useAuthStore((s) => s.cookieStatus);
   const [libRule, setLibRule] = useState<LibRuleInfo | null>(null);
 
   const stoppedRef = useRef(false);
@@ -107,6 +109,10 @@ export function useRenewalLoop() {
   /** 计算下一轮触发时间：renewTimeNext 优先，否则签到截止 - 提前量 */
   const scheduleNextRound = useCallback(
     async (current: ReservationInfo | null) => {
+      if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
+        stop("Cookie 已失效，续约停止");
+        return;
+      }
       const fresh = current ?? (await getReservation(cookieStr.trim(), apiConfig));
       if (stoppedRef.current) return;
       setReservation(fresh);
@@ -176,6 +182,10 @@ export function useRenewalLoop() {
   const runRound = useCallback(
     async (known: ReservationInfo | null) => {
       if (stoppedRef.current) return;
+      if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
+        stop("Cookie 已失效，续约停止");
+        return;
+      }
       try {
         const current = known ?? (await getReservation(cookieStr.trim(), apiConfig));
         if (stoppedRef.current) return;
@@ -257,8 +267,8 @@ export function useRenewalLoop() {
 
   const start = useCallback(async () => {
     if (running) return;
-    if (!cookieStr || cookieStr.trim().length < 10) {
-      setMessage("Cookie 无效，请先在首页完成扫码登录");
+    if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
+      setMessage("Cookie 已失效，请回首页重新扫码后再开启续约");
       return;
     }
     setMessage("");
@@ -287,10 +297,10 @@ export function useRenewalLoop() {
   }, [running, cookieStr, apiConfig, scheduleNextRound]);
 
   useEffect(() => {
-    if (running && (!cookieStr || cookieStr.trim().length < 10)) {
+    if (running && (!cookieStr || cookieStr.trim().length < 10 || cookieBlocked(useAuthStore.getState().cookieStatus))) {
       stop("Cookie 已失效，续约停止");
     }
-  }, [cookieStr, running, stop]);
+  }, [cookieStr, running, stop, cookieStatus]);
 
   useEffect(() => () => {
     stoppedRef.current = true;

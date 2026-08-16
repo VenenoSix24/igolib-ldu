@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDynamicRooms, validateUser, type DynamicRoom, type RoomMapping } from "@/services/api";
 import type { ApiConfig } from "@/lib/api-config";
+import { useAuthStore, cookieBlocked } from "@/stores/auth";
 
 /** 场馆列表 + Cookie 校验：与 1.0 相同的防抖节奏 */
 export function useRooms(cookieStr: string, apiConfig: ApiConfig, libId: string, setLibId: (libId: string) => void) {
@@ -19,6 +20,12 @@ export function useRooms(cookieStr: string, apiConfig: ApiConfig, libId: string,
 
     async function checkCookie() {
       if (!cookieStr || cookieStr.trim().length < 10) {
+        return;
+      }
+      // 首页已判失效（无效 / 已到期）则不再发起校验请求
+      const status = useAuthStore.getState().cookieStatus;
+      if (cookieBlocked(status)) {
+        setUserInfo({ name: "", valid: false });
         return;
       }
       setValidatingCookie(true);
@@ -43,6 +50,9 @@ export function useRooms(cookieStr: string, apiConfig: ApiConfig, libId: string,
 
     async function fetchDynamicRoomsData() {
       if (!cookieStr || cookieStr.trim().length < 10) {
+        return;
+      }
+      if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
         return;
       }
 

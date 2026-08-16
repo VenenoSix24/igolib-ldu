@@ -21,7 +21,7 @@ export function VenueSelect({
 }) {
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+      <label className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
         <Building2 className="h-3.5 w-3.5" />阅览室
         {rooms.length > 0 && !error && <span className="text-[10px] font-normal text-green-500">✓ 实时</span>}
       </label>
@@ -94,7 +94,7 @@ export function VenueList({
                   : "border-slate-200 bg-slate-100 hover:bg-slate-200/70 dark:border-transparent dark:bg-white/[0.05] dark:hover:bg-white/[0.09]",
             )}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-500 dark:bg-white/[0.08] dark:text-slate-400">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-500 dark:bg-white/[0.08] dark:text-slate-300">
               <Building2 className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
@@ -106,7 +106,7 @@ export function VenueList({
             <span className={cn(
               "rounded-full px-2 py-0.5 text-[10.5px] font-bold",
               closed
-                ? "bg-slate-400/15 text-slate-500 dark:text-slate-400"
+                ? "bg-slate-400/15 text-slate-500 dark:text-slate-300"
                 : full
                   ? "bg-red-400/15 text-red-400 dark:text-red-300"
                   : "bg-green-500/15 text-green-500 dark:text-green-300",
@@ -148,7 +148,7 @@ export function SeatSelect({
 
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+      <label className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
         <Armchair className="h-3.5 w-3.5" />座位号
         {seats.length > 0 && (
           <span className="text-[10px] font-normal text-green-500">（{seats.length} 可选）</span>
@@ -165,7 +165,7 @@ export function SeatSelect({
                   "flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] transition-colors",
                   view === v
                     ? "bg-white font-bold text-[#131a2a] shadow-sm dark:bg-white/90"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200",
                 )}
               >
                 {v === "grid" ? <LayoutGrid className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
@@ -244,7 +244,7 @@ export function TimeCard({
 }) {
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
         <Clock className="h-3.5 w-3.5" />执行时间
         {hint && <span className="ml-auto rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-normal text-amber-500 dark:text-amber-300">{hint}</span>}
       </div>
@@ -258,7 +258,7 @@ export function TimeCard({
               "flex-1 cursor-pointer whitespace-nowrap rounded-lg px-2 py-2 text-xs transition-all",
               execTime === t
                 ? "bg-white font-bold text-[#131a2a] shadow-sm dark:bg-white/90"
-                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200",
             )}
           >
             {t === "immediate" ? "立即执行" : t === "2148" ? defaultTime : "自定义"}
