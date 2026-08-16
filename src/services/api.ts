@@ -14,6 +14,8 @@ export interface SeatRequest {
   timeStr: string;
   cookieStr: string;
   seatKey?: string;
+  /** 备选链：主选失败（座位被占等）时按序尝试 */
+  backupSeats?: { key: string; name: string }[];
   // API 配置参数
   apiUrl?: string;
   origin?: string;
@@ -117,9 +119,24 @@ export async function submitRequest(
     try {
       if (onStatusUpdate) onStatusUpdate("正在执行最终预约请求...", "phase", { phase: "reserving" });
 
-      const result = await service.bookSeat(request.libId, request.seatKey as string, request.mode || 2);
+      // 候选链：主选在前，备选按序在后
+      const candidates: { key: string; label: string }[] = [
+        { key: request.seatKey as string, label: request.seatNumber },
+        ...(request.backupSeats ?? []).map((b) => ({ key: b.key, label: b.name })),
+      ];
 
-      if (result.errors) {
+      let lastError: Error = new Error("Booking request failed");
+      for (let i = 0; i < candidates.length; i++) {
+        const candidate = candidates[i];
+        const result = await service.bookSeat(request.libId, candidate.key, request.mode || 2);
+
+        if (!result.errors) {
+          if (i > 0 && onStatusUpdate) {
+            onStatusUpdate(`[备选] 已改用备选座位 ${candidate.label} 完成预约`, "success");
+          }
+          return { status: "success", message: "Booking successful", data: undefined };
+        }
+
         // 简单错误解析
         const errorMsg = result.errors[0]?.message || result.errors[0]?.msg || 'Booking failed';
 
@@ -130,12 +147,19 @@ export async function submitRequest(
           throw new Error("操作失败: 该日期不开放预约");
         }
         if (errorMsg.includes("被预约") || errorMsg.includes("被人预定")) {
-          throw new Error("操作失败: 手慢了，座位已被抢占");
+          lastError = new Error(`操作失败: 座位 ${candidate.label} 已被抢占`);
+        } else {
+          lastError = new Error(`操作失败: ${errorMsg}`);
         }
 
-        throw new Error(`操作失败: ${errorMsg}`);
+        const hasNext = i < candidates.length - 1;
+        if (hasNext && onStatusUpdate) {
+          onStatusUpdate(`[备选] 座位 ${candidate.label} 失败（${lastError.message}），尝试下一个备选…`, "warn");
+        } else {
+          throw lastError;
+        }
       }
-      return { status: "success", message: "Booking successful", data: undefined };
+      throw lastError;
     } catch (e) {
       throw new Error(e instanceof Error ? e.message : 'Booking request failed');
     }
