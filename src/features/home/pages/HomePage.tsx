@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Eye, EyeOff, KeyRound, QrCode, Settings2 } from "lucide-react";
+import { ChevronRight, Eye, EyeOff, Image, KeyRound, Moon, QrCode, Settings2, Sun } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useSettingsStore } from "@/stores/settings";
+import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { LogsPanel } from "../../logs/components/LogsPanel";
@@ -24,6 +25,8 @@ export function HomePage() {
   const setApi = useSettingsStore((s) => s.setApi);
   const prefs = useSettingsStore((s) => s.prefs);
   const setPrefs = useSettingsStore((s) => s.setPrefs);
+  const themeMode = useThemeStore((s) => s.mode);
+  const setThemeMode = useThemeStore((s) => s.setMode);
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
 
@@ -132,10 +135,37 @@ export function HomePage() {
       <GlassCard className="p-4 md:p-5">
         <h3 className="mb-2.5 flex items-center gap-2 text-[13.5px] font-extrabold"><Settings2 className="h-4 w-4" />常用设置</h3>
         <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
+          <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">主题</span>
+          <span className="flex gap-1 rounded-full bg-slate-200/70 p-1 dark:bg-white/[0.08]">
+            {([
+              { mode: "light" as ThemeMode, icon: Sun, label: "浅色" },
+              { mode: "dark" as ThemeMode, icon: Moon, label: "深色" },
+              { mode: "wallpaper" as ThemeMode, icon: Image, label: "壁纸" },
+            ]).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                type="button"
+                aria-label={`主题：${label}`}
+                aria-pressed={themeMode === mode}
+                onClick={() => setThemeMode(mode)}
+                className={
+                  themeMode === mode
+                    ? "flex cursor-pointer items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#131a2a] shadow-sm dark:bg-white/90"
+                    : "flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+          </span>
+        </div>
+
           <button
             type="button"
             onClick={() => setShowSettings(true)}
-            className="flex cursor-pointer items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.09]"
+            className="flex cursor-pointer items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 text-left transition-colors hover:bg-slate-200/70 dark:bg-white/[0.05] dark:hover:bg-white/[0.09]"
           >
             <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">API 预设</span>
             <span className="flex items-center gap-1 text-[11.5px] text-slate-500">
@@ -143,7 +173,7 @@ export function HomePage() {
               <ChevronRight className="h-3.5 w-3.5" />
             </span>
           </button>
-          <div className="flex items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2.5">
+          <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
             <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">Cookie 到期提醒</span>
             <span className="flex items-center gap-1 text-[11.5px] text-slate-500">
               提前 {prefs.cookieReminderMinutes} 分钟
@@ -153,7 +183,7 @@ export function HomePage() {
             type="button"
             onClick={() => setShowMore(!showMore)}
             aria-expanded={showMore}
-            className="flex cursor-pointer items-center justify-between rounded-xl bg-white/[0.05] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.09]"
+            className="flex cursor-pointer items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 text-left transition-colors hover:bg-slate-200/70 dark:bg-white/[0.05] dark:hover:bg-white/[0.09]"
           >
             <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">更多设置</span>
             <ChevronRight className={cn("h-3.5 w-3.5 text-slate-500 transition-transform", showMore && "rotate-90")} />
@@ -162,7 +192,7 @@ export function HomePage() {
 
         {/* 二级：更多设置 */}
         {showMore && (
-          <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-2.5">
+          <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
             <div className="flex items-center justify-between px-1 py-1">
               <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">LDU 兼容模式</span>
               <button
@@ -172,7 +202,7 @@ export function HomePage() {
                 onClick={() => setPrefs({ lduFallbackEnabled: !prefs.lduFallbackEnabled })}
                 className={cn(
                   "h-6 w-11 cursor-pointer rounded-full p-0.5 transition-colors",
-                  prefs.lduFallbackEnabled ? "bg-blue-500" : "bg-white/15",
+                  prefs.lduFallbackEnabled ? "bg-blue-500" : "bg-slate-300 dark:bg-white/15",
                 )}
               >
                 <span className={cn(

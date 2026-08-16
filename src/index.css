@@ -284,11 +284,12 @@
   min-height: 100dvh;
 }
 
+/* 深色：石墨底 + 暖灯光（自习室台灯意象），避开蓝紫 */
 [data-app-theme="dark"] .app-root,
 [data-app-theme="wallpaper"] .app-root {
   background:
-    radial-gradient(ellipse 90% 60% at 75% -10%, rgba(28, 42, 85, 0.9) 0%, transparent 55%),
-    linear-gradient(170deg, #101526 0%, #0b0f1c 55%, #101526 100%);
+    radial-gradient(ellipse 80% 50% at 70% -12%, rgba(120, 90, 40, 0.35) 0%, transparent 55%),
+    linear-gradient(170deg, #121317 0%, #0e0f12 55%, #131418 100%);
 }
 
 [data-app-theme="dark"] .app-root::before,
@@ -297,20 +298,20 @@
   position: fixed;
   border-radius: 50%;
   filter: blur(46px);
-  opacity: 0.75;
+  opacity: 0.55;
   pointer-events: none;
 }
 [data-app-theme="dark"] .app-root::before {
   width: 340px;
   height: 340px;
-  background: #3b6ea5;
+  background: #8a6a2f;
   top: -80px;
   left: 22%;
 }
 [data-app-theme="dark"] .app-root::after {
   width: 300px;
   height: 300px;
-  background: #8a4d76;
+  background: #2f4a44;
   bottom: -60px;
   right: 8%;
 }

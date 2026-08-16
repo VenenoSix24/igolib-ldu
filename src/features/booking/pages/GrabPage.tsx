@@ -44,8 +44,6 @@ export function GrabPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-center text-xs tracking-[0.15em] text-slate-500 dark:text-slate-400">立即抢座 · 实时余位</p>
-
       {/* 行动卡 */}
       <GlassCard className="flex items-center gap-3 p-4 md:p-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-500 dark:text-amber-300">

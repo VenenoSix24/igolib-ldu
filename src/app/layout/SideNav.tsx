@@ -17,7 +17,7 @@ export function SideNav() {
   const setMode = useThemeStore((s) => s.setMode);
 
   return (
-    <GlassCard className="hidden w-[196px] shrink-0 flex-col p-4 md:flex">
+    <GlassCard className="hidden w-[196px] shrink-0 flex-col p-4 md:sticky md:top-7 md:flex md:self-start">
       <div className="mb-3 flex items-center gap-2.5 px-2">
         <BookMarked className="h-5 w-5 opacity-80" />
         <span className="text-sm font-semibold tracking-wide">我去抢个座</span>

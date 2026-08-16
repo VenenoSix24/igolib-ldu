@@ -23,10 +23,6 @@ export function TomorrowPage() {
 
   const [selectedSeatKey, setSelectedSeatKey] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
-  const [dateLabel] = useState(() => {
-    const tomorrow = new Date(Date.now() + 24 * 3600 * 1000);
-    return `${tomorrow.getMonth() + 1} 月 ${tomorrow.getDate()} 日`;
-  });
   const roomName = rooms[booking.libId];
 
   const startEnabled = Boolean(booking.libId && booking.seatNumber && booking.cookieStr);
@@ -50,13 +46,11 @@ export function TomorrowPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-center text-xs tracking-[0.15em] text-slate-500 dark:text-slate-400">明日预约 · {dateLabel}</p>
-
       {/* 任务总览 */}
       <GlassCard className="p-4 md:p-5">
         <div className="flex flex-col items-center gap-3 md:flex-row md:gap-5">
           <div className="text-center md:text-left">
-            <div className="bg-gradient-to-b from-white to-[#aebadc] bg-clip-text text-[34px] font-extrabold tracking-widest tabular-nums text-transparent md:text-[38px] dark:from-white dark:to-[#aebadc]">
+            <div className="bg-gradient-to-b from-slate-700 to-slate-900 bg-clip-text text-[34px] font-extrabold tracking-widest tabular-nums text-transparent md:text-[38px] dark:from-white dark:to-[#aebadc]">
               {countDownStr ?? "--:--:--"}
             </div>
             <div className="mt-0.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
@@ -64,10 +58,10 @@ export function TomorrowPage() {
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-2 md:justify-start">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11.5px] text-slate-700 dark:text-slate-200">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[11.5px] text-slate-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200">
               <Building2 className="h-3.5 w-3.5" />{roomName || "未选场馆"}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11.5px] text-slate-700 dark:text-slate-200">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1.5 text-[11.5px] text-slate-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200">
               <Armchair className="h-3.5 w-3.5" />{booking.seatNumber ? `${booking.seatNumber} 号` : "未选座位"}
             </span>
             {userInfo?.valid && (
@@ -80,7 +74,7 @@ export function TomorrowPage() {
             type="button"
             disabled={!startEnabled || running || loadingRooms}
             onClick={() => setShowConfirm(true)}
-            className="ml-auto flex cursor-pointer items-center gap-2 rounded-2xl bg-gradient-to-br from-[#b3d0ff] to-[#7da7ff] px-6 py-3 text-[13.5px] font-extrabold text-[#10162a] shadow-[0_8px_24px_rgba(125,167,255,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex cursor-pointer items-center gap-2 rounded-2xl md:ml-auto bg-gradient-to-br from-[#b3d0ff] to-[#7da7ff] px-6 py-3 text-[13.5px] font-extrabold text-[#10162a] shadow-[0_8px_24px_rgba(125,167,255,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Play className="h-4 w-4" />{running ? "任务运行中" : "启动预约"}
           </button>
