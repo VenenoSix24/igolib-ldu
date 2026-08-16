@@ -1,0 +1,158 @@
+import { useState } from "react";
+import { Armchair, Building2, Play } from "lucide-react";
+import { GlassCard } from "@/components/glass/GlassCard";
+import { useSettingsStore } from "@/stores/settings";
+import { useRooms } from "../model/useRooms";
+import { useSeats } from "../model/useSeats";
+import { useBookingTask } from "../model/useBookingTask";
+import { useCountdown } from "../model/useCountdown";
+import { VenueSelect, SeatSelect, TimeCard } from "../components/SelectionCards";
+import { ConsoleCard } from "../components/ConsoleCard";
+import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
+
+export function TomorrowPage() {
+  const apiConfig = useSettingsStore((s) => s.api);
+  const booking = useSettingsStore((s) => s.booking);
+  const setBooking = useSettingsStore((s) => s.setBooking);
+
+  const { rooms, dynamicRooms, loadingRooms, roomsError, userInfo } =
+    useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
+  const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "scheduled");
+  const task = useBookingTask();
+  const countDownStr = useCountdown(booking.execTime, booking.customTime);
+
+  const [selectedSeatKey, setSelectedSeatKey] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [dateLabel] = useState(() => {
+    const tomorrow = new Date(Date.now() + 24 * 3600 * 1000);
+    return `${tomorrow.getMonth() + 1} 月 ${tomorrow.getDate()} 日`;
+  });
+  const roomName = rooms[booking.libId];
+
+  const startEnabled = Boolean(booking.libId && booking.seatNumber && booking.cookieStr);
+  const running = task.status === "running" || task.status === "connecting";
+
+  const launch = () => {
+    setShowConfirm(false);
+    setBooking({ opMode: "scheduled" });
+    task.launch({
+      apiConfig,
+      libId: booking.libId,
+      seatNumber: booking.seatNumber,
+      cookieStr: booking.cookieStr,
+      opMode: "scheduled",
+      execTime: booking.execTime,
+      customTime: booking.customTime,
+      selectedSeatKey,
+      roomName,
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-center text-xs tracking-[0.15em] text-slate-500 dark:text-slate-400">明日预约 · {dateLabel}</p>
+
+      {/* 任务总览 */}
+      <GlassCard className="p-4 md:p-5">
+        <div className="flex flex-col items-center gap-3 md:flex-row md:gap-5">
+          <div className="text-center md:text-left">
+            <div className="bg-gradient-to-b from-white to-[#aebadc] bg-clip-text text-[34px] font-extrabold tracking-widest tabular-nums text-transparent md:text-[38px] dark:from-white dark:to-[#aebadc]">
+              {countDownStr ?? "--:--:--"}
+            </div>
+            <div className="mt-0.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+              距 {booking.execTime === "2148" ? "21:48" : booking.execTime === "custom" ? booking.customTime : "立即"} 自动执行
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 md:justify-start">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11.5px] text-slate-700 dark:text-slate-200">
+              <Building2 className="h-3.5 w-3.5" />{roomName || "未选场馆"}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1.5 text-[11.5px] text-slate-700 dark:text-slate-200">
+              <Armchair className="h-3.5 w-3.5" />{booking.seatNumber ? `${booking.seatNumber} 号` : "未选座位"}
+            </span>
+            {userInfo?.valid && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-2.5 py-1.5 text-[11.5px] text-green-600 dark:text-green-300">
+                ● 身份有效
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={!startEnabled || running || loadingRooms}
+            onClick={() => setShowConfirm(true)}
+            className="ml-auto flex cursor-pointer items-center gap-2 rounded-2xl bg-gradient-to-br from-[#b3d0ff] to-[#7da7ff] px-6 py-3 text-[13.5px] font-extrabold text-[#10162a] shadow-[0_8px_24px_rgba(125,167,255,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Play className="h-4 w-4" />{running ? "任务运行中" : "启动预约"}
+          </button>
+        </div>
+      </GlassCard>
+
+      {/* 目标座位 / 执行时间 双列 */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <GlassCard className="p-4 md:p-5">
+          <h3 className="mb-3 flex items-center gap-2 text-[13.5px] font-extrabold"><Building2 className="h-4 w-4" />目标座位</h3>
+          <div className="flex flex-col gap-3.5">
+            <VenueSelect
+              rooms={dynamicRooms}
+              loading={loadingRooms}
+              error={roomsError}
+              libId={booking.libId}
+              onChange={(libId) => { setBooking({ libId }); setSelectedSeatKey(""); }}
+              cookieStr={booking.cookieStr}
+            />
+            <SeatSelect
+              seats={dynamicSeats}
+              loading={loadingSeats}
+              seatNumber={booking.seatNumber}
+              onSeatNumber={(seatNumber) => setBooking({ seatNumber })}
+              selectedSeatKey={selectedSeatKey}
+              onSelectSeatKey={(key, name) => {
+                setSelectedSeatKey(key);
+                if (name) setBooking({ seatNumber: name });
+              }}
+            />
+          </div>
+        </GlassCard>
+        <GlassCard className="p-4 md:p-5">
+          <TimeCard
+            options={["immediate", "2148", "custom"]}
+            execTime={booking.execTime}
+            onExecTime={(execTime) => setBooking({ execTime })}
+            customTime={booking.customTime}
+            onCustomTime={(customTime) => setBooking({ customTime })}
+            hint="模式默认 21:48"
+          />
+        </GlassCard>
+      </div>
+
+      <ConsoleCard
+        status={task.status}
+        currentPhase={task.currentPhase}
+        latestLog={task.latestLog}
+        logs={task.logs}
+        setLogs={task.setLogs}
+        countDownStr={countDownStr}
+        onStop={task.stop}
+      />
+
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        onConfirm={launch}
+        opMode="scheduled"
+        execTime={booking.execTime}
+        customTime={booking.customTime}
+        roomName={roomName}
+        seatNumber={booking.seatNumber}
+      />
+      <ResultDialog
+        open={task.showResultDialog}
+        onOpenChange={task.setShowResultDialog}
+        status={task.status}
+        latestLog={task.latestLog}
+        roomName={roomName}
+        seatNumber={booking.seatNumber}
+      />
+    </div>
+  );
+}
