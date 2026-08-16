@@ -1,11 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext } from "react"
+import { useThemeStore } from "../stores/theme"
 
 type Theme = "dark" | "light" | "system"
 
 type ThemeProviderProps = {
   children: React.ReactNode
-  defaultTheme?: Theme
-  storageKey?: string
 }
 
 type ThemeProviderState = {
@@ -13,49 +12,24 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
+const ThemeProviderContext = createContext<ThemeProviderState>({
   theme: "system",
   setTheme: () => null,
-}
+})
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+/**
+ * 旧页面的主题入口，内部代理 2.0 的 theme store。
+ * wallpaper 模式对旧组件呈现为 dark；DOM 应用统一由 ThemeSync 处理。
+ */
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const mode = useThemeStore((s) => s.mode)
+  const setMode = useThemeStore((s) => s.setMode)
 
-export function ThemeProvider({
-  children,
-  defaultTheme = "system",
-  storageKey = "vite-ui-theme",
-}: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  )
-
-  useEffect(() => {
-    const root = window.document.documentElement
-
-    root.classList.remove("light", "dark")
-
-    if (theme === "system") {
-      const media = window.matchMedia("(prefers-color-scheme: dark)")
-      const systemTheme = media.matches ? "dark" : "light"
-      root.classList.add(systemTheme)
-
-      const listener = (e: MediaQueryListEvent) => {
-        root.classList.remove("light", "dark")
-        root.classList.add(e.matches ? "dark" : "light")
-      }
-      media.addEventListener("change", listener)
-      return () => media.removeEventListener("change", listener)
-    }
-
-    root.classList.add(theme)
-  }, [theme])
+  const legacyTheme: Theme = mode === "wallpaper" ? "dark" : mode
 
   const value = {
-    theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
-    },
+    theme: legacyTheme,
+    setTheme: (theme: Theme) => setMode(theme),
   }
 
   return (
@@ -67,9 +41,5 @@ export function ThemeProvider({
 
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext)
-
-  if (context === undefined)
-    throw new Error("useTheme must be used within a ThemeProvider")
-
   return context
 }

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 
 import { ThemeProvider } from "./components/theme-provider";
 import { UpdateDialog } from "./components/UpdateDialog";
+import { ThemeSync } from "./app/layout/ThemeSync";
+import { GlassFilter } from "./components/glass/GlassFilter";
+import { AppRouter } from "./app/router";
 
 import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -64,13 +67,15 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+    <ThemeProvider>
+      <ThemeSync />
+      <GlassFilter />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
+        <AppRouter />
       </BrowserRouter>
 
       <UpdateDialog

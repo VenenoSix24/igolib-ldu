@@ -208,3 +208,115 @@
     linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
+
+/* ===================== 2.0 液态玻璃体系 ===================== */
+/* 滤镜链结构参考: codepen.io/Mikhail-Bespalov/pen/MYwrMNy */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-highlight: rgba(255, 255, 255, 0.35);
+  --glass-counter-shine: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-backdrop: blur(22px) saturate(160%);
+}
+
+:root[data-app-theme="light"] {
+  --glass-bg: rgba(255, 255, 255, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-highlight: rgba(255, 255, 255, 0.95);
+  --glass-counter-shine: rgba(255, 255, 255, 0);
+  --glass-shadow: 0 8px 28px rgba(70, 84, 110, 0.18);
+}
+
+/* 玻璃类置于 components 层：position 与 border-radius 由组件层控制，
+   避免 fixed / rounded-full 等工具类被覆盖 */
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      inset 0 -1px 0 var(--glass-counter-shine),
+      var(--glass-shadow);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+  }
+
+  /* 折射增强层：仅 Chromium 系特性检测通过时叠加（GlassFilter 组件负责挂类） */
+  body.refraction .glass {
+    backdrop-filter: url(#igolib-frosted) saturate(160%);
+    -webkit-backdrop-filter: url(#igolib-frosted) saturate(160%);
+  }
+
+  .glass-hoverable {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .glass-hoverable:hover {
+    transform: scale(1.008);
+  }
+}
+
+/* 壁纸层：wallpaper 模式时由 WallpaperLayer 渲染在内容之下 */
+.wallpaper-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+}
+.wallpaper-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 10, 18, 0.3), rgba(8, 10, 18, 0.62));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-hoverable,
+  .glass-indicator {
+    transition: none !important;
+  }
+}
+
+/* 2.0 应用壳背景：按 data-app-theme 切换，只作用于 .app-root（旧页面不受影响） */
+.app-root {
+  min-height: 100dvh;
+}
+
+[data-app-theme="dark"] .app-root,
+[data-app-theme="wallpaper"] .app-root {
+  background:
+    radial-gradient(ellipse 90% 60% at 75% -10%, rgba(28, 42, 85, 0.9) 0%, transparent 55%),
+    linear-gradient(170deg, #101526 0%, #0b0f1c 55%, #101526 100%);
+}
+
+[data-app-theme="dark"] .app-root::before,
+[data-app-theme="dark"] .app-root::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(46px);
+  opacity: 0.75;
+  pointer-events: none;
+}
+[data-app-theme="dark"] .app-root::before {
+  width: 340px;
+  height: 340px;
+  background: #3b6ea5;
+  top: -80px;
+  left: 22%;
+}
+[data-app-theme="dark"] .app-root::after {
+  width: 300px;
+  height: 300px;
+  background: #8a4d76;
+  bottom: -60px;
+  right: 8%;
+}
+
+[data-app-theme="light"] .app-root {
+  background:
+    radial-gradient(ellipse 70% 40% at 30% 0%, rgba(255, 255, 255, 0.85), transparent 60%),
+    linear-gradient(170deg, #e9edf4 0%, #dde4ee 60%, #e6ebf3 100%);
+}
