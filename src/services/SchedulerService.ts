@@ -14,7 +14,7 @@ export class SchedulerService {
 
       const TRIGGER_THRESHOLD = 0.01;
       let lastLoggedSec = -999;
-      let timerId: any;
+      let timerId: ReturnType<typeof setTimeout> | undefined;
 
       const onAbort = () => {
         clearTimeout(timerId);

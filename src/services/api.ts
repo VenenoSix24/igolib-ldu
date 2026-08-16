@@ -35,7 +35,7 @@ const activeControllers = new Map<string, AbortController>();
 
 export async function submitRequest(
   request: SeatRequest,
-  onStatusUpdate?: (message: string, event?: string, data?: any) => void
+  onStatusUpdate?: (message: string, event?: string, data?: Record<string, unknown>) => void
 ): Promise<ApiResponse<void>> {
   const apiUrl = request.apiUrl || DEFAULT_API_CONFIG.apiUrl;
   const service = new LibraryService(request.cookieStr, apiUrl, request.origin, request.referer);
@@ -68,8 +68,8 @@ export async function submitRequest(
           } else {
             throw new Error(`无法找到座位号 "${request.seatNumber}" 对应的 Key。请检查座位号是否正确或座位是否开放。`);
           }
-        } catch (e: any) {
-          throw new Error(`座位解析失败: ${e.message}`);
+        } catch (e) {
+          throw new Error(`座位解析失败: ${e instanceof Error ? e.message : String(e)}`);
         }
       } else {
         throw new Error('Seat Key or Seat Number is required');
@@ -103,9 +103,9 @@ export async function submitRequest(
         // 时间已到
         if (onStatusUpdate) onStatusUpdate("时间到，正在执行...", "phase", { phase: "executing" });
 
-      } catch (e: any) {
-        if (e.message === "Task cancelled") throw e;
-        throw new Error(`Scheduling failed: ${e.message}`);
+      } catch (e) {
+        if (e instanceof Error && e.message === "Task cancelled") throw e;
+        throw new Error(`Scheduling failed: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
@@ -133,8 +133,8 @@ export async function submitRequest(
         throw new Error(`操作失败: ${errorMsg}`);
       }
       return { status: "success", message: "Booking successful", data: undefined };
-    } catch (e: any) {
-      throw new Error(e.message || 'Booking request failed');
+    } catch (e) {
+      throw new Error(e instanceof Error ? e.message : 'Booking request failed');
     }
   } finally {
     // 清理
@@ -271,7 +271,7 @@ export async function validateUser(
       return { valid: true, name: info.name };
     }
     return { valid: false };
-  } catch (e) {
+  } catch {
     return { valid: false };
   }
 }

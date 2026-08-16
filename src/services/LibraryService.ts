@@ -14,6 +14,44 @@ interface Seat {
   type: number;
 }
 
+interface RawSeat {
+  key: string;
+  name: string;
+  status: boolean;
+  type: number;
+  seat_status?: number;
+}
+
+interface RawLib {
+  lib_id: number;
+  lib_name: string;
+  lib_rt?: { seats_has?: number };
+  lib_layout?: { seats?: RawSeat[] };
+}
+
+interface GqlError {
+  message?: string;
+  msg?: string;
+  code?: number;
+}
+
+interface GqlResponse {
+  data?: {
+    userAuth?: {
+      reserve?: {
+        libs?: RawLib[];
+        reserveSeat?: boolean;
+        reserueSeat?: boolean;
+      };
+      prereserve?: {
+        libLayout?: { seats_booking?: number; seats_total?: number; seats_used?: number };
+        save?: boolean;
+      };
+    };
+  };
+  errors?: GqlError[];
+}
+
 export class LibraryService {
   private baseUrl: string;
   private headers: Record<string, string>;
@@ -46,7 +84,7 @@ export class LibraryService {
   }
 
   // 带重试逻辑的通用 GraphQL 发送器
-  private async sendGraphql(operationName: string, query: string, variables: any = {}) {
+  private async sendGraphql(operationName: string, query: string, variables: Record<string, unknown> = {}): Promise<GqlResponse> {
     const MAX_RETRIES = 3;
     let lastError;
 
@@ -61,7 +99,9 @@ export class LibraryService {
         // 调试请求头日志
         console.log(`[HTTP] 发送操作: ${operationName}`);
         console.log(`[HTTP] URL: ${this.baseUrl}`);
-        // console.log(`[HTTP] Headers:`, this.headers);
+        const loggedHeaders = { ...this.headers, Cookie: this.headers.Cookie ? `${this.headers.Cookie.slice(0, 16)}...(len=${this.headers.Cookie.length})` : "" };
+        console.log(`[HTTP] Headers:`, loggedHeaders);
+        console.log(`[HTTP] Variables:`, variables);
 
         const response = await fetch(this.baseUrl, {
           method: 'POST',
@@ -70,10 +110,11 @@ export class LibraryService {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP Error: ${response.status}`);
+          throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
         }
 
         const json = await response.json();
+        console.log(`[HTTP] ${operationName} 响应:`, json);
         return json;
       } catch (error) {
         console.error(`[HTTP] 请求失败 (第 ${attempt} 次):`, error);
@@ -92,7 +133,7 @@ export class LibraryService {
 
     // 过滤开放的场馆并映射字段
     console.log("[HTTP] 原始场馆数据:", libs);
-    return libs.map((l: any) => ({
+    return libs.map((l) => ({
       id: l.lib_id,
       name: l.lib_name,
       available: l.lib_rt?.seats_has || 0
@@ -106,14 +147,14 @@ export class LibraryService {
     const data = await this.sendGraphql("libLayout", query, { libId, libType: -1 });
     const seats = data?.data?.userAuth?.reserve?.libs?.[0]?.lib_layout?.seats || [];
 
-    return seats.filter((s: any) => {
+    return seats.filter((s) => {
       // 过滤掉 name 为空的无效元素
       if (!s.name) return false;
       // 明日预约模式下不过滤占用状态，返回全部座位
       if (includeOccupied) return true;
       const seatStatus = s.seat_status !== undefined ? s.seat_status : 1;
       return seatStatus === 1;
-    }).map((s: any) => ({
+    }).map((s) => ({
       key: s.key,
       name: s.name,
       status: s.status,
@@ -149,16 +190,17 @@ export class LibraryService {
   }
 
   // 5. Book Seat
-  async bookSeat(libId: number, seatKey: string, mode: number = 2, captcha = ""): Promise<any> {
+  async bookSeat(libId: number, seatKey: string, mode: number = 2, captcha = ""): Promise<GqlResponse> {
     if (mode === 1) {
       // 只有明日预约需要强制排队
       try {
         const wsService = new WebSocketService(this.cookie, this.baseUrl, this.headers["Origin"]);
         console.log("[Booking] 1. Starting WebSocket Queue (Tomorrow Mode)...");
         await wsService.passQueue(mode);
-      } catch (e: any) {
-        if (e && e.message && e.message.includes("FATAL:")) {
-          throw new Error(e.message.replace("FATAL: ", "排队被拦截: "));
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (message.includes("FATAL:")) {
+          throw new Error(message.replace("FATAL: ", "排队被拦截: "));
         }
         console.warn("[Booking] WebSocket queue bypassed/failed, proceeding to HTTP...", e);
       }
@@ -167,13 +209,13 @@ export class LibraryService {
     }
 
     let preflightQuery = "";
-    let preflightVars: any = {};
+    let preflightVars: Record<string, unknown> = {};
     if (mode === 1) {
       preflightQuery = `query libLayout($libId: Int!) { userAuth { prereserve { libLayout(libId: $libId) { seats_booking seats_total seats_used } } } }`;
       preflightVars = { libId };
     } else {
-      preflightQuery = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_layout { seats_total seats_booking seats_used } } } } }`;
-      preflightVars = { libId, libType: -1 };
+      preflightQuery = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_id is_open lib_floor lib_name lib_type lib_layout { seats_total seats_booking seats_used max_x max_y seats { x y key type name seat_status status } } } } } }`;
+      preflightVars = { libId };
     }
 
     try {
@@ -186,12 +228,20 @@ export class LibraryService {
       console.warn("[Booking] Pre-flight warning (non-fatal):", e);
     }
     console.log("[预约] 3. 正在执行最终预约请求...");
-    let result;
+    let result: GqlResponse;
     if (mode === 2) {
       // 立即抢座 (Today)
-      const query = `mutation reserveSeat($libId: Int!, $seatKey: String!, $captchaCode: String, $captcha: String!) { userAuth { reserve { reserveSeat(libId: $libId, seatKey: $seatKey, captchaCode: $captchaCode, captcha: $captcha) } } }`;
+      // 官方 schema 的 mutation 名为 reserueSeat，LDU 自建后端仍为 reserveSeat
+      const isOfficial = this.baseUrl.includes("wechat.v2.traceint.com");
+      const opName = isOfficial ? "reserueSeat" : "reserveSeat";
+      const query = `mutation ${opName}($libId: Int!, $seatKey: String!, $captchaCode: String, $captcha: String!) { userAuth { reserve { ${opName}(libId: $libId, seatKey: $seatKey, captchaCode: $captchaCode, captcha: $captcha) } } }`;
       const variables = { libId, seatKey, captchaCode: "", captcha };
-      result = await this.sendGraphql("reserveSeat", query, variables);
+      result = await this.sendGraphql(opName, query, variables);
+
+      // 官方失败时仅返回 false 不带 errors，漏读会误报成功
+      if (result.data?.userAuth?.reserve?.[opName] === false) {
+        return { errors: [{ msg: "服务端返回预约失败（座位可能刚被抢占）", code: 0 }] };
+      }
     } else {
       // 明日预约 (Tomorrow)
       const query = `mutation save($key: String!, $libid: Int!, $captchaCode: String, $captcha: String) { userAuth { prereserve { save(key: $key, libId: $libid, captcha: $captcha, captchaCode: $captchaCode) } } }`;
