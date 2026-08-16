@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getDynamicRooms, type DynamicRoom } from "@/services/api";
+import { getDynamicRooms, getRoomSeats, submitRequest, type DynamicRoom } from "@/services/api";
 import { useSettingsStore } from "@/stores/settings";
-import { useScannerStore, type ScannerVenue } from "@/stores/scanner";
+import { useScannerStore, registerScannerLoopStopper, type ScannerVenue } from "@/stores/scanner";
+import { useBackupSeatsStore } from "@/stores/backupSeats";
+import { notify } from "@/lib/notify";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("捡漏");
@@ -36,6 +38,7 @@ export function useScannerLoop() {
   const venuesRef = useRef<ScannerVenue[]>(venues);
   const lastAvailableRef = useRef<Record<string, number>>({});
   const consecutiveErrorsRef = useRef(0);
+  const bookingRef = useRef(false);
 
   useEffect(() => {
     venuesRef.current = venues;
@@ -60,6 +63,83 @@ export function useScannerLoop() {
     // runRound 通过 ref 间接引用，保持 schedule 稳定
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
+  );
+
+  const stop = useCallback(() => {
+    stoppedRef.current = true;
+    clearTimer();
+    setRunning(false);
+    setCurrentLibId("");
+    log.info("扫描已停止");
+  }, []);
+
+  /** 命中处理：拉取座位，优先该场馆备选链，自动预约 + 通知；返回是否预约成功 */
+  const attemptBooking = useCallback(
+    async (venue: ScannerVenue, room: DynamicRoom): Promise<boolean> => {
+      if (bookingRef.current) return false;
+      bookingRef.current = true;
+      log.info(`${room.name} 出现空位（余 ${room.seatsAvailable}），尝试自动预约…`);
+      try {
+        const layout = await getRoomSeats(parseInt(venue.libId), cookieStr.trim(), apiConfig, 2);
+        const available = layout.seats.filter((s) => s.available);
+        if (available.length === 0) {
+          log.info(`${room.name} 空位已被抢完，继续扫描`);
+          return false;
+        }
+
+        // 备选链命中的座位优先（按链内顺序），其余空闲座位按序补位
+        const chain = useBackupSeatsStore.getState().chains[venue.libId] ?? [];
+        const chainIndex = new Map(chain.map((b, i) => [b.key, i]));
+        const inChain = available
+          .filter((s) => chainIndex.has(s.key))
+          .sort((a, b) => (chainIndex.get(a.key) ?? 0) - (chainIndex.get(b.key) ?? 0));
+        const rest = available.filter((s) => !chainIndex.has(s.key));
+        const candidates = [...inChain, ...rest];
+
+        const target = candidates[0];
+        await submitRequest(
+          {
+            clientId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            libId: parseInt(venue.libId),
+            seatNumber: target.name,
+            seatKey: target.key,
+            mode: 2,
+            timeStr: "",
+            cookieStr: cookieStr.trim(),
+            backupSeats: candidates.slice(1).map((s) => ({ key: s.key, name: s.name })),
+            apiUrl: apiConfig.apiUrl,
+            origin: apiConfig.origin,
+            referer: apiConfig.referer,
+          },
+          (message) => log.info(message),
+        );
+
+        log.info(`${room.name} ${target.name} 号自动预约成功`);
+        pushHit({
+          libId: venue.libId,
+          libName: room.name,
+          seatName: target.name,
+          message: "自动预约成功",
+          kind: "booked",
+        });
+        notify("捡漏成功", `${room.name} ${target.name} 号已自动预约`);
+        stop();
+        return true;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        log.error(`${room.name} 自动预约失败：${msg}`);
+        pushHit({ libId: venue.libId, libName: room.name, message: `自动预约失败：${msg}`, kind: "failed" });
+        notify("捡漏预约失败", `${room.name}：${msg}`);
+        if (msg.includes("Cookie无效")) {
+          stop();
+          setError("Cookie 已失效，扫描停止");
+        }
+        return false;
+      } finally {
+        bookingRef.current = false;
+      }
+    },
+    [cookieStr, apiConfig, pushHit, stop],
   );
 
   const runRound = useCallback(async () => {
@@ -92,13 +172,12 @@ export function useScannerLoop() {
 
         const previous = lastAvailableRef.current[venue.libId] ?? -1;
         if (room?.isOpen && room.seatsAvailable > 0 && previous <= 0) {
-          log.info(`发现空位：${room.name} 余 ${room.seatsAvailable} 个`);
-          pushHit({
-            libId: venue.libId,
-            libName: room.name,
-            message: `发现空位，余 ${room.seatsAvailable} 个`,
-            kind: "found",
-          });
+          const booked = await attemptBooking(venue, room);
+          if (stoppedRef.current) return;
+          if (!booked) {
+            // 预约失败后重置变化门槛，下一轮仍会尝试该场馆
+            nextAvailable[venue.libId] = -1;
+          }
         }
       }
 
@@ -116,7 +195,7 @@ export function useScannerLoop() {
       schedule(backoff);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cookieStr, apiConfig, interval, pushHit, schedule]);
+  }, [cookieStr, apiConfig, interval, pushHit, schedule, attemptBooking]);
 
   const start = useCallback(() => {
     if (running) return;
@@ -135,16 +214,20 @@ export function useScannerLoop() {
     setRunning(true);
     log.info(`扫描启动：${venuesRef.current.length} 个场馆，间隔 ${interval}s`);
     void runRound();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, cookieStr, interval, runRound]);
 
-  const stop = useCallback(() => {
-    stoppedRef.current = true;
-    clearTimer();
-    setRunning(false);
-    setCurrentLibId("");
-    log.info("扫描已停止");
-  }, []);
+  // 抢座任务成功后自动停止同场馆扫描（防重复预约触发风控）
+  useEffect(() => {
+    if (!running) return;
+    registerScannerLoopStopper((libId) => {
+      if (venuesRef.current.some((v) => v.libId === libId)) {
+        log.info("抢座任务成功，自动停止同场馆扫描");
+        stop();
+        setError("同场馆抢座任务已成功，扫描自动停止");
+      }
+    });
+    return () => registerScannerLoopStopper(null);
+  }, [running, stop]);
 
   useEffect(() => {
     // Cookie 被清空时直接停扫
