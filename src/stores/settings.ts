@@ -52,7 +52,7 @@ const DEFAULT_BOOKING: BookingState = {
 const DEFAULT_PREFS: FeaturePrefs = {
   defaultExecTime: "21:48",
   cookieReminderMinutes: 15,
-  scanIntervalSec: 3,
+  scanIntervalSec: 10,
   renewalDelaySec: 60,
   renewalLeadMinutes: 2,
   lduFallbackEnabled: false,
@@ -112,11 +112,14 @@ export const useSettingsStore = create<SettingsState>()(
     },
     {
       name: "igolib:settings:v1",
-      version: 2,
-      // v2：prefs 增量字段（如触发提前量）需要回填默认值，避免旧持久化整体覆盖
+      version: 3,
       migrate: (state) => {
         if (state && typeof state === "object" && "prefs" in state) {
-          return { ...state, prefs: { ...DEFAULT_PREFS, ...(state as { prefs?: Partial<FeaturePrefs> }).prefs } };
+          const prefs = { ...DEFAULT_PREFS, ...(state as { prefs?: Partial<FeaturePrefs> }).prefs };
+          // v2：prefs 增量字段（如触发提前量）回填默认值，避免旧持久化整体覆盖
+          // v3：捡漏扫描间隔旧默认 3s 提到 10s（手动改成其他值的保持不变）
+          if (prefs.scanIntervalSec === 3) prefs.scanIntervalSec = 10;
+          return { ...state, prefs };
         }
         return state;
       },

@@ -10,7 +10,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
-import { useCookieExpiry } from "../model/useCookieExpiry";
+import { useCookieExpiry } from "@/lib/useCookieExpiry";
 import { LogsPanel } from "../../logs/components/LogsPanel";
 
 function greeting(): string {
@@ -31,7 +31,10 @@ export function HomePage() {
   const setThemeMode = useThemeStore((s) => s.setMode);
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
-  const { remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
+  const { expiry, remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
+  const expiryText = expiry !== null
+    ? `${new Date(expiry).getMonth() + 1}/${String(new Date(expiry).getDate()).padStart(2, "0")} ${String(new Date(expiry).getHours()).padStart(2, "0")}:${String(new Date(expiry).getMinutes()).padStart(2, "0")}`
+    : null;
   const setCookieStatus = useAuthStore((s) => s.setCookieStatus);
 
   const [showCookie, setShowCookie] = useState(false);
@@ -147,6 +150,11 @@ export function HomePage() {
             {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
+        {expiryText && !expired && (
+          <p className="mt-1.5 text-[10.5px] tabular-nums text-slate-500 dark:text-slate-300">
+            到期时间 {expiryText} · 剩 {remainingText}
+          </p>
+        )}
         {(expiring || expired) && (
           <div className={cn(
             "mt-2.5 flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px]",
@@ -280,24 +288,6 @@ export function HomePage() {
             <p className="px-1 text-[10.5px] leading-relaxed text-slate-500">
               预约失败时自动换官方接口名重试（备用通道，默认关闭）
             </p>
-            <div className="mt-1 flex items-center justify-between border-t border-slate-200 px-1 py-2 dark:border-white/[0.08]">
-              <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">捡漏扫描间隔</span>
-              <span className="flex items-center gap-1.5">
-                <input
-                  type="number"
-                  min={3}
-                  max={60}
-                  aria-label="捡漏扫描间隔（秒）"
-                  value={prefs.scanIntervalSec}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v)) setPrefs({ scanIntervalSec: Math.max(3, Math.min(60, v)) });
-                  }}
-                  className="h-8 w-16 rounded-lg border border-slate-200 bg-white/80 px-2 text-center font-mono text-[12px] text-slate-800 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
-                />
-                <span className="text-[11px] text-slate-500">秒（下限 3s）</span>
-              </span>
-            </div>
             <div className="mt-1 border-t border-white/[0.08] pt-2">
               <p className="mb-1.5 px-1 text-[12px] font-bold text-slate-700 dark:text-slate-200">运行日志</p>
               <LogsPanel />
