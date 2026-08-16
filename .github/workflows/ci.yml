@@ -33,3 +33,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: 版本号一致性校验
+        run: node scripts/release.mjs --check

@@ -1,7 +1,7 @@
 {
   "name": "igolib-ldu",
   "private": true,
-  "version": "4.6.25",
+  "version": "1.0.28",
   "homepage": ".",
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "tauri": "tauri",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "release": "node scripts/release.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
