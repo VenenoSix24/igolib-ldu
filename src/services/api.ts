@@ -183,6 +183,9 @@ export interface DynamicSeat {
   name: string;
   status: number;
   available: boolean;
+  /** 布局坐标（无坐标数据时为 0，网格按序排布） */
+  x: number;
+  y: number;
 }
 
 /**
@@ -215,8 +218,8 @@ export async function getDynamicRooms(
   const rooms: DynamicRoom[] = rawRooms.map(r => ({
     id: r.id,
     name: r.name,
-    floor: r.name.match(/\d+/)?.at(0) || "1", 
-    isOpen: true,
+    floor: r.name.match(/\d+/)?.at(0) || "1",
+    isOpen: r.isOpen,
     seatsTotal: r.available,
     seatsUsed: 0,
     seatsAvailable: r.available,
@@ -245,8 +248,10 @@ export async function getRoomSeats(
   const seats: DynamicSeat[] = rawSeats.map(s => ({
     key: s.key,
     name: s.name,
-    status: 1, 
-    available: true 
+    status: 1,
+    available: s.seatStatus === 1,
+    x: s.x,
+    y: s.y
   }));
 
   const seatMapping: { [name: string]: string } = {};

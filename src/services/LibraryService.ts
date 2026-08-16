@@ -10,6 +10,7 @@ interface Room {
   id: number;
   name: string;
   available: number;
+  isOpen: boolean;
 }
 
 interface Seat {
@@ -17,6 +18,9 @@ interface Seat {
   name: string;
   status: boolean;
   type: number;
+  x: number;
+  y: number;
+  seatStatus: number;
 }
 
 interface RawSeat {
@@ -25,11 +29,14 @@ interface RawSeat {
   status: boolean;
   type: number;
   seat_status?: number;
+  x?: number;
+  y?: number;
 }
 
 interface RawLib {
   lib_id: number;
   lib_name: string;
+  is_open?: number | boolean;
   lib_rt?: { seats_has?: number };
   lib_layout?: { seats?: RawSeat[] };
 }
@@ -158,14 +165,15 @@ export class LibraryService {
     return libs.map((l) => ({
       id: l.lib_id,
       name: l.lib_name,
-      available: l.lib_rt?.seats_has || 0
+      available: l.lib_rt?.seats_has || 0,
+      isOpen: l.is_open !== 0 && l.is_open !== false
     }));
   }
 
   // 2. Get Seat Layout
   // 明日预约需要展示全部座位
   async getSeatLayout(libId: number, includeOccupied = false): Promise<Seat[]> {
-    const query = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_layout { seats { key name status seat_status type } } } } } }`;
+    const query = `query libLayout($libId: Int, $libType: Int) { userAuth { reserve { libs(libType: $libType, libId: $libId) { lib_layout { seats { key name status seat_status type x y } } } } } }`;
     const data = await this.sendGraphql("libLayout", query, { libId, libType: -1 });
     const seats = data?.data?.userAuth?.reserve?.libs?.[0]?.lib_layout?.seats || [];
 
@@ -180,7 +188,10 @@ export class LibraryService {
       key: s.key,
       name: s.name,
       status: s.status,
-      type: s.type
+      type: s.type,
+      x: s.x ?? 0,
+      y: s.y ?? 0,
+      seatStatus: s.seat_status !== undefined ? s.seat_status : 1
     }));
   }
 
