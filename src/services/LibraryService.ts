@@ -88,10 +88,11 @@ export class LibraryService {
     httpLog.info(`LibraryService 初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
   }
 
-  // 带重试逻辑的通用 GraphQL 发送器
+  // 带超时与重试逻辑的通用 GraphQL 发送器
   private async sendGraphql(operationName: string, query: string, variables: Record<string, unknown> = {}): Promise<GqlResponse> {
     const MAX_RETRIES = 3;
-    let lastError;
+    const TIMEOUT_MS = 8000;
+    let lastError: Error = new Error("请求失败");
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
@@ -108,22 +109,38 @@ export class LibraryService {
         httpLog.debug(`Headers:`, loggedHeaders);
         httpLog.debug(`Variables:`, variables);
 
-        const response = await fetch(this.baseUrl, {
-          method: 'POST',
-          headers: this.headers,
-          body: JSON.stringify({ operationName, query, variables })
-        });
+        const timeoutController = new AbortController();
+        const timeoutId = setTimeout(() => timeoutController.abort(), TIMEOUT_MS);
+
+        let response: Response;
+        try {
+          response = await fetch(this.baseUrl, {
+            method: 'POST',
+            headers: this.headers,
+            body: JSON.stringify({ operationName, query, variables }),
+            signal: timeoutController.signal
+          });
+        } catch (error) {
+          // 网络层失败或超时：可重试
+          throw { retryable: true, error };
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
-          throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+          // 5xx 视为临时故障可重试；4xx 是请求本身的问题，重试无意义
+          throw { retryable: response.status >= 500, error: new Error(`HTTP Error: ${response.status} ${response.statusText}`) };
         }
 
         const json = await response.json();
         httpLog.debug(`${operationName} 响应:`, json);
         return json;
-      } catch (error) {
-        httpLog.error(`请求失败 (第 ${attempt} 次):`, error);
-        lastError = error;
+      } catch (failure) {
+        const retryable = (failure as { retryable?: boolean }).retryable === true;
+        const error = (failure as { error?: unknown }).error ?? failure;
+        lastError = error instanceof Error ? error : new Error(String(error));
+        httpLog.error(`请求失败 (第 ${attempt} 次)${retryable ? "" : "（不可重试）"}:`, lastError);
+        if (!retryable) break;
       }
     }
     throw lastError;
