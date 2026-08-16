@@ -112,7 +112,14 @@ export const useSettingsStore = create<SettingsState>()(
     },
     {
       name: "igolib:settings:v1",
-      version: 1,
+      version: 2,
+      // v2：prefs 增量字段（如触发提前量）需要回填默认值，避免旧持久化整体覆盖
+      migrate: (state) => {
+        if (state && typeof state === "object" && "prefs" in state) {
+          return { ...state, prefs: { ...DEFAULT_PREFS, ...(state as { prefs?: Partial<FeaturePrefs> }).prefs } };
+        }
+        return state;
+      },
     },
   ),
 );
