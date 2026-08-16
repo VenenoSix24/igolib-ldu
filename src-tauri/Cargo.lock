@@ -2024,7 +2024,7 @@ dependencies = [
 
 [[package]]
 name = "igolib-ldu"
-version = "1.0.27"
+version = "1.0.28"
 dependencies = [
  "log",
  "reqwest",
