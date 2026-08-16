@@ -6,7 +6,7 @@ import { RenewalPage } from "../features/renewal/pages/RenewalPage";
 import { LogsPage } from "../features/logs/pages/LogsPage";
 import { SettingsPage } from "../features/settings/pages/SettingsPage";
 
-/** 2.0 路由：/app/* 为新壳；/dashboard（旧）在 S0-8 迁移完成前保留 */
+/** 2.0 路由：/app/* 为新壳；/dashboard（旧）在功能页迁移完成前保留 */
 export function AppRouter() {
   return (
     <Routes>

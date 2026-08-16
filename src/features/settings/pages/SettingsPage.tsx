@@ -16,7 +16,7 @@ export function SettingsPage() {
   return (
     <GlassCard hoverable className="p-8">
       <h1 className="text-lg font-semibold">设置</h1>
-      <p className="mt-1 text-xs opacity-50">S1 开发中 · 完整设置中心（API 预设 / 通知 / 扫描参数 / 兼容模式）随后到位</p>
+      <p className="mt-1 text-xs opacity-50">开发中 · API 预设、通知、扫描参数等设置项随后到位</p>
 
       <div className="mt-6">
         <div className="mb-2 text-xs opacity-60">主题</div>

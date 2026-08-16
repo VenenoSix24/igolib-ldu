@@ -10,7 +10,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
   ({ className, hoverable = false, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("glass", hoverable && "glass-hoverable", className)}
+      className={cn("glass relative rounded-3xl", hoverable && "glass-hoverable", className)}
       {...props}
     />
   ),

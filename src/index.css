@@ -218,7 +218,6 @@
   --glass-highlight: rgba(255, 255, 255, 0.35);
   --glass-counter-shine: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --glass-radius: 24px;
   --glass-backdrop: blur(22px) saturate(160%);
 }
 
@@ -230,30 +229,32 @@
   --glass-shadow: 0 8px 28px rgba(70, 84, 110, 0.18);
 }
 
-.glass {
-  position: relative;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius);
-  box-shadow:
-    inset 0 1px 0 var(--glass-highlight),
-    inset 0 -1px 0 var(--glass-counter-shine),
-    var(--glass-shadow);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-}
+/* 玻璃类置于 components 层：position 与 border-radius 由组件层控制，
+   避免 fixed / rounded-full 等工具类被覆盖 */
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      inset 0 -1px 0 var(--glass-counter-shine),
+      var(--glass-shadow);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+  }
 
-/* 折射增强层：仅 Chromium 系特性检测通过时叠加（GlassFilter 组件负责挂类） */
-body.refraction .glass {
-  backdrop-filter: url(#igolib-frosted) saturate(160%);
-  -webkit-backdrop-filter: url(#igolib-frosted) saturate(160%);
-}
+  /* 折射增强层：仅 Chromium 系特性检测通过时叠加（GlassFilter 组件负责挂类） */
+  body.refraction .glass {
+    backdrop-filter: url(#igolib-frosted) saturate(160%);
+    -webkit-backdrop-filter: url(#igolib-frosted) saturate(160%);
+  }
 
-.glass-hoverable {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.glass-hoverable:hover {
-  transform: scale(1.008);
+  .glass-hoverable {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .glass-hoverable:hover {
+    transform: scale(1.008);
+  }
 }
 
 /* 壁纸层：wallpaper 模式时由 WallpaperLayer 渲染在内容之下 */
