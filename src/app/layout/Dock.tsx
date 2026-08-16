@@ -12,7 +12,7 @@ export function Dock() {
   return createPortal(
     <nav
       aria-label="底部导航"
-      className="glass fixed bottom-5 left-1/2 z-10 flex -translate-x-1/2 gap-0.5 rounded-full p-1.5 md:hidden"
+      className="glass fixed bottom-5 left-1/2 z-10 flex -translate-x-1/2 gap-1 rounded-full p-1.5 md:hidden"
     >
       {NAV_ITEMS.map(({ path, shortLabel, icon: Icon }) => (
         <NavLink
@@ -20,7 +20,7 @@ export function Dock() {
           to={path}
           className={({ isActive }) =>
             cn(
-              "flex flex-col items-center gap-0.5 rounded-full px-3.5 pt-1.5 pb-1 text-[11px] transition-all active:scale-90",
+              "flex flex-col items-center gap-0.5 whitespace-nowrap rounded-full px-4 pt-1.5 pb-1 text-[11px] transition-all active:scale-90",
               isActive ? "bg-white/80 font-semibold text-[#131a2a]" : "opacity-60",
             )
           }
