@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Eye, EyeOff, Image, KeyRound, Moon, QrCode, Settings2, Sun } from "lucide-react";
+import { AlertTriangle, ChevronRight, Eye, EyeOff, Image, KeyRound, Moon, QrCode, Settings2, Sun } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
@@ -9,6 +9,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
+import { useCookieExpiry } from "../model/useCookieExpiry";
 import { LogsPanel } from "../../logs/components/LogsPanel";
 
 function greeting(): string {
@@ -29,6 +30,7 @@ export function HomePage() {
   const setThemeMode = useThemeStore((s) => s.setMode);
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
+  const { remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
 
   const [showCookie, setShowCookie] = useState(false);
   const [showQr, setShowQr] = useState(false);
@@ -96,8 +98,17 @@ export function HomePage() {
           <KeyRound className="h-3.5 w-3.5" />身份 Cookie
           <span className="ml-auto">
             {validating && <span className="animate-pulse text-[10px] text-blue-500">验证中…</span>}
-            {!validating && userInfo?.valid && <span className="text-[10px] text-green-500">● 有效</span>}
+            {!validating && userInfo?.valid && (
+              <span className={cn("text-[10px]", expired ? "text-red-500" : expiring ? "text-amber-500" : "text-green-500")}>
+                ● {expired ? "已到期" : expiring ? "即将到期" : "有效"}
+              </span>
+            )}
             {!validating && userInfo && !userInfo.valid && <span className="text-[10px] text-red-500">● 无效</span>}
+            {remainingText && !expired && (
+              <span className={cn("ml-1.5 text-[10px]", expiring ? "text-amber-500" : "text-slate-400")}>
+                剩 {remainingText}
+              </span>
+            )}
           </span>
         </div>
         <div className="relative">
@@ -122,6 +133,27 @@ export function HomePage() {
             {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
+        {(expiring || expired) && (
+          <div className={cn(
+            "mt-2.5 flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px]",
+            expired
+              ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+          )}>
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span className="flex-1 leading-relaxed">
+              {expired ? "Cookie 已到期，预约功能将不可用" : `Cookie 即将到期（剩 ${remainingText}）`}
+              ，请重新扫码获取
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowQr(true)}
+              className="shrink-0 cursor-pointer rounded-full bg-white/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 transition-transform active:scale-[0.97] dark:bg-white/15 dark:text-slate-100"
+            >
+              重新扫码
+            </button>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => setShowQr(true)}
