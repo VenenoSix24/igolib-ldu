@@ -1,3 +1,6 @@
+import { createLogger } from '@/lib/logger';
+
+const apiLog = createLogger("Task");
 
 export interface RoomMapping {
   [id: string]: string;
@@ -51,7 +54,7 @@ export async function submitRequest(
     if (!request.seatKey) {
       if (request.seatNumber) {
         const msg = `[解析] 正在为您查找座位号 ${request.seatNumber} 的系统标识...`;
-        console.log(msg);
+        apiLog.info(msg);
         if (onStatusUpdate) onStatusUpdate(msg, "info");
         try {
           // 明日预约模式(mode=1)需要包含今日被占用的座位，否则解析不到 Key
@@ -63,7 +66,7 @@ export async function submitRequest(
           if (resolvedKey) {
             request.seatKey = resolvedKey;
             const successMsg = `[解析] 座位标识已锁定 (${resolvedKey})`;
-            console.log(successMsg);
+            apiLog.info(successMsg);
             if (onStatusUpdate) onStatusUpdate(successMsg, "info");
           } else {
             throw new Error(`无法找到座位号 "${request.seatNumber}" 对应的 Key。请检查座位号是否正确或座位是否开放。`);
@@ -78,7 +81,7 @@ export async function submitRequest(
 
     if (request.timeStr) {
       const msg = `执行时间 ${request.timeStr} 已设定`;
-      console.log(msg);
+      apiLog.info(msg);
       if (onStatusUpdate) onStatusUpdate(msg, "phase", { phase: "waiting" });
 
       try {
@@ -91,11 +94,11 @@ export async function submitRequest(
             // 优化显示格式
             const timeStr = m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
             const msg = `距执行还有 ${timeStr}`;
-            console.log(msg);
+            apiLog.info(msg);
             if (onStatusUpdate) onStatusUpdate(msg, "countdown", { remaining, phase: "waiting" });
           } else {
             const msg = `即将开始！还剩 ${Math.floor(remaining)} 秒`;
-            console.log(msg);
+            apiLog.info(msg);
             if (onStatusUpdate) onStatusUpdate(msg, "countdown", { remaining, phase: "countdown" });
           }
         }, controller.signal); // 在此处传递信号
@@ -147,7 +150,7 @@ export async function cancelTask(clientId: string): Promise<ApiResponse<void>> {
   if (controller) {
     controller.abort();
     activeControllers.delete(clientId);
-    console.log(`[Task] Cancelled task ${clientId}`);
+    apiLog.info(`已取消任务 ${clientId}`);
     return { status: "success", message: "Task cancelled", data: undefined };
   }
   return { status: "warning", message: "Task not found or already finished", data: undefined };
