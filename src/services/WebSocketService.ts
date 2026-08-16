@@ -1,4 +1,7 @@
 import WebSocket from '@tauri-apps/plugin-websocket';
+import { createLogger } from '@/lib/logger';
+
+const wsLog = createLogger("WS");
 
 export class WebSocketService {
   private host: string;
@@ -20,12 +23,12 @@ export class WebSocketService {
       "Cookie": cookie
     };
     
-    console.log(`[WS] 动态初始化成功: Host=${this.host}, Origin=${origin}`);
+    wsLog.info(`动态初始化成功: Host=${this.host}, Origin=${origin}`);
   }
 
   async passQueue(mode: number, onStatus?: (msg: string) => void): Promise<boolean> {
     const log = (msg: string) => {
-      console.log(`[WS] ${msg}`);
+      wsLog.info(msg);
       onStatus?.(msg);
     };
 
