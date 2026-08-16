@@ -29,13 +29,13 @@ function stepIndex(phase: string): number {
 
 function levelTag(log: LogEntry): { text: string; cls: string } {
   switch (log.event ?? log.type) {
-    case "success": return { text: "成功", cls: "bg-green-500/15 text-green-300" };
-    case "error": return { text: "错误", cls: "bg-red-400/15 text-red-300" };
+    case "success": return { text: "成功", cls: "bg-green-500/15 text-green-700 dark:text-green-300" };
+    case "error": return { text: "错误", cls: "bg-red-500/15 text-red-600 dark:text-red-300" };
     case "warning":
-    case "cancelled": return { text: "警告", cls: "bg-amber-400/15 text-amber-300" };
-    case "countdown": return { text: "倒计时", cls: "bg-cyan-400/15 text-cyan-300" };
-    case "phase": return { text: "阶段", cls: "bg-blue-400/15 text-blue-300" };
-    default: return { text: "INFO", cls: "bg-blue-400/10 text-slate-400" };
+    case "cancelled": return { text: "警告", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-300" };
+    case "countdown": return { text: "倒计时", cls: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300" };
+    case "phase": return { text: "阶段", cls: "bg-blue-500/15 text-blue-600 dark:text-blue-300" };
+    default: return { text: "INFO", cls: "bg-slate-500/10 text-slate-500 dark:text-slate-400" };
   }
 }
 
@@ -48,14 +48,35 @@ function passFilter(log: LogEntry, filter: LogFilter): boolean {
   return log.event === "phase" || log.event === "success" || log.type === "error" || log.type === "success";
 }
 
-const STATUS_META: Record<TaskStatus, { icon: typeof Timer; iconCls: string; chip: string; title: string }> = {
-  idle: { icon: Timer, iconCls: "bg-white/10 text-slate-400", chip: "text-slate-400 bg-white/[0.06] border-white/15", title: "任务控制台" },
-  connecting: { icon: Zap, iconCls: "bg-blue-400/20 text-blue-300", chip: "text-green-300 bg-green-500/10 border-green-400/30", title: "正在连接…" },
-  running: { icon: Zap, iconCls: "bg-blue-400/20 text-blue-300", chip: "text-green-300 bg-green-500/10 border-green-400/30", title: "正在执行…" },
-  success: { icon: Rocket, iconCls: "bg-green-500/15 text-green-300", chip: "text-green-300 bg-green-500/10 border-green-400/30", title: "预约成功 · 座位已锁定" },
-  failed: { icon: StopCircle, iconCls: "bg-red-400/15 text-red-300", chip: "text-red-300 bg-red-400/10 border-red-400/30", title: "任务失败" },
-  cancelled: { icon: StopCircle, iconCls: "bg-amber-400/15 text-amber-300", chip: "text-amber-300 bg-amber-400/10 border-amber-400/30", title: "任务已取消" },
+const STATUS_META: Record<TaskStatus, { icon: typeof Timer; iconCls: string; chip: string; title: string; titleCls: string }> = {
+  idle: { icon: Timer, iconCls: "bg-slate-200 text-slate-500 dark:bg-white/10 dark:text-slate-400", chip: "text-slate-500 border-slate-300 bg-slate-100 dark:border-white/15 dark:bg-white/[0.06] dark:text-slate-400", title: "任务控制台", titleCls: "text-slate-800 dark:text-slate-100" },
+  connecting: { icon: Zap, iconCls: "bg-blue-500/15 text-blue-600 dark:bg-blue-400/20 dark:text-blue-300", chip: "text-green-600 border-green-500/30 bg-green-500/10 dark:text-green-300", title: "正在连接…", titleCls: "text-slate-800 dark:text-slate-100" },
+  running: { icon: Zap, iconCls: "bg-blue-500/15 text-blue-600 dark:bg-blue-400/20 dark:text-blue-300", chip: "text-green-600 border-green-500/30 bg-green-500/10 dark:text-green-300", title: "正在执行…", titleCls: "text-slate-800 dark:text-slate-100" },
+  success: { icon: Rocket, iconCls: "bg-green-500/15 text-green-600 dark:bg-green-500/15 dark:text-green-300", chip: "text-green-600 border-green-500/30 bg-green-500/10 dark:text-green-300", title: "预约成功 · 座位已锁定", titleCls: "text-green-600 dark:text-green-300" },
+  failed: { icon: StopCircle, iconCls: "bg-red-500/15 text-red-600 dark:bg-red-400/15 dark:text-red-300", chip: "text-red-600 border-red-500/30 bg-red-500/10 dark:text-red-300", title: "任务失败", titleCls: "text-red-600 dark:text-red-300" },
+  cancelled: { icon: StopCircle, iconCls: "bg-amber-500/15 text-amber-600 dark:bg-amber-400/15 dark:text-amber-300", chip: "text-amber-600 border-amber-500/30 bg-amber-500/10 dark:text-amber-300", title: "任务已取消", titleCls: "text-amber-600 dark:text-amber-300" },
 };
+
+/** 空状态：CSS 绘制的迷你座位图，几个座位亮起等待任务 */
+function EmptySeatsGlyph() {
+  const lit = new Set([3, 8, 16, 22]);
+  return (
+    <div className="grid w-fit grid-cols-7 gap-1" aria-hidden="true">
+      {Array.from({ length: 21 }, (_, i) => (
+        <span
+          key={i}
+          className={cn(
+            "h-2 w-2 rounded-[3px]",
+            lit.has(i)
+              ? "animate-pulse bg-blue-400/80"
+              : "bg-slate-300 dark:bg-white/15",
+          )}
+          style={lit.has(i) ? { animationDelay: `${(i % 7) * 200}ms` } : undefined}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface ConsoleCardProps {
   status: TaskStatus;
@@ -77,8 +98,11 @@ export function ConsoleCard({
 
   const visibleLogs = useMemo(() => logs.filter((l) => passFilter(l, filter)), [logs, filter]);
 
+  // 有新日志时跟随滚动；空列表不滚动，避免页面加载被拽到底部
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (logs.length > 0) {
+      logEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }, [logs]);
 
   const meta = STATUS_META[status];
@@ -100,12 +124,7 @@ export function ConsoleCard({
           <StatusIcon className={cn("h-5 w-5", running && "animate-pulse")} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className={cn(
-            "text-[14.5px] font-extrabold",
-            status === "success" && "text-green-300",
-            status === "failed" && "text-red-300",
-            status === "cancelled" && "text-amber-300",
-          )}>{meta.title}</div>
+          <div className={cn("text-[14.5px] font-extrabold", meta.titleCls)}>{meta.title}</div>
           <div className="truncate font-mono text-[11.5px] text-slate-500 dark:text-slate-400">{subTitle}</div>
         </div>
         <span className={cn(
@@ -119,7 +138,7 @@ export function ConsoleCard({
           type="button"
           aria-label="清空日志"
           onClick={() => setLogs([])}
-          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-slate-400 transition-colors hover:text-slate-200"
+          className="flex h-[30px] w-[30px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-slate-500 transition-colors hover:text-slate-700 dark:border-white/15 dark:bg-white/[0.07] dark:text-slate-400 dark:hover:text-slate-200"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -137,40 +156,40 @@ export function ConsoleCard({
                   <div className={cn(
                     "flex h-[30px] w-[30px] items-center justify-center rounded-full border text-[11px] transition-all",
                     isDone
-                      ? "border-green-400/40 bg-green-500/15 text-green-300"
+                      ? "border-green-500/40 bg-green-500/15 text-green-600 dark:text-green-300"
                       : isAct
-                        ? "animate-pulse border-blue-400/60 bg-blue-400/20 text-blue-100 shadow-[0_0_0_4px_rgba(125,167,255,0.15)]"
-                        : "border-white/15 bg-white/[0.08] text-slate-500",
+                        ? "animate-pulse border-blue-500/60 bg-blue-500/15 text-blue-600 shadow-[0_0_0_4px_rgba(125,167,255,0.2)] dark:bg-blue-400/20 dark:text-blue-100"
+                        : "border-slate-300 bg-slate-100 text-slate-400 dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-500",
                   )}>
                     {isDone ? <Check className="h-3.5 w-3.5" /> : isAct ? i + 1 : <Clock className="h-3.5 w-3.5" />}
                   </div>
                   <span className={cn(
                     "whitespace-nowrap text-[10px]",
-                    isDone ? "text-green-300" : isAct ? "font-bold text-blue-300" : "text-slate-500",
+                    isDone ? "text-green-600 dark:text-green-300" : isAct ? "font-bold text-blue-600 dark:text-blue-300" : "text-slate-400 dark:text-slate-500",
                   )}>{step.label}</span>
                 </div>
                 {i < STEPS.length - 1 && (
                   <div className={cn(
                     "-mt-4 h-[2.5px] min-w-2 flex-1 rounded-full",
-                    doneAll || i < current ? "bg-green-400/50" : "bg-white/10",
+                    doneAll || i < current ? "bg-green-500/50" : "bg-slate-200 dark:bg-white/10",
                   )} />
                 )}
               </div>
             );
           })}
         </div>
-        <div className="mt-1.5 text-right font-mono text-[10.5px] text-slate-500 tabular-nums">
+        <div className="mt-1.5 text-right font-mono text-[10.5px] text-slate-400 tabular-nums dark:text-slate-500">
           Step {Math.min(current + 1, STEPS.length)} / {STEPS.length}
           {doneAll && " · 全部完成"}
         </div>
       </div>
 
       {/* 日志流 */}
-      <div className="flex min-h-32 flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-[#080b18]/60 p-2.5">
+      <div className="flex min-h-32 flex-col gap-1.5 rounded-2xl border border-slate-200 bg-slate-100/60 p-2.5 dark:border-white/[0.08] dark:bg-[#0a0c11]/60">
         {visibleLogs.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 py-6 text-slate-500">
-            <span className="text-2xl grayscale">☕</span>
-            <span className="text-[11.5px]">Ready when you are</span>
+          <div className="flex flex-1 flex-col items-center justify-center gap-2.5 py-6">
+            <EmptySeatsGlyph />
+            <span className="text-[11.5px] text-slate-400 dark:text-slate-500">座位就绪，等待任务启动</span>
           </div>
         ) : (
           visibleLogs.map((log, i) => {
@@ -181,17 +200,17 @@ export function ConsoleCard({
                 key={log.id}
                 className={cn(
                   "flex items-start gap-2 rounded-lg px-2 py-1.5 font-mono text-[11.5px]",
-                  isLast && log.event !== "success" && log.type !== "error" ? "bg-white/[0.05]" : "",
+                  isLast && log.event !== "success" && log.type !== "error" ? "bg-white/70 dark:bg-white/[0.05]" : "",
                 )}
               >
-                <span className="shrink-0 pt-px text-[10.5px] text-slate-600 dark:text-slate-500">{log.timestamp.split(" ")[0]}</span>
+                <span className="shrink-0 pt-px text-[10.5px] text-slate-400 dark:text-slate-500">{log.timestamp.split(" ")[0]}</span>
                 <span className={cn("mt-px shrink-0 rounded px-1.5 py-px text-[9.5px] font-bold", tag.cls)}>{tag.text}</span>
                 <span className="min-w-0 flex-1 break-words text-slate-600 dark:text-slate-300">
                   {log.message}
                   {log.count && log.count > 1 && (
-                    <span className="ml-2 shrink-0 rounded-full bg-white/10 px-1.5 py-px text-[9.5px] text-slate-400">×{log.count}</span>
+                    <span className="ml-2 shrink-0 rounded-full bg-slate-300/70 px-1.5 py-px text-[9.5px] text-slate-500 dark:bg-white/10 dark:text-slate-400">×{log.count}</span>
                   )}
-                  {isLast && running && <span className="ml-1 inline-block h-3 w-[7px] animate-pulse rounded-sm bg-blue-300 align-[-2px]" />}
+                  {isLast && running && <span className="ml-1 inline-block h-3 w-[7px] animate-pulse rounded-sm bg-blue-500 align-[-2px] dark:bg-blue-300" />}
                 </span>
               </div>
             );
@@ -206,7 +225,7 @@ export function ConsoleCard({
           <button
             type="button"
             onClick={onStop}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-red-300 to-red-400 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg shadow-red-400/30 transition-transform active:scale-[0.97]"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-red-400 to-red-500 px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg shadow-red-400/30 transition-transform active:scale-[0.97]"
           >
             <StopCircle className="h-4 w-4" />终止任务
           </button>
@@ -218,8 +237,8 @@ export function ConsoleCard({
               className={cn(
                 "cursor-pointer rounded-full border px-3 py-1.5 text-[11px] transition-colors",
                 filter === f
-                  ? "border-transparent bg-white/90 font-bold text-[#131a2a]"
-                  : "border-white/10 bg-white/[0.06] text-slate-400 hover:text-slate-200",
+                  ? "border-transparent bg-slate-800 font-bold text-white dark:bg-white/90 dark:text-[#131a2a]"
+                  : "border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-700 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-400 dark:hover:text-slate-200",
               )}
             >
               {f === "all" ? "全部" : f === "key" ? "关键" : "错误"}

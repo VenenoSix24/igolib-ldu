@@ -81,15 +81,15 @@ export function VenueList({
             onClick={() => !full && onChange(String(room.id))}
             disabled={full}
             className={cn(
-              "flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all",
+              "flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all border-slate-200 dark:border-transparent",
               active
-                ? "border-blue-400/50 bg-blue-400/10"
+                ? "border-blue-500/50 bg-blue-500/10"
                 : full
-                  ? "cursor-not-allowed border-transparent bg-white/[0.04] opacity-60"
-                  : "border-transparent bg-white/[0.05] hover:bg-white/[0.09]",
+                  ? "cursor-not-allowed border-slate-200 bg-slate-100/50 opacity-60 dark:border-transparent dark:bg-white/[0.04]"
+                  : "border-slate-200 bg-slate-100 hover:bg-slate-200/70 dark:border-transparent dark:bg-white/[0.05] dark:hover:bg-white/[0.09]",
             )}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.08] text-slate-400">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-500 dark:bg-white/[0.08] dark:text-slate-400">
               <Building2 className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
