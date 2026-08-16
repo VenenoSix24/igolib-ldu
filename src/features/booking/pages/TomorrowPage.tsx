@@ -20,6 +20,7 @@ export function TomorrowPage() {
   const booking = useSettingsStore((s) => s.booking);
   const setBooking = useSettingsStore((s) => s.setBooking);
   const defaultTime = useSettingsStore((s) => s.prefs.defaultExecTime);
+  const setPrefs = useSettingsStore((s) => s.setPrefs);
 
   const { rooms, dynamicRooms, loadingRooms, roomsError, userInfo } =
     useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
@@ -144,6 +145,7 @@ export function TomorrowPage() {
             onCustomTime={(customTime) => setBooking({ customTime })}
             hint={`模式默认 ${defaultTime}`}
             defaultTime={defaultTime}
+            onDefaultTime={(t) => setPrefs({ defaultExecTime: t })}
           />
         </GlassCard>
       </div>

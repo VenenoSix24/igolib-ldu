@@ -4,7 +4,6 @@ import { cn } from "../../lib/utils";
 import { GlassCard } from "../../components/glass/GlassCard";
 import { useThemeStore, type ThemeMode } from "../../stores/theme";
 import { NAV_ITEMS } from "./nav";
-import { CookieMiniCard } from "./CookieMiniCard";
 
 const THEME_QUICK: { mode: ThemeMode; title: string; icon: typeof Sun }[] = [
   { mode: "light", title: "浅色", icon: Sun },
@@ -18,7 +17,7 @@ export function SideNav() {
   const setMode = useThemeStore((s) => s.setMode);
 
   return (
-    <GlassCard className="hidden w-[196px] shrink-0 flex-col p-4 md:sticky md:top-7 md:flex md:self-start">
+    <GlassCard className="flex w-full flex-col p-4">
       <div className="mb-3 flex items-center gap-2.5 px-2">
         <BookMarked className="h-5 w-5 opacity-80" />
         <span className="text-sm font-semibold tracking-wide">我去抢个座</span>
@@ -45,7 +44,6 @@ export function SideNav() {
       </nav>
 
       <div className="mt-auto pt-4">
-        <CookieMiniCard />
         <div className="flex items-center justify-around rounded-2xl border border-white/10 bg-white/5 p-1.5">
           {THEME_QUICK.map(({ mode: m, title, icon: Icon }) => (
             <button

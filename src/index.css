@@ -285,11 +285,15 @@
 }
 
 /* 深色：石墨底 + 暖灯光（自习室台灯意象），避开蓝紫 */
-[data-app-theme="dark"] .app-root,
-[data-app-theme="wallpaper"] .app-root {
+[data-app-theme="dark"] .app-root {
   background:
     radial-gradient(ellipse 80% 50% at 70% -12%, rgba(120, 90, 40, 0.35) 0%, transparent 55%),
     linear-gradient(170deg, #121317 0%, #0e0f12 55%, #131418 100%);
+}
+
+/* wallpaper 模式：背景透明露出壁纸层（壁纸自带 ::after 暗化渐变保证文字对比） */
+[data-app-theme="wallpaper"] .app-root {
+  background: transparent;
 }
 
 [data-app-theme="dark"] .app-root::before,
