@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
-import { SettingsModal, loadApiConfig, saveApiConfig, type ApiConfig, DEFAULT_CONFIG } from "@/components/SettingsModal";
+import { SettingsModal } from "@/components/SettingsModal";
+import { loadApiConfig, saveApiConfig, DEFAULT_CONFIG, type ApiConfig } from "@/lib/api-config";
 import { QRCodeCanvas } from "qrcode.react";
 import { AuthService } from "../services/AuthService";
 
@@ -94,8 +95,8 @@ export default function Dashboard() {
       setShowAuthDialog(false);
       setAuthInputUrl("");
       setAuthError(null);
-    } catch (e: any) {
-      const msg = e.message || String(e);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
       setAuthError(msg);
     } finally {
       setAuthLoading(false);
@@ -127,7 +128,7 @@ export default function Dashboard() {
         } else {
           setUserInfo({ name: "", valid: false });
         }
-      } catch (error) {
+      } catch {
         setUserInfo({ name: "", valid: false });
       } finally {
         setValidatingCookie(false);
@@ -171,8 +172,8 @@ export default function Dashboard() {
     const savedCookie = localStorage.getItem("cookieStr"); if (savedCookie) setCookieStr(savedCookie);
     const savedLibId = localStorage.getItem("libId"); if (savedLibId) setLibId(savedLibId);
     const savedSeat = localStorage.getItem("seatNumber"); if (savedSeat) setSeatNumber(savedSeat);
-    const savedOpMode = localStorage.getItem("opMode"); if (savedOpMode) setOpMode(savedOpMode as any);
-    const savedExecTime = localStorage.getItem("execTime"); if (savedExecTime) setExecTime(savedExecTime as any);
+    const savedOpMode = localStorage.getItem("opMode"); if (savedOpMode) setOpMode(savedOpMode as 'scheduled' | 'immediate');
+    const savedExecTime = localStorage.getItem("execTime"); if (savedExecTime) setExecTime(savedExecTime as 'immediate' | '2148' | 'custom');
     const savedTime = localStorage.getItem("customTime"); if (savedTime) setCustomTime(savedTime);
 
     return () => {
@@ -491,11 +492,12 @@ export default function Dashboard() {
       addLog("任务成功！座位已锁定。", "success", "success");
       setShowResultDialog(true);
 
-    } catch (error: any) {
+    } catch (error) {
       // 失败处理
-      const isCancelled = error.message === "Task cancelled";
+      const errMsg = error instanceof Error ? error.message : "";
+      const isCancelled = errMsg === "Task cancelled";
       setStatus(isCancelled ? "cancelled" : "failed");
-      const errorMsg = error.message || "未知错误";
+      const errorMsg = errMsg || "未知错误";
 
       if (isCancelled) {
         addLog("任务已主动取消", "warning", "cancelled");
@@ -653,7 +655,7 @@ export default function Dashboard() {
                     {['immediate', '2148', 'custom'].map((t) => (
                       <button
                         key={t}
-                        onClick={() => setExecTime(t as any)}
+                        onClick={() => setExecTime(t as 'immediate' | '2148' | 'custom')}
                         className={cn(
                           "flex-1 py-1.5 px-2 rounded-md text-xs font-bold transition-all capitalize",
                           execTime === t
@@ -1175,7 +1177,7 @@ export default function Dashboard() {
                           try {
                             const text = await readText();
                             if (text) setAuthInputUrl(text.trim());
-                          } catch (err: any) {
+                          } catch (err) {
                             console.warn("[Auth] 粘贴失败:", err);
                             alert("无法获取剪贴板内容，请手动长按输入框粘贴");
                           }

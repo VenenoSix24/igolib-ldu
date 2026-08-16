@@ -20,4 +20,10 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/components/ui/**', 'src/components/theme-provider.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'warn',
+    },
+  },
 ])

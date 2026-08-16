@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { DEFAULT_CONFIG, type ApiConfig } from "@/components/SettingsModal";
+import { DEFAULT_CONFIG, type ApiConfig } from "@/lib/api-config";
 
 export type OpMode = "scheduled" | "immediate";
 export type ExecTime = "immediate" | "2148" | "custom";

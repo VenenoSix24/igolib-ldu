@@ -37,9 +37,11 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({ update, onClose }) =
     getVersion().then(v => setCurrentVersion(v)).catch(console.error);
   }, []);
 
-  useEffect(() => {
+  const [lastUpdate, setLastUpdate] = useState(update);
+  if (update !== lastUpdate) {
+    setLastUpdate(update);
     if (update) setImgError(false);
-  }, [update]);
+  }
 
   const handleUpdate = async () => {
     if (!update) return;
@@ -56,9 +58,9 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({ update, onClose }) =
         await (update as Update).downloadAndInstall();
         await relaunch();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("更新失败:", err);
-      setError(err.message || "更新过程中发生错误");
+      setError(err instanceof Error ? err.message : "更新过程中发生错误");
       setIsUpdating(false);
     }
   };
