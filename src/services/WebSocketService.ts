@@ -45,7 +45,6 @@ export class WebSocketService {
       // 进行完整的 WebSocket 排队轮询验证
       return new Promise<boolean>((resolve, reject) => {
         let isResolved = false;
-        let pollTimer: any;
 
         // 超时15秒，放弃排队
         const timeout = setTimeout(async () => {
@@ -60,51 +59,48 @@ export class WebSocketService {
 
         ws.addListener((msg) => {
           if (isResolved) return;
+          if (msg.type !== "Text") return;
 
           try {
-            const payload = typeof msg === 'string' ? msg : (msg as any).data;
-            if (typeof payload === 'string') {
-              let serverMsg = payload;
-              try {
-                const data = JSON.parse(payload);
-                serverMsg = data.msg || payload;
-              } catch (e) {
-                // 如果不是 JSON，就直接用字符串
-              }
-              
-              log(`拉回收到: ${serverMsg}`);
+            let serverMsg = msg.data;
+            try {
+              serverMsg = JSON.parse(msg.data).msg || msg.data;
+            } catch {
+              // 非 JSON 消息直接用原始字符串
+            }
 
-              const lowerMsg = String(serverMsg).toLowerCase();
+            log(`拉回收到: ${serverMsg}`);
 
-              if (["不在", "未开始", "结束", "已闭馆", "登记了", "已登记"].some(k => lowerMsg.includes(k))) {
-                if (mode === 2) {
-                  log(`当日推断: 当前时段无需排队 (${serverMsg})，直接放行...`);
-                  isResolved = true;
-                  clearTimeout(timeout);
-                  clearInterval(pollTimer);
-                  ws.disconnect().then(() => resolve(true));
-                  return;
-                } else {
-                  // 对于明日预约，这就代表提前返回已知状态
-                  log(`排队通道提前返回状态: ${serverMsg}`);
-                  isResolved = true;
-                  clearTimeout(timeout);
-                  clearInterval(pollTimer);
-                  ws.disconnect().then(() => reject(new Error(`FATAL: ${serverMsg}`)));
-                  return;
-                }
-              }
+            const lowerMsg = String(serverMsg).toLowerCase();
 
-              if (["ok", "排队成功", "u6392", "您已经预定了座位", "u6210", "不需要排队"].some(k => lowerMsg.includes(k))) {
-                log("排队成功(或无需排队)标志被检测到！");
+            if (["不在", "未开始", "结束", "已闭馆", "登记了", "已登记"].some(k => lowerMsg.includes(k))) {
+              if (mode === 2) {
+                log(`当日推断: 当前时段无需排队 (${serverMsg})，直接放行...`);
                 isResolved = true;
                 clearTimeout(timeout);
                 clearInterval(pollTimer);
-                setTimeout(() => {
-                  ws.disconnect().then(() => resolve(true));
-                }, 500);
+                ws.disconnect().then(() => resolve(true));
+                return;
+              } else {
+                // 对于明日预约，这就代表提前返回已知状态
+                log(`排队通道提前返回状态: ${serverMsg}`);
+                isResolved = true;
+                clearTimeout(timeout);
+                clearInterval(pollTimer);
+                ws.disconnect().then(() => reject(new Error(`FATAL: ${serverMsg}`)));
                 return;
               }
+            }
+
+            if (["ok", "排队成功", "u6392", "您已经预定了座位", "u6210", "不需要排队"].some(k => lowerMsg.includes(k))) {
+              log("排队成功(或无需排队)标志被检测到！");
+              isResolved = true;
+              clearTimeout(timeout);
+              clearInterval(pollTimer);
+              setTimeout(() => {
+                ws.disconnect().then(() => resolve(true));
+              }, 500);
+              return;
             }
           } catch (e) {
             log(`消息解析失败: ${e}`);
@@ -118,7 +114,7 @@ export class WebSocketService {
         ws.send(payloadStr);
 
         // 每隔 200 毫秒发送一次
-        pollTimer = setInterval(() => {
+        const pollTimer = setInterval(() => {
           if (!isResolved) {
              ws.send(payloadStr);
           }
@@ -127,7 +123,7 @@ export class WebSocketService {
       });
 
     } catch (e) {
-      log(`WebSocket 连接失败: ${e}`);
+      log(`WebSocket 连接失败: ${e} (类型: ${(e as object)?.constructor?.name})`);
       return true;
     }
   }
