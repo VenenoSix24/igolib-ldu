@@ -174,10 +174,30 @@ export function HomePage() {
             </span>
           </button>
           <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
+            <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">明日默认时间</span>
+            <input
+              type="time"
+              aria-label="明日默认执行时间"
+              value={prefs.defaultExecTime}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (/^\d{2}:\d{2}$/.test(v)) setPrefs({ defaultExecTime: v });
+              }}
+              className="h-8 cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-2 text-center font-mono text-[12px] text-slate-800 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
             <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">Cookie 到期提醒</span>
-            <span className="flex items-center gap-1 text-[11.5px] text-slate-500">
-              提前 {prefs.cookieReminderMinutes} 分钟
-            </span>
+            <select
+              aria-label="Cookie 到期提醒提前量"
+              value={prefs.cookieReminderMinutes}
+              onChange={(e) => setPrefs({ cookieReminderMinutes: Number(e.target.value) })}
+              className="h-8 cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-2 text-center text-[12px] text-slate-800 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
+            >
+              {[5, 10, 15, 30, 60].map((m) => (
+                <option key={m} value={m}>提前 {m} 分钟</option>
+              ))}
+            </select>
           </div>
           <button
             type="button"
@@ -214,6 +234,24 @@ export function HomePage() {
             <p className="px-1 text-[10.5px] leading-relaxed text-slate-500">
               预约失败时自动换官方接口名重试（备用通道，默认关闭）
             </p>
+            <div className="mt-1 flex items-center justify-between border-t border-slate-200 px-1 py-2 dark:border-white/[0.08]">
+              <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">捡漏扫描间隔</span>
+              <span className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={3}
+                  max={60}
+                  aria-label="捡漏扫描间隔（秒）"
+                  value={prefs.scanIntervalSec}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isFinite(v)) setPrefs({ scanIntervalSec: Math.max(3, Math.min(60, v)) });
+                  }}
+                  className="h-8 w-16 rounded-lg border border-slate-200 bg-white/80 px-2 text-center font-mono text-[12px] text-slate-800 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
+                />
+                <span className="text-[11px] text-slate-500">秒（下限 3s）</span>
+              </span>
+            </div>
             <div className="mt-1 border-t border-white/[0.08] pt-2">
               <p className="mb-1.5 px-1 text-[12px] font-bold text-slate-700 dark:text-slate-200">运行日志</p>
               <LogsPanel />

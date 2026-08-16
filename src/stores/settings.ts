@@ -17,6 +17,8 @@ export interface BookingState {
 
 /** 2.0 新增功能参数，页面接入前仅作为默认值存放 */
 export interface FeaturePrefs {
+  /** 明日预约模式默认执行时间（HH:MM，可改） */
+  defaultExecTime: string;
   /** Cookie 到期提醒提前量（分钟） */
   cookieReminderMinutes: number;
   /** 捡漏扫描间隔下限（秒） */
@@ -46,6 +48,7 @@ const DEFAULT_BOOKING: BookingState = {
 };
 
 const DEFAULT_PREFS: FeaturePrefs = {
+  defaultExecTime: "21:48",
   cookieReminderMinutes: 15,
   scanIntervalSec: 3,
   renewalDelaySec: 60,
