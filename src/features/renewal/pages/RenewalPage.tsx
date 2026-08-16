@@ -64,13 +64,13 @@ export function RenewalPage() {
         <div className="flex items-center gap-3">
           <div className={cn(
             "flex h-10 w-10 items-center justify-center rounded-xl",
-            running ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-slate-500/10 text-slate-500"
+            running ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-sky-500/15 text-sky-600 dark:text-sky-300"
           )}>
             <InfinityIcon className="h-5 w-5" />
           </div>
           <div className="flex-1">
             <h2 className="text-[15px] font-bold">占座续约</h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] text-slate-500 dark:text-slate-300">
               临近签到截止自动「取消 → 等待 → 重订」循环保座；重订优先原座位与备选链
             </p>
           </div>
@@ -129,7 +129,7 @@ export function RenewalPage() {
 
       {/* 循环参数 */}
       <GlassCard className="p-4 md:p-5">
-        <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
           <Timer className="h-3.5 w-3.5" />循环参数
         </div>
         <div className="flex flex-col gap-3 md:flex-row">
@@ -170,7 +170,7 @@ export function RenewalPage() {
       {/* 场馆规则 */}
       {libRule && (
         <GlassCard className="p-4 md:p-5">
-          <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
             <RefreshCw className="h-3.5 w-3.5" />场馆规则
           </div>
           <div className="flex flex-wrap gap-2 text-[11.5px]">

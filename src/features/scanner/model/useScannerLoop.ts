@@ -3,6 +3,7 @@ import { getDynamicRooms, getRoomSeats, submitRequest, buildBookingCandidates, t
 import { useSettingsStore } from "@/stores/settings";
 import { useScannerStore, registerScannerLoopStopper, type ScannerVenue } from "@/stores/scanner";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
+import { useAuthStore, cookieBlocked } from "@/stores/auth";
 import { notify } from "@/lib/notify";
 import { createLogger } from "@/lib/logger";
 
@@ -26,6 +27,7 @@ export function useScannerLoop() {
   const scanIntervalSec = useSettingsStore((s) => s.prefs.scanIntervalSec);
   const venues = useScannerStore((s) => s.venues);
   const pushHit = useScannerStore((s) => s.pushHit);
+  const cookieStatus = useAuthStore((s) => s.cookieStatus);
 
   const [running, setRunning] = useState(false);
   const [rounds, setRounds] = useState(0);
@@ -194,8 +196,8 @@ export function useScannerLoop() {
 
   const start = useCallback(() => {
     if (running) return;
-    if (!cookieStr || cookieStr.trim().length < 10) {
-      setError("Cookie 无效，请先在首页完成扫码登录");
+    if (cookieBlocked(useAuthStore.getState().cookieStatus)) {
+      setError("Cookie 已失效，请回首页重新扫码后再开启扫描");
       return;
     }
     if (venuesRef.current.length === 0) {
@@ -209,7 +211,7 @@ export function useScannerLoop() {
     setRunning(true);
     log.info(`扫描启动：${venuesRef.current.length} 个场馆，间隔 ${interval}s`);
     void runRound();
-  }, [running, cookieStr, interval, runRound]);
+  }, [running, interval, runRound]);
 
   // 抢座任务成功后自动停止同场馆扫描（防重复预约触发风控）
   useEffect(() => {
@@ -224,13 +226,20 @@ export function useScannerLoop() {
     return () => registerScannerLoopStopper(null);
   }, [running, stop]);
 
+  // Cookie 被清空或被首页判失效时直接停扫
   useEffect(() => {
-    // Cookie 被清空时直接停扫
     if (running && (!cookieStr || cookieStr.trim().length < 10)) {
       stop();
       setError("Cookie 已失效，扫描停止");
     }
   }, [cookieStr, running, stop]);
+
+  useEffect(() => {
+    if (running && cookieBlocked(useAuthStore.getState().cookieStatus)) {
+      stop();
+      setError("Cookie 已失效，扫描停止");
+    }
+  }, [cookieStatus, running, stop]);
 
   useEffect(() => () => {
     stoppedRef.current = true;

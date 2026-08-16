@@ -104,7 +104,7 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
                         "py-2 px-3 rounded-lg text-xs font-bold transition-all border-2",
                         localConfig.preset === key
                           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "border-slate-200 bg-slate-50 text-neutral-600 hover:bg-slate-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-slate-400"
+                          : "border-slate-200 bg-slate-50 text-neutral-600 hover:bg-slate-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-slate-300"
                       )}
                     >
                       {key === "ldu" ? "卤蛋大学" : key === "official" ? "官方原版" : "自定义"}
@@ -175,13 +175,13 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-800/50 space-y-1">
                   <p className="text-xs text-slate-500">
                     <span className="font-bold">API:</span>{" "}
-                    <span className="font-mono text-neutral-600 dark:text-slate-400 break-all">
+                    <span className="font-mono text-neutral-600 dark:text-slate-300 break-all">
                       {localConfig.apiUrl}
                     </span>
                   </p>
                   <p className="text-xs text-slate-500">
                     <span className="font-bold">Origin:</span>{" "}
-                    <span className="font-mono text-neutral-600 dark:text-slate-400">
+                    <span className="font-mono text-neutral-600 dark:text-slate-300">
                       {localConfig.origin}
                     </span>
                   </p>

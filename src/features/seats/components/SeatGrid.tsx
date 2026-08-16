@@ -35,7 +35,7 @@ export function SeatGrid({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-300">
         <span className="flex items-center gap-1"><Armchair className="h-3 w-3" />共 {seats.length} 座</span>
         <span className="flex items-center gap-3">
           <span className="flex items-center gap-1">
@@ -118,7 +118,7 @@ export function SeatGrid({
                     ? "cursor-pointer border-amber-500 bg-amber-500/25 text-amber-700 dark:text-amber-300"
                     : clickable
                       ? "cursor-pointer border-green-500/40 bg-green-500/15 text-green-700 hover:scale-110 hover:bg-green-500/30 dark:text-green-300"
-                      : "cursor-not-allowed border-transparent bg-slate-300 text-slate-400 dark:bg-white/10 dark:text-slate-500",
+                      : "cursor-not-allowed border-transparent bg-slate-300 text-slate-400 dark:bg-white/10 dark:text-slate-300",
               )}
             >
               {seat.name}

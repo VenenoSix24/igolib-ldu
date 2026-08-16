@@ -13,7 +13,7 @@ export function BackupChainPanel({ libId, className }: { libId: string; classNam
 
   return (
     <div className={cn("rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]", className)}>
-      <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
         <ListOrdered className="h-3.5 w-3.5" />备选链
         <span className="text-[10px] font-normal">（主选失败后按序尝试）</span>
         {chain.length > 0 && (

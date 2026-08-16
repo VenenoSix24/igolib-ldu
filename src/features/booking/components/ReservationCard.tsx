@@ -68,7 +68,7 @@ export function ReservationCard({
             当前预约：{reservation.seatName ? `${reservation.seatName} 号` : "—"}
             {reservation.libName ? ` · ${reservation.libName}` : ""}
           </div>
-          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11.5px] text-slate-500 dark:text-slate-400">
+          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11.5px] text-slate-500 dark:text-slate-300">
             {reservation.stime && (
               <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{reservation.stime}{reservation.etime ? ` – ${reservation.etime}` : ""}</span>
             )}

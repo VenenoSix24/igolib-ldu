@@ -75,7 +75,7 @@ export function GrabPage() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[13.5px] font-extrabold">今日实时抢座</div>
-          <div className="text-[11.5px] text-slate-500 dark:text-slate-400">选好座位即刻出手</div>
+          <div className="text-[11.5px] text-slate-500 dark:text-slate-300">选好座位即刻出手</div>
         </div>
         <button
           type="button"

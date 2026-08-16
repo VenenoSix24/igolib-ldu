@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useSettingsStore } from "@/stores/settings";
+import { useAuthStore } from "@/stores/auth";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export function HomePage() {
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
   const { remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
+  const setCookieStatus = useAuthStore((s) => s.setCookieStatus);
 
   const [showCookie, setShowCookie] = useState(false);
   const [showQr, setShowQr] = useState(false);
@@ -39,24 +41,36 @@ export function HomePage() {
   const [userInfo, setUserInfo] = useState<{ name: string; valid: boolean } | null>(null);
   const [validating, setValidating] = useState(false);
 
-  // Cookie 有效性校验（与预约流程一致的 800ms 防抖）
+  // Cookie 有效性校验（与预约流程一致的 800ms 防抖）；结果写入全局 auth store，
+  // 其余页面据此拦截请求，避免失效后反复请求触发风控
   useEffect(() => {
     setUserInfo(null);
     setValidating(false);
+    if (!cookieStr || cookieStr.trim().length < 10) {
+      setCookieStatus("none");
+      return;
+    }
+    setCookieStatus("unknown");
     const timer = setTimeout(async () => {
-      if (!cookieStr || cookieStr.trim().length < 10) return;
       setValidating(true);
       try {
         const res = await validateUser(cookieStr.trim(), apiConfig);
         setUserInfo(res.valid ? { name: res.name || "User", valid: true } : { name: "", valid: false });
+        setCookieStatus(res.valid ? "valid" : "invalid");
       } catch {
         setUserInfo({ name: "", valid: false });
+        setCookieStatus("invalid");
       } finally {
         setValidating(false);
       }
     }, 800);
     return () => clearTimeout(timer);
-  }, [cookieStr, apiConfig]);
+  }, [cookieStr, apiConfig, setCookieStatus]);
+
+  // 到期优先于「无效」覆盖状态
+  useEffect(() => {
+    if (expired) setCookieStatus("expired");
+  }, [expired, setCookieStatus]);
 
   const ready = userInfo?.valid === true;
 
@@ -67,7 +81,7 @@ export function HomePage() {
         <h2 className="text-[17px] font-extrabold">
           {greeting()}，{ready ? "身份就绪，随时可以出手" : "先配置身份再开始抢座"}
         </h2>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-300">
           {ready
             ? "明日预约 / 立即抢座 / 场馆捡漏 全部可用"
             : "在下方获取或粘贴 Cookie 后，其余页面即可使用"}
@@ -94,7 +108,7 @@ export function HomePage() {
 
       {/* 身份 Cookie */}
       <GlassCard className="p-4 md:p-5">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
           <KeyRound className="h-3.5 w-3.5" />身份 Cookie
           <span className="ml-auto">
             {validating && <span className="animate-pulse text-[10px] text-blue-500">验证中…</span>}
@@ -184,7 +198,7 @@ export function HomePage() {
                 className={
                   themeMode === mode
                     ? "flex cursor-pointer items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#131a2a] shadow-sm dark:bg-white/90"
-                    : "flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    : "flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
                 }
               >
                 <Icon className="h-3.5 w-3.5" />

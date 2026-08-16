@@ -3,7 +3,7 @@ import { getLogs, subscribeLogs, type LogEntry } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
 const LEVEL_CLS: Record<string, string> = {
-  debug: "bg-slate-400/10 text-slate-500 dark:text-slate-400",
+  debug: "bg-slate-400/10 text-slate-500 dark:text-slate-300",
   info: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
   warn: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
   error: "bg-red-500/15 text-red-600 dark:text-red-300",
@@ -25,7 +25,7 @@ export function LogsPanel() {
         <div className="flex flex-col gap-1">
           {visible.map((entry) => (
             <div key={entry.id} className="flex items-start gap-2 rounded-md px-1.5 py-1 font-mono text-[10.5px]">
-              <span className="shrink-0 pt-px text-slate-400 dark:text-slate-600 dark:text-slate-500">
+              <span className="shrink-0 pt-px text-slate-400 dark:text-slate-600 dark:text-slate-300">
                 {new Date(entry.time).toLocaleTimeString("zh-CN", { hour12: false })}
               </span>
               <span className={cn("shrink-0 rounded px-1 py-px text-[9px] font-bold uppercase", LEVEL_CLS[entry.level])}>
