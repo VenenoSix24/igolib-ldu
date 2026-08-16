@@ -25,6 +25,8 @@ export interface FeaturePrefs {
   scanIntervalSec: number;
   /** 续约取消后等待（秒） */
   renewalDelaySec: number;
+  /** 续约触发提前量（分钟，早于签到截止开始续约） */
+  renewalLeadMinutes: number;
   /** LDU 预约失败时换官方 mutation 名重试 */
   lduFallbackEnabled: boolean;
 }
@@ -52,6 +54,7 @@ const DEFAULT_PREFS: FeaturePrefs = {
   cookieReminderMinutes: 15,
   scanIntervalSec: 3,
   renewalDelaySec: 60,
+  renewalLeadMinutes: 2,
   lduFallbackEnabled: false,
 };
 
