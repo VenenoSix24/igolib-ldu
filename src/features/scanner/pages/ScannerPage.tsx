@@ -7,6 +7,8 @@ import { getDynamicRooms, type DynamicRoom } from "@/services/api";
 import { useSettingsStore } from "@/stores/settings";
 import { useScannerStore } from "@/stores/scanner";
 import { useScannerLoop } from "../model/useScannerLoop";
+import { ScopeConsoleCard } from "@/components/console/ScopeConsoleCard";
+import { ResultCard } from "@/components/console/ResultCard";
 import { useAuthStore, cookieBlocked } from "@/stores/auth";
 
 function formatTime(ts: number) {
@@ -29,6 +31,7 @@ export function ScannerPage() {
 
   const [allRooms, setAllRooms] = useState<DynamicRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
+  const [dismissedHitId, setDismissedHitId] = useState<string | null>(null);
 
   // 场馆列表（勾选用，500ms 防抖）
   useEffect(() => {
@@ -58,8 +61,20 @@ export function ScannerPage() {
   const cookieReady = Boolean(cookieStr && cookieStr.trim().length >= 10);
   const selectedIds = new Set(venues.map((v) => v.libId));
 
+  const latestOutcome = hits.find((h) => h.kind === "booked" || h.kind === "failed");
+
   return (
     <div className="flex flex-col gap-4">
+      {/* 结果反馈 */}
+      {latestOutcome && latestOutcome.id !== dismissedHitId && (
+        <ResultCard
+          kind={latestOutcome.kind === "booked" ? "success" : "error"}
+          title={latestOutcome.kind === "booked" ? "捡漏成功，已自动预约" : "自动预约失败"}
+          detail={`${latestOutcome.libName}${latestOutcome.seatName ? ` ${latestOutcome.seatName} 号` : ""} · ${latestOutcome.message}`}
+          onClose={() => setDismissedHitId(latestOutcome.id)}
+        />
+      )}
+
       {/* 扫描状态 */}
       <GlassCard className="p-4 md:p-5">
         <div className="flex items-center gap-3">
@@ -263,6 +278,14 @@ export function ScannerPage() {
           </ul>
         )}
       </GlassCard>
+
+      {/* 任务控制台 */}
+      <ScopeConsoleCard
+        scope="捡漏"
+        title="捡漏控制台"
+        statusText={running ? `第 ${rounds} 轮` : "待命"}
+        running={running}
+      />
     </div>
   );
 }
