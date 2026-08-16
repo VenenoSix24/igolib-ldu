@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Armchair, Building2, Play } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { useSettingsStore } from "@/stores/settings";
+import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
 import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
@@ -27,10 +28,13 @@ export function TomorrowPage() {
   const countDownStr = useCountdown(booking.execTime, booking.customTime, defaultTime);
   const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(booking.cookieStr, apiConfig);
 
-  // 抢座成功后刷新当前预约
+  // 抢座成功后刷新当前预约，并停止同场馆的捡漏扫描
   useEffect(() => {
-    if (task.status === "success") void refreshReservation();
-  }, [task.status, refreshReservation]);
+    if (task.status === "success") {
+      void refreshReservation();
+      notifyBookingSuccess(booking.libId);
+    }
+  }, [task.status, refreshReservation, booking.libId]);
 
   const [selectedSeatKey, setSelectedSeatKey] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
