@@ -18,6 +18,8 @@ function formatTime(ts: number) {
 export function ScannerPage() {
   const apiConfig = useSettingsStore((s) => s.api);
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
+  const scanIntervalSec = useSettingsStore((s) => s.prefs.scanIntervalSec);
+  const setPrefs = useSettingsStore((s) => s.setPrefs);
 
   const venues = useScannerStore((s) => s.venues);
   const hits = useScannerStore((s) => s.hits);
@@ -72,7 +74,7 @@ export function ScannerPage() {
             <p className="text-[11px] text-slate-500 dark:text-slate-300">
               {running
                 ? `第 ${rounds} 轮 · 正在扫描 ${venues.find((v) => v.libId === currentLibId)?.name ?? "…"} · 间隔 ${interval}s`
-                : `按优先级轮询勾选场馆的余位，命中即自动预约并通知 · 间隔 ${interval}s（可在首页更多设置调整）`}
+                : `按优先级轮询勾选场馆的余位，命中即自动预约并通知 · 间隔 ${interval}s（下方可调）`}
             </p>
           </div>
           {running ? (
@@ -120,16 +122,31 @@ export function ScannerPage() {
       <GlassCard className="p-4 md:p-5">
         <div className="mb-3 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
           <Activity className="h-3.5 w-3.5" />监控场馆（自上而下扫描）
-          {venues.length > 0 && (
-            <button
-              type="button"
-              onClick={clearVenues}
-              className="ml-auto cursor-pointer text-[10.5px] text-slate-400 transition-colors hover:text-red-500"
-            >
-              清空
-            </button>
-          )}
+          <span className="ml-auto flex items-center gap-1.5">
+            <input
+              type="number"
+              min={3}
+              max={300}
+              aria-label="捡漏扫描间隔（秒）"
+              value={scanIntervalSec}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v)) setPrefs({ scanIntervalSec: Math.max(3, Math.min(300, Math.round(v))) });
+              }}
+              className="h-7 w-14 rounded-lg border border-slate-200 bg-white/80 px-1.5 text-center font-mono text-[11.5px] tabular-nums text-slate-800 focus:border-sky-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
+            />
+            <span className="text-[10.5px] text-slate-500 dark:text-slate-300">秒 / 轮（下限 3s）</span>
+          </span>
         </div>
+        {venues.length > 0 && (
+          <button
+            type="button"
+            onClick={clearVenues}
+            className="mb-2 cursor-pointer text-[10.5px] text-slate-400 transition-colors hover:text-red-500"
+          >
+            清空已选场馆
+          </button>
+        )}
 
         {/* 已选序列 */}
         {venues.length > 0 && (

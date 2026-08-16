@@ -4,6 +4,7 @@ import { cn } from "../../lib/utils";
 import { GlassCard } from "../../components/glass/GlassCard";
 import { useThemeStore, type ThemeMode } from "../../stores/theme";
 import { NAV_ITEMS } from "./nav";
+import { CookieMiniCard } from "./CookieMiniCard";
 
 const THEME_QUICK: { mode: ThemeMode; title: string; icon: typeof Sun }[] = [
   { mode: "light", title: "浅色", icon: Sun },
@@ -44,6 +45,7 @@ export function SideNav() {
       </nav>
 
       <div className="mt-auto pt-4">
+        <CookieMiniCard />
         <div className="flex items-center justify-around rounded-2xl border border-white/10 bg-white/5 p-1.5">
           {THEME_QUICK.map(({ mode: m, title, icon: Icon }) => (
             <button
