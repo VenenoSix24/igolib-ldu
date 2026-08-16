@@ -185,9 +185,9 @@ export function SeatSelect({
   );
 }
 
-/** 执行时间卡：立即 / 21:48 / 自定义（按页面取用不同选项） */
+/** 执行时间卡：立即 / 模式默认 / 自定义（按页面取用不同选项） */
 export function TimeCard({
-  options, execTime, onExecTime, customTime, onCustomTime, hint,
+  options, execTime, onExecTime, customTime, onCustomTime, hint, defaultTime = "21:48",
 }: {
   options: ExecTime[];
   execTime: ExecTime;
@@ -195,6 +195,7 @@ export function TimeCard({
   customTime: string;
   onCustomTime: (t: string) => void;
   hint?: string;
+  defaultTime?: string;
 }) {
   return (
     <div className="space-y-2.5">
@@ -215,7 +216,7 @@ export function TimeCard({
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
             )}
           >
-            {t === "immediate" ? "立即执行" : t === "2148" ? "21:48" : "自定义"}
+            {t === "immediate" ? "立即执行" : t === "2148" ? defaultTime : "自定义"}
           </button>
         ))}
       </div>

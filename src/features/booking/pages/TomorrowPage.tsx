@@ -14,12 +14,13 @@ export function TomorrowPage() {
   const apiConfig = useSettingsStore((s) => s.api);
   const booking = useSettingsStore((s) => s.booking);
   const setBooking = useSettingsStore((s) => s.setBooking);
+  const defaultTime = useSettingsStore((s) => s.prefs.defaultExecTime);
 
   const { rooms, dynamicRooms, loadingRooms, roomsError, userInfo } =
     useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
   const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "scheduled");
   const task = useBookingTask();
-  const countDownStr = useCountdown(booking.execTime, booking.customTime);
+  const countDownStr = useCountdown(booking.execTime, booking.customTime, defaultTime);
 
   const [selectedSeatKey, setSelectedSeatKey] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -39,6 +40,7 @@ export function TomorrowPage() {
       opMode: "scheduled",
       execTime: booking.execTime,
       customTime: booking.customTime,
+      defaultTime,
       selectedSeatKey,
       roomName,
     });
@@ -54,7 +56,7 @@ export function TomorrowPage() {
               {countDownStr ?? "--:--:--"}
             </div>
             <div className="mt-0.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
-              距 {booking.execTime === "2148" ? "21:48" : booking.execTime === "custom" ? booking.customTime : "立即"} 自动执行
+              距 {booking.execTime === "2148" ? defaultTime : booking.execTime === "custom" ? booking.customTime : "立即"} 自动执行
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-2 md:justify-start">
@@ -114,7 +116,8 @@ export function TomorrowPage() {
             onExecTime={(execTime) => setBooking({ execTime })}
             customTime={booking.customTime}
             onCustomTime={(customTime) => setBooking({ customTime })}
-            hint="模式默认 21:48"
+            hint={`模式默认 ${defaultTime}`}
+            defaultTime={defaultTime}
           />
         </GlassCard>
       </div>
@@ -136,6 +139,7 @@ export function TomorrowPage() {
         opMode="scheduled"
         execTime={booking.execTime}
         customTime={booking.customTime}
+        defaultTime={defaultTime}
         roomName={roomName}
         seatNumber={booking.seatNumber}
       />

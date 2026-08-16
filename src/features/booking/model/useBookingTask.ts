@@ -146,10 +146,11 @@ export function useBookingTask() {
     opMode: "scheduled" | "immediate";
     execTime: "immediate" | "2148" | "custom";
     customTime: string;
+    defaultTime?: string;
     selectedSeatKey: string;
     roomName: string;
   }) => {
-    const { apiConfig, libId, seatNumber, cookieStr, opMode, execTime, customTime, selectedSeatKey, roomName } = params;
+    const { apiConfig, libId, seatNumber, cookieStr, opMode, execTime, customTime, defaultTime, selectedSeatKey, roomName } = params;
     try {
       setLogs([]);
       setStatus("connecting");
@@ -157,7 +158,8 @@ export function useBookingTask() {
       const newClientId = generateUUID();
       activeClientIdRef.current = newClientId;
 
-      const timeStrDisplay = execTime === "immediate" ? "立即开始" : (execTime === "2148" ? "21:48:00" : customTime);
+      const defaultTimeStr = `${defaultTime ?? "21:48"}:00`;
+      const timeStrDisplay = execTime === "immediate" ? "立即开始" : (execTime === "2148" ? defaultTimeStr : customTime);
       const modeDisplay = opMode === "scheduled" ? "明日预约模式" : "立即抢座模式";
 
       addLog(`🚀 任务初始化...`, "info", "phase", { phase: "start" });
@@ -166,7 +168,7 @@ export function useBookingTask() {
 
       const mode = opMode === "immediate" ? 2 : 1;
       let timeStr = "";
-      if (execTime === "2148") timeStr = "21:48:00";
+      if (execTime === "2148") timeStr = defaultTimeStr;
       else if (execTime === "custom") timeStr = customTime;
 
       if (timeStr) {

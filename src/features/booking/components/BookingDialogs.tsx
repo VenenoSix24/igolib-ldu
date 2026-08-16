@@ -13,12 +13,13 @@ interface ConfirmDialogProps {
   opMode: OpMode;
   execTime: ExecTime;
   customTime: string;
+  defaultTime?: string;
   roomName?: string;
   seatNumber: string;
 }
 
 export function ConfirmDialog({
-  open, onOpenChange, onConfirm, opMode, execTime, customTime, roomName, seatNumber,
+  open, onOpenChange, onConfirm, opMode, execTime, customTime, defaultTime, roomName, seatNumber,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,7 +39,7 @@ export function ConfirmDialog({
             <div className="flex justify-between">
               <span className="text-slate-500">触发时间</span>
               <span className="font-bold font-mono text-blue-600 dark:text-blue-400">
-                {execTime === "immediate" ? "现在 (Now)" : (execTime === "2148" ? "21:48:00" : customTime)}
+                {execTime === "immediate" ? "现在 (Now)" : (execTime === "2148" ? `${defaultTime ?? "21:48"}:00` : customTime)}
               </span>
             </div>
             <div className="flex justify-between">

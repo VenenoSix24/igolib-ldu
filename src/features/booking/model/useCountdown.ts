@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ExecTime } from "@/stores/settings";
 
-/** 计划执行时间倒计时（200ms tick，与 1.0 一致） */
-export function useCountdown(execTime: ExecTime, customTime: string) {
+/** 计划执行时间倒计时（200ms tick，与 1.0 一致）；defaultTime 为模式默认时间（HH:MM） */
+export function useCountdown(execTime: ExecTime, customTime: string, defaultTime = "21:48") {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useCountdown(execTime: ExecTime, customTime: string) {
     if (execTime === "immediate") return null;
 
     let timeStr = "";
-    if (execTime === "2148") timeStr = "21:48:00";
+    if (execTime === "2148") timeStr = `${defaultTime}:00`;
     else if (execTime === "custom" && customTime) timeStr = customTime;
 
     if (!timeStr) return null;
