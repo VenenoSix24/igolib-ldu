@@ -21,7 +21,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: lts/*
+          node-version: 24
 
       - name: Get version
         run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
@@ -111,7 +111,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v5
         with:
-          node-version: lts/*
+          node-version: 24
           cache: 'pnpm'
 
       - name: Install Rust stable
