@@ -7,6 +7,8 @@ import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
 import { useCountdown } from "../model/useCountdown";
 import { VenueSelect, SeatSelect, TimeCard } from "../components/SelectionCards";
+import { BackupChainPanel } from "@/features/seats/components/BackupChainPanel";
+import { useBackupSeatsStore } from "@/stores/backupSeats";
 import { ConsoleCard } from "../components/ConsoleCard";
 import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
 
@@ -41,6 +43,7 @@ export function TomorrowPage() {
       execTime: booking.execTime,
       customTime: booking.customTime,
       defaultTime,
+      backupSeats: useBackupSeatsStore.getState().chains[booking.libId] ?? [],
       selectedSeatKey,
       roomName,
     });
@@ -106,7 +109,9 @@ export function TomorrowPage() {
                 setSelectedSeatKey(key);
                 if (name) setBooking({ seatNumber: name });
               }}
+              libId={booking.libId}
             />
+            <BackupChainPanel libId={booking.libId} />
           </div>
         </GlassCard>
         <GlassCard className="p-4 md:p-5">

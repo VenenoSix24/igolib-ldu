@@ -147,10 +147,11 @@ export function useBookingTask() {
     execTime: "immediate" | "2148" | "custom";
     customTime: string;
     defaultTime?: string;
+    backupSeats?: { key: string; name: string }[];
     selectedSeatKey: string;
     roomName: string;
   }) => {
-    const { apiConfig, libId, seatNumber, cookieStr, opMode, execTime, customTime, defaultTime, selectedSeatKey, roomName } = params;
+    const { apiConfig, libId, seatNumber, cookieStr, opMode, execTime, customTime, defaultTime, backupSeats, selectedSeatKey, roomName } = params;
     try {
       setLogs([]);
       setStatus("connecting");
@@ -163,7 +164,7 @@ export function useBookingTask() {
       const modeDisplay = opMode === "scheduled" ? "明日预约模式" : "立即抢座模式";
 
       addLog(`🚀 任务初始化...`, "info", "phase", { phase: "start" });
-      addLog(`任务清单: 模式 [${modeDisplay}] | 场馆 [${roomName || "加载中"}] | 座位 [${seatNumber}] | 计划执行 [${timeStrDisplay}]`, "info", "phase");
+      addLog(`任务清单: 模式 [${modeDisplay}] | 场馆 [${roomName || "加载中"}] | 座位 [${seatNumber}]${backupSeats?.length ? ` | 备选 [${backupSeats.map((b) => b.name).join(" → ")}]` : ""} | 计划执行 [${timeStrDisplay}]`, "info", "phase");
       addLog("正在进行环境检查与身份校验...", "info");
 
       const mode = opMode === "immediate" ? 2 : 1;
@@ -183,6 +184,7 @@ export function useBookingTask() {
         timeStr,
         cookieStr,
         seatKey: selectedSeatKey || undefined,
+        backupSeats,
         apiUrl: apiConfig.apiUrl,
         origin: apiConfig.origin,
         referer: apiConfig.referer

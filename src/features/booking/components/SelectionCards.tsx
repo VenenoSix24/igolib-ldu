@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { DynamicRoom, DynamicSeat } from "@/services/api";
 import type { ExecTime } from "@/stores/settings";
 import { SeatGrid } from "@/features/seats/components/SeatGrid";
+import { useBackupSeatsStore, EMPTY_BACKUP_CHAIN } from "@/stores/backupSeats";
 
 /** 场馆下拉（明日预约用） */
 export function VenueSelect({
@@ -121,7 +122,7 @@ export function VenueList({
 
 /** 座位选择：网格 / 下拉 / 手动输入三态视图 */
 export function SeatSelect({
-  seats, loading, seatNumber, onSeatNumber, selectedSeatKey, onSelectSeatKey,
+  seats, loading, seatNumber, onSeatNumber, selectedSeatKey, onSelectSeatKey, libId,
 }: {
   seats: DynamicSeat[];
   loading: boolean;
@@ -129,10 +130,12 @@ export function SeatSelect({
   onSeatNumber: (seat: string) => void;
   selectedSeatKey: string;
   onSelectSeatKey: (key: string, name: string) => void;
+  libId: string;
 }) {
   // 无座位数据时（如 Cookie 未配 / 明日模式未开放）退化为手动输入
   const manual = seats.length === 0;
   const [view, setView] = useState<"grid" | "list">(manual ? "list" : "grid");
+  const backupChain = useBackupSeatsStore((s) => s.chains[libId] ?? EMPTY_BACKUP_CHAIN);
 
   const switchToList = () => {
     // 切视图时保住已选座位号
@@ -191,6 +194,8 @@ export function SeatSelect({
               onSelectSeatKey(key, name);
               if (name) onSeatNumber(name);
             }}
+            backupKeys={backupChain.map((b) => b.key)}
+            onToggleBackup={(key, name) => useBackupSeatsStore.getState().toggle(libId, { key, name })}
           />
         )
       ) : (
