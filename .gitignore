@@ -56,7 +56,7 @@ Icon
 .env
 .env.*
 !.env.example
-logs/
+/logs/
 *.log
 
 # --- Cleanup (Legacy Python files) ---
