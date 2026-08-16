@@ -21,6 +21,14 @@ const MAX_CONSECUTIVE_FAILURES = 3;
 
 export type RenewalPhase = "idle" | "waiting" | "cancelling" | "cooldown" | "rebooking" | "stopped";
 
+/** 最近一轮结果（结果反馈卡数据源） */
+export interface RenewalResult {
+  kind: "success" | "error";
+  title: string;
+  detail?: string;
+  time: number;
+}
+
 /** 服务端时间戳兼容秒 / 毫秒两种精度 */
 function normalizeTs(raw?: number): number | null {
   if (!raw || raw <= 0) return null;
@@ -55,6 +63,7 @@ export function useRenewalLoop() {
   const [nextActionLabel, setNextActionLabel] = useState("");
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
+  const [lastResult, setLastResult] = useState<RenewalResult | null>(null);
   const [reservation, setReservation] = useState<ReservationInfo | null>(null);
   const cookieStatus = useAuthStore((s) => s.cookieStatus);
   const [libRule, setLibRule] = useState<LibRuleInfo | null>(null);
@@ -237,6 +246,7 @@ export function useRenewalLoop() {
           setConsecutiveFails(0);
           setRounds((r) => r + 1);
           setMessage(`第 ${rounds + 1} 轮续约完成`);
+          setLastResult({ kind: "success", title: `第 ${rounds + 1} 轮续约完成`, detail: `${current.libName ?? ""} 重订成功，将继续自动续约`, time: Date.now() });
           notify("续约成功", `第 ${rounds + 1} 轮已完成，将继续自动续约`);
           await scheduleNextRound(null);
         }
@@ -247,9 +257,11 @@ export function useRenewalLoop() {
         setConsecutiveFails(fails);
         log.error(`第 ${fails} 次连续失败：${msg}`);
         if (fails >= MAX_CONSECUTIVE_FAILURES) {
+          setLastResult({ kind: "error", title: "续约已自动停止", detail: `连续失败 ${MAX_CONSECUTIVE_FAILURES} 轮：${msg}`, time: Date.now() });
           abortWithAlert(msg);
           return;
         }
+        setLastResult({ kind: "error", title: `本轮续约失败（第 ${fails} 次）`, detail: msg, time: Date.now() });
         setMessage(`本轮失败（${msg}），将在下一轮重试`);
         // 失败后退避：等待一个冷却周期后再试
         setPhase("waiting");
@@ -312,6 +324,7 @@ export function useRenewalLoop() {
 
   return {
     running,
+    lastResult,
     phase,
     rounds,
     consecutiveFails,

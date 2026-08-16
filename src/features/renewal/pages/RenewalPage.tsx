@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Infinity as InfinityIcon, Play, RefreshCw, Square, Timer } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { useSettingsStore } from "@/stores/settings";
 import { useReservation } from "@/features/booking/model/useReservation";
 import { ReservationCard } from "@/features/booking/components/ReservationCard";
 import { useRenewalLoop, type RenewalPhase } from "../model/useRenewalLoop";
+import { ScopeConsoleCard } from "@/components/console/ScopeConsoleCard";
+import { ResultCard } from "@/components/console/ResultCard";
 
 const PHASE_TEXT: Record<RenewalPhase, string> = {
   idle: "待命",
@@ -18,6 +21,7 @@ const PHASE_TEXT: Record<RenewalPhase, string> = {
 };
 
 export function RenewalPage() {
+  const navigate = useNavigate();
   const apiConfig = useSettingsStore((s) => s.api);
   const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
   const prefs = useSettingsStore((s) => s.prefs);
@@ -26,11 +30,12 @@ export function RenewalPage() {
   const { reservation, loading: loadingReservation, refresh: refreshReservation } =
     useReservation(cookieStr, apiConfig);
   const {
-    running, phase, rounds, consecutiveFails, nextActionLabel, remainingText, message, libRule,
+    running, lastResult, phase, rounds, consecutiveFails, nextActionLabel, remainingText, message, libRule,
     start, stop,
   } = useRenewalLoop();
 
   const [starting, setStarting] = useState(false);
+  const [dismissedResultAt, setDismissedResultAt] = useState<number | null>(null);
 
   // 续约轮次完成后刷新当前预约
   useEffect(() => {
@@ -50,13 +55,38 @@ export function RenewalPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 当前预约 */}
-      {reservation?.seatName && (
+      {/* 结果反馈 */}
+      {lastResult && lastResult.time !== dismissedResultAt && (
+        <ResultCard
+          kind={lastResult.kind}
+          title={lastResult.title}
+          detail={lastResult.detail}
+          onClose={() => setDismissedResultAt(lastResult.time)}
+        />
+      )}
+
+      {/* 当前预约（常驻：无预约时引导先去抢座） */}
+      {reservation?.seatName ? (
         <ReservationCard
           reservation={reservation}
           refreshing={loadingReservation}
           onRefresh={() => void refreshReservation()}
         />
+      ) : (
+        <GlassCard className="flex items-center gap-3 p-4 md:p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-500/10 text-slate-500 dark:text-slate-300">
+            <InfinityIcon className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[13.5px] font-bold">当前无预约</p>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-300">
+              续约针对已有预约循环保座，请先在「立即抢座」完成一次预约
+            </p>
+          </div>
+          <Button size="sm" onClick={() => navigate("/app/grab")}>
+            去抢座
+          </Button>
+        </GlassCard>
       )}
 
       {/* 续约控制 */}
@@ -186,6 +216,14 @@ export function RenewalPage() {
           </div>
         </GlassCard>
       )}
+
+      {/* 任务控制台 */}
+      <ScopeConsoleCard
+        scope="续约"
+        title="续约控制台"
+        statusText={running ? PHASE_TEXT[phase] : "待命"}
+        running={running}
+      />
     </div>
   );
 }
