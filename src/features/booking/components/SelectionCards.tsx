@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Armchair, Building2, ChevronDown, Clock, Pencil, Pointer } from "lucide-react";
+import { Armchair, Building2, ChevronDown, Clock, LayoutGrid, Pencil, Pointer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { DynamicRoom, DynamicSeat } from "@/services/api";
 import type { ExecTime } from "@/stores/settings";
+import { SeatGrid } from "@/features/seats/components/SeatGrid";
 
 /** 场馆下拉（明日预约用） */
 export function VenueSelect({
@@ -73,18 +75,20 @@ export function VenueList({
     <div className="flex flex-col gap-1.5">
       {[...rooms].sort((a, b) => a.name.localeCompare(b.name)).map((room) => {
         const full = room.seatsAvailable <= 0;
+        const closed = !room.isOpen;
+        const disabled = full || closed;
         const active = String(room.id) === libId;
         return (
           <button
             key={room.id}
             type="button"
-            onClick={() => !full && onChange(String(room.id))}
-            disabled={full}
+            onClick={() => !disabled && onChange(String(room.id))}
+            disabled={disabled}
             className={cn(
               "flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all border-slate-200 dark:border-transparent",
               active
                 ? "border-blue-500/50 bg-blue-500/10"
-                : full
+                : disabled
                   ? "cursor-not-allowed border-slate-200 bg-slate-100/50 opacity-60 dark:border-transparent dark:bg-white/[0.04]"
                   : "border-slate-200 bg-slate-100 hover:bg-slate-200/70 dark:border-transparent dark:bg-white/[0.05] dark:hover:bg-white/[0.09]",
             )}
@@ -94,13 +98,19 @@ export function VenueList({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13px] font-bold text-slate-800 dark:text-slate-100">{room.name}</span>
-              <span className="block text-[11px] text-slate-500">{full ? "已满 · 可加入捡漏监控" : "实时余位"}</span>
+              <span className="block text-[11px] text-slate-500">
+                {closed ? "未开放" : full ? "已满 · 可加入捡漏监控" : "实时余位"}
+              </span>
             </span>
             <span className={cn(
               "rounded-full px-2 py-0.5 text-[10.5px] font-bold",
-              full ? "bg-red-400/15 text-red-300" : "bg-green-500/15 text-green-500 dark:text-green-300",
+              closed
+                ? "bg-slate-400/15 text-slate-500 dark:text-slate-400"
+                : full
+                  ? "bg-red-400/15 text-red-400 dark:text-red-300"
+                  : "bg-green-500/15 text-green-500 dark:text-green-300",
             )}>
-              {full ? "满" : `${room.seatsAvailable} 空`}
+              {closed ? "关" : full ? "满" : `${room.seatsAvailable} 空`}
             </span>
           </button>
         );
@@ -109,7 +119,7 @@ export function VenueList({
   );
 }
 
-/** 座位选择：下拉 / 手动输入切换 */
+/** 座位选择：网格 / 下拉 / 手动输入三态视图 */
 export function SeatSelect({
   seats, loading, seatNumber, onSeatNumber, selectedSeatKey, onSelectSeatKey,
 }: {
@@ -120,7 +130,19 @@ export function SeatSelect({
   selectedSeatKey: string;
   onSelectSeatKey: (key: string, name: string) => void;
 }) {
+  // 无座位数据时（如 Cookie 未配 / 明日模式未开放）退化为手动输入
   const manual = seats.length === 0;
+  const [view, setView] = useState<"grid" | "list">(manual ? "list" : "grid");
+
+  const switchToList = () => {
+    // 切视图时保住已选座位号
+    if (selectedSeatKey) {
+      const seat = seats.find((s) => s.key === selectedSeatKey);
+      if (seat) onSeatNumber(seat.name);
+    }
+    onSelectSeatKey("", seatNumber);
+  };
+
   return (
     <div className="space-y-2">
       <label className="flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-400">
@@ -129,20 +151,25 @@ export function SeatSelect({
           <span className="text-[10px] font-normal text-green-500">（{seats.length} 可选）</span>
         )}
         {!manual && (
-          <button
-            type="button"
-            className="ml-auto flex cursor-pointer items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600"
-            onClick={() => {
-              // 切到手动：保留下拉已选的座位号
-              if (selectedSeatKey) {
-                const seat = seats.find((s) => s.key === selectedSeatKey);
-                if (seat) onSeatNumber(seat.name);
-              }
-              onSelectSeatKey("", seatNumber);
-            }}
-          >
-            <Pencil className="h-3 w-3" />手动输入
-          </button>
+          <span className="ml-auto flex gap-1 rounded-full bg-slate-100 p-0.5 dark:bg-white/[0.06]">
+            {(["grid", "list"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => (v === "list" && view === "grid" ? switchToList() : setView(v))}
+                className={cn(
+                  "flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] transition-colors",
+                  view === v
+                    ? "bg-white font-bold text-[#131a2a] shadow-sm dark:bg-white/90"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                )}
+              >
+                {v === "grid" ? <LayoutGrid className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+                {v === "grid" ? "网格" : "列表"}
+              </button>
+            ))}
+          </span>
         )}
       </label>
       {manual ? (
@@ -153,6 +180,19 @@ export function SeatSelect({
           autoComplete="off"
           className="h-10 text-center font-mono tracking-widest dark:border-white/15"
         />
+      ) : view === "grid" ? (
+        loading ? (
+          <p className="py-3 text-center text-xs text-slate-400">正在加载座位布局…</p>
+        ) : (
+          <SeatGrid
+            seats={seats}
+            selectedKey={selectedSeatKey}
+            onSelect={(key, name) => {
+              onSelectSeatKey(key, name);
+              if (name) onSeatNumber(name);
+            }}
+          />
+        )
       ) : (
         <div className="relative">
           <select
