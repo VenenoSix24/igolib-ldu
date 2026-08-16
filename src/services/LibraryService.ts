@@ -57,6 +57,7 @@ interface GqlResponse {
         reserveCancle?: boolean;
         reserveCancel?: boolean;
         reserve?: RawReservation;
+        libRule?: RawLibRule;
       };
       prereserve?: {
         libLayout?: { seats_booking?: number; seats_total?: number; seats_used?: number };
@@ -70,8 +71,10 @@ interface GqlResponse {
 /** 当前预约信息（query index 的 reserve 字段） */
 export interface ReservationInfo {
   status?: number;
+  libId?: number;
   libName?: string;
   seatName?: string;
+  seatKey?: string;
   stime?: string;
   etime?: string;
   tmsg?: string;
@@ -79,20 +82,48 @@ export interface ReservationInfo {
   /** 签到截止 */
   validateDate?: string;
   holdDate?: string;
+  /** 下次允许续约的时间戳（秒或毫秒，服务端两种都出现过） */
+  renewTimeNext?: number;
   /** 为真时禁止取消 */
   forbidWechatCancle?: boolean;
 }
 
+/** 场馆规则（query libRule），续约节奏依据 */
+export interface LibRuleInfo {
+  advanceBooking?: number;
+  libSeatTtl?: number;
+  libHoldTtl?: number;
+  /** 续约时限 */
+  libRenewTime?: number;
+  /** 签到时限 */
+  libValidateTime?: number;
+  openTimeStr?: string;
+  closeTimeStr?: string;
+}
+
+interface RawLibRule {
+  advance_booking?: number;
+  lib_seat_ttl?: number;
+  lib_hold_ttl?: number;
+  lib_renew_time?: number;
+  lib_validate_time?: number;
+  open_time_str?: string;
+  close_time_str?: string;
+}
+
 interface RawReservation {
   status?: number;
+  lib_id?: number;
   lib_name?: string;
   seat_name?: string;
+  seat_key?: string;
   stime?: string;
   etime?: string;
   tmsg?: string;
   getSToken?: string;
   validate_date?: string;
   hold_date?: string;
+  renewTimeNext?: number;
   forbidWechatCancle?: boolean;
 }
 
@@ -256,21 +287,41 @@ export class LibraryService {
 
   // 5. Get Current Reservation (query index)
   async getReservation(): Promise<ReservationInfo | null> {
-    const query = `query index { userAuth { reserve { reserve { status stime etime lib_name seat_name tmsg getSToken validate_date hold_date forbidWechatCancle } } } }`;
+    const query = `query index { userAuth { reserve { reserve { status stime etime lib_id lib_name seat_key seat_name tmsg getSToken validate_date hold_date renewTimeNext forbidWechatCancle } } } }`;
     const data = await this.sendGraphql("index", query);
     const raw = data?.data?.userAuth?.reserve?.reserve;
     if (!raw || raw.status === undefined) return null;
     return {
       status: raw.status,
+      libId: raw.lib_id,
       libName: raw.lib_name,
       seatName: raw.seat_name,
+      seatKey: raw.seat_key,
       stime: raw.stime,
       etime: raw.etime,
       tmsg: raw.tmsg,
       sToken: raw.getSToken,
       validateDate: raw.validate_date,
       holdDate: raw.hold_date,
+      renewTimeNext: raw.renewTimeNext,
       forbidWechatCancle: raw.forbidWechatCancle === true,
+    };
+  }
+
+  // 5.5 Get Library Rule (query libRule)
+  async getLibRule(libId: number): Promise<LibRuleInfo | null> {
+    const query = `query libRule($libId: Int!) { userAuth { reserve { libRule(libId: $libId) { advance_booking lib_seat_ttl lib_hold_ttl lib_renew_time lib_validate_time open_time_str close_time_str } } } }`;
+    const data = await this.sendGraphql("libRule", query, { libId });
+    const raw = data?.data?.userAuth?.reserve?.libRule;
+    if (!raw) return null;
+    return {
+      advanceBooking: raw.advance_booking,
+      libSeatTtl: raw.lib_seat_ttl,
+      libHoldTtl: raw.lib_hold_ttl,
+      libRenewTime: raw.lib_renew_time,
+      libValidateTime: raw.lib_validate_time,
+      openTimeStr: raw.open_time_str,
+      closeTimeStr: raw.close_time_str,
     };
   }
 

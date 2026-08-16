@@ -321,6 +321,37 @@ export async function getReservation(
 }
 
 /**
+ * 查询场馆规则（签到 / 续约时限），续约节奏依据
+ */
+export async function getLibRule(
+  cookie: string,
+  libId: number,
+  apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
+): Promise<import('./LibraryService').LibRuleInfo | null> {
+  const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+  const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
+  return service.getLibRule(libId);
+}
+
+/**
+ * 构造自动预约候选序列：preferredKey（原座位）→ 备选链命中（按链内顺序）→ 其余空闲座位
+ */
+export function buildBookingCandidates(
+  seats: DynamicSeat[],
+  backupChain: { key: string; name: string }[],
+  preferredKey?: string,
+): { key: string; name: string }[] {
+  const available = seats.filter((s) => s.available);
+  const chainIndex = new Map(backupChain.map((b, i) => [b.key, i]));
+  const preferred = preferredKey ? available.filter((s) => s.key === preferredKey) : [];
+  const inChain = available
+    .filter((s) => chainIndex.has(s.key) && s.key !== preferredKey)
+    .sort((a, b) => (chainIndex.get(a.key) ?? 0) - (chainIndex.get(b.key) ?? 0));
+  const rest = available.filter((s) => !chainIndex.has(s.key) && s.key !== preferredKey);
+  return [...preferred, ...inChain, ...rest].map((s) => ({ key: s.key, name: s.name }));
+}
+
+/**
  * 取消当前预约。兼容模式下 mutation 名不被识别时自动换名重试一次。
  */
 export async function cancelReservation(

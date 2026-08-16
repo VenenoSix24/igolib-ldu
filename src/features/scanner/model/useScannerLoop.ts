@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getDynamicRooms, getRoomSeats, submitRequest, type DynamicRoom } from "@/services/api";
+import { getDynamicRooms, getRoomSeats, submitRequest, buildBookingCandidates, type DynamicRoom } from "@/services/api";
 import { useSettingsStore } from "@/stores/settings";
 import { useScannerStore, registerScannerLoopStopper, type ScannerVenue } from "@/stores/scanner";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
@@ -89,12 +89,7 @@ export function useScannerLoop() {
 
         // 备选链命中的座位优先（按链内顺序），其余空闲座位按序补位
         const chain = useBackupSeatsStore.getState().chains[venue.libId] ?? [];
-        const chainIndex = new Map(chain.map((b, i) => [b.key, i]));
-        const inChain = available
-          .filter((s) => chainIndex.has(s.key))
-          .sort((a, b) => (chainIndex.get(a.key) ?? 0) - (chainIndex.get(b.key) ?? 0));
-        const rest = available.filter((s) => !chainIndex.has(s.key));
-        const candidates = [...inChain, ...rest];
+        const candidates = buildBookingCandidates(layout.seats, chain);
 
         const target = candidates[0];
         await submitRequest(
