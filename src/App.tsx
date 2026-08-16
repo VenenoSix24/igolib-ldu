@@ -54,7 +54,7 @@ function App() {
               body: data.notes,
               isExternal: true,
               downloadUrl: "https://igolib.ivyris.top/#/download"
-            } as any);
+            } as unknown as Update);
           }
         }
 
