@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Armchair, Building2, Play } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { useSettingsStore } from "@/stores/settings";
@@ -6,6 +6,8 @@ import { useRooms } from "../model/useRooms";
 import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
 import { useCountdown } from "../model/useCountdown";
+import { useReservation } from "../model/useReservation";
+import { ReservationCard } from "../components/ReservationCard";
 import { VenueSelect, SeatSelect, TimeCard } from "../components/SelectionCards";
 import { BackupChainPanel } from "@/features/seats/components/BackupChainPanel";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
@@ -23,6 +25,12 @@ export function TomorrowPage() {
   const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "scheduled");
   const task = useBookingTask();
   const countDownStr = useCountdown(booking.execTime, booking.customTime, defaultTime);
+  const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(booking.cookieStr, apiConfig);
+
+  // 抢座成功后刷新当前预约
+  useEffect(() => {
+    if (task.status === "success") void refreshReservation();
+  }, [task.status, refreshReservation]);
 
   const [selectedSeatKey, setSelectedSeatKey] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -51,6 +59,15 @@ export function TomorrowPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* 当前预约 */}
+      {reservation?.seatName && (
+        <ReservationCard
+          reservation={reservation}
+          refreshing={loadingReservation}
+          onRefresh={() => void refreshReservation()}
+        />
+      )}
+
       {/* 任务总览 */}
       <GlassCard className="p-4 md:p-5">
         <div className="flex flex-col items-center gap-3 md:flex-row md:gap-5">

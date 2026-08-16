@@ -54,6 +54,9 @@ interface GqlResponse {
         libs?: RawLib[];
         reserveSeat?: boolean;
         reserueSeat?: boolean;
+        reserveCancle?: boolean;
+        reserveCancel?: boolean;
+        reserve?: RawReservation;
       };
       prereserve?: {
         libLayout?: { seats_booking?: number; seats_total?: number; seats_used?: number };
@@ -62,6 +65,35 @@ interface GqlResponse {
     };
   };
   errors?: GqlError[];
+}
+
+/** 当前预约信息（query index 的 reserve 字段） */
+export interface ReservationInfo {
+  status?: number;
+  libName?: string;
+  seatName?: string;
+  stime?: string;
+  etime?: string;
+  tmsg?: string;
+  sToken?: string;
+  /** 签到截止 */
+  validateDate?: string;
+  holdDate?: string;
+  /** 为真时禁止取消 */
+  forbidWechatCancle?: boolean;
+}
+
+interface RawReservation {
+  status?: number;
+  lib_name?: string;
+  seat_name?: string;
+  stime?: string;
+  etime?: string;
+  tmsg?: string;
+  getSToken?: string;
+  validate_date?: string;
+  hold_date?: string;
+  forbidWechatCancle?: boolean;
 }
 
 export class LibraryService {
@@ -222,7 +254,35 @@ export class LibraryService {
     }
   }
 
-  // 5. Book Seat
+  // 5. Get Current Reservation (query index)
+  async getReservation(): Promise<ReservationInfo | null> {
+    const query = `query index { userAuth { reserve { reserve { status stime etime lib_name seat_name tmsg getSToken validate_date hold_date forbidWechatCancle } } } }`;
+    const data = await this.sendGraphql("index", query);
+    const raw = data?.data?.userAuth?.reserve?.reserve;
+    if (!raw || raw.status === undefined) return null;
+    return {
+      status: raw.status,
+      libName: raw.lib_name,
+      seatName: raw.seat_name,
+      stime: raw.stime,
+      etime: raw.etime,
+      tmsg: raw.tmsg,
+      sToken: raw.getSToken,
+      validateDate: raw.validate_date,
+      holdDate: raw.hold_date,
+      forbidWechatCancle: raw.forbidWechatCancle === true,
+    };
+  }
+
+  // 6. Cancel Reservation
+  // 官方 schema 的 mutation 名为 reserveCancle（拼写如此）；LDU 命名待实测，失败时可换 reserveCancel 重试
+  async cancelReservation(sToken: string, altMutation = false): Promise<GqlResponse> {
+    const opName = altMutation ? "reserveCancel" : "reserveCancle";
+    const query = `mutation ${opName}($sToken: String!) { userAuth { reserve { ${opName}(sToken: $sToken) } } }`;
+    return this.sendGraphql(opName, query, { sToken });
+  }
+
+  // 7. Book Seat
   async bookSeat(libId: number, seatKey: string, mode: number = 2, captcha = ""): Promise<GqlResponse> {
     if (mode === 1) {
       // 只有明日预约需要强制排队

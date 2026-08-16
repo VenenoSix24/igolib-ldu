@@ -307,3 +307,40 @@ export async function validateUser(
     return { valid: false };
   }
 }
+
+/**
+ * 查询当前预约（座位 / 时段 / 签到截止 / sToken）
+ */
+export async function getReservation(
+  cookie: string,
+  apiConfig?: { apiUrl?: string; origin?: string; referer?: string }
+): Promise<import('./LibraryService').ReservationInfo | null> {
+  const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+  const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
+  return service.getReservation();
+}
+
+/**
+ * 取消当前预约。兼容模式下 mutation 名不被识别时自动换名重试一次。
+ */
+export async function cancelReservation(
+  cookie: string,
+  sToken: string,
+  apiConfig?: { apiUrl?: string; origin?: string; referer?: string },
+  lduFallback = false
+): Promise<{ success: boolean; message: string }> {
+  const apiUrl = apiConfig?.apiUrl || DEFAULT_API_CONFIG.apiUrl;
+  const service = new LibraryService(cookie, apiUrl, apiConfig?.origin, apiConfig?.referer);
+
+  const result = await service.cancelReservation(sToken);
+  if (!result.errors) return { success: true, message: "预约已取消" };
+
+  // code 1 = mutation 不被识别（命名不一致）
+  if (lduFallback && result.errors.some((e) => e.code === 1)) {
+    apiLog.warn("取消接口名不被识别，尝试备选命名 reserveCancel...");
+    const retry = await service.cancelReservation(sToken, true);
+    if (!retry.errors) return { success: true, message: "预约已取消（兼容模式）" };
+    return { success: false, message: retry.errors[0]?.message || retry.errors[0]?.msg || "取消失败" };
+  }
+  return { success: false, message: result.errors[0]?.message || result.errors[0]?.msg || "取消失败" };
+}

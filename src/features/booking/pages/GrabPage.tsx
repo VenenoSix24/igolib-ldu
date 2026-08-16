@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Armchair, Building2, Zap } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { useSettingsStore } from "@/stores/settings";
 import { useRooms } from "../model/useRooms";
 import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
+import { useReservation } from "../model/useReservation";
+import { ReservationCard } from "../components/ReservationCard";
 import { VenueList, SeatSelect, TimeCard } from "../components/SelectionCards";
 import { BackupChainPanel } from "@/features/seats/components/BackupChainPanel";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
@@ -20,6 +22,12 @@ export function GrabPage() {
     useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
   const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "immediate");
   const task = useBookingTask();
+  const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(booking.cookieStr, apiConfig);
+
+  // 抢座成功后刷新当前预约
+  useEffect(() => {
+    if (task.status === "success") void refreshReservation();
+  }, [task.status, refreshReservation]);
 
   const [selectedSeatKey, setSelectedSeatKey] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -47,6 +55,15 @@ export function GrabPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* 当前预约 */}
+      {reservation?.seatName && (
+        <ReservationCard
+          reservation={reservation}
+          refreshing={loadingReservation}
+          onRefresh={() => void refreshReservation()}
+        />
+      )}
+
       {/* 行动卡 */}
       <GlassCard className="flex items-center gap-3 p-4 md:p-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-500 dark:text-amber-300">
