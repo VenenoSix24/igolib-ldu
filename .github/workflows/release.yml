@@ -90,13 +90,13 @@ jobs:
 
           # --- Android 构建 --- #
           - platform: 'ubuntu-22.04'
-            args: '--apk true --split-per-abi --target aarch64'
+            args: '--apk --split-per-abi --target aarch64'
             mobile: 'android'
           - platform: 'ubuntu-22.04'
-            args: '--apk true --split-per-abi --target armv7'
+            args: '--apk --split-per-abi --target armv7'
             mobile: 'android'
           - platform: 'ubuntu-22.04'
-            args: '--apk true --split-per-abi --target x86_64'
+            args: '--apk --split-per-abi --target x86_64'
             mobile: 'android'
 
     runs-on: ${{ matrix.platform }}
