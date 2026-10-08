@@ -3,8 +3,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "pnpm dev:diagnostic",
-    "beforeBuildCommand": "pnpm build:diagnostic"
+    "beforeDevCommand": "pnpm debug:frontend:dev",
+    "beforeBuildCommand": "pnpm debug:frontend:build"
   },
   "bundle": {
     "createUpdaterArtifacts": false

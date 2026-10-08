@@ -11,7 +11,7 @@ import { fetch } from "@tauri-apps/plugin-http";
 import { check, Update } from '@tauri-apps/plugin-updater';
 
 import { createLogger } from "./lib/logger";
-import { IS_DIAGNOSTIC_BUILD } from "./lib/diagnostics";
+import { IS_DEBUG_BUILD } from "./lib/diagnostics";
 
 const log = createLogger("App");
 
@@ -20,7 +20,7 @@ function App() {
 
   useEffect(() => {
     // 诊断版使用独立的应用标识，若被正式版自动更新覆盖会直接丢掉诊断能力，因此跳过更新检查
-    if (IS_DIAGNOSTIC_BUILD) {
+    if (IS_DEBUG_BUILD) {
       log.info("诊断版已跳过更新检查");
       return;
     }

@@ -1,0 +1,281 @@
+name: 'Debug Build'
+
+# 手动触发，构建带日志导出的诊断版安装包，用于给用户抓日志。
+#
+# 与 release.yml 保持同一套写法（矩阵、步骤、动作版本），差异只有：
+#   - 触发方式、Release 标签与命名
+#   - 每个平台追加 --config 切到调试模式
+#   - 构建全绿后才发布（draft -> prerelease），避免用户拿到空的或残缺的 Release
+#   - 发布后清理更早的诊断版
+on:
+  workflow_dispatch:
+
+jobs:
+  # 任务 1：创建 Release（先 draft，构建成功后再发布）
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+      tag: ${{ steps.stamp.outputs.tag }}
+      stamp: ${{ steps.stamp.outputs.stamp }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      # 标签唯一：debug-<应用版本>-r<run 号>。每轮构建互不覆盖，
+      # 这样某一轮构建失败也不会影响已经发给用户的旧链接。
+      - name: Compute tag and build stamp
+        id: stamp
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          BUILT_AT=$(date -u '+%Y-%m-%d %H:%M UTC')
+          echo "tag=debug-${VERSION}-r${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "stamp=${VERSION}-r${{ github.run_number }} (${SHORT_SHA}, ${BUILT_AT})" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create-release
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ steps.stamp.outputs.tag }}
+        with:
+          script: |
+            const tag = process.env.TAG;
+            const base = 'https://github.com/' + context.repo.owner + '/' + context.repo.repo
+              + '/releases/download/' + tag + '/';
+
+            // 防呆：任务 3 会按 debug- 前缀删 Release，标签必须符合预期
+            if (!/^debug-[0-9A-Za-z.\-]+-r\d+$/.test(tag)) {
+              core.setFailed(`标签格式不符合预期: ${tag}`);
+              return;
+            }
+
+            const link = (name) => `[\`${name}\`](${base}${name})`;
+
+            const body = [
+              '这是**诊断版**，用于收集排障日志，不是正式版本。',
+              '',
+              '## 怎么用',
+              '',
+              '1. 下载安装（macOS 首次打开若被系统拦下，请右键 →「打开」）',
+              '2. 照常使用，直到问题复现',
+              '3. 点左上角的 **🩺** →「复制报告」把内容发给我（日志大就点「导出文件」）',
+              '',
+              '## 各平台下载',
+              '',
+              '| 平台 | 文件 |',
+              '| --- | --- |',
+              `| Windows | ${link(`igolib_ldu-${tag}-windows-x64-setup.exe`)} |`,
+              `| macOS（Apple 芯片） | ${link(`igolib_ldu-${tag}-darwin-aarch64.dmg`)} |`,
+              `| macOS（Intel） | ${link(`igolib_ldu-${tag}-darwin-x64.dmg`)} |`,
+              `| Android | ${link(`igolib_ldu-${tag}-android-arm64.apk`)} |`,
+              `| Linux | ${link(`igolib_ldu-${tag}-linux-amd64.AppImage`)} |`,
+              '',
+              '## 说明',
+              '',
+              '- 日志里的 Cookie / token 等凭据已自动脱敏，只保存在本机，不会自动上传',
+              '- **安卓诊断版会替换正式版**（包名相同）：重装正式版即可切回，历史日志不会丢',
+              '- 桌面版是独立应用，可与正式版共存，也不会被自动更新覆盖'
+            ].join('\n');
+
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `我去抢个座 诊断版 ${tag}`,
+              body,
+              draft: true,
+              prerelease: true
+            });
+
+            return data.id;
+
+  # 任务 2：构建并上传（矩阵与 release.yml 一致）
+  build-tauri:
+    needs: create-release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # --- macOS 构建 --- #
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            config: 'src-tauri/tauri.debug.conf.json'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+            config: 'src-tauri/tauri.debug.conf.json'
+
+          # --- Linux 构建 --- #
+          - platform: 'ubuntu-22.04'
+            args: ''
+            config: 'src-tauri/tauri.debug.conf.json'
+
+          # --- Windows 64 构建 --- #
+          - platform: 'windows-latest'
+            args: ''
+            config: 'src-tauri/tauri.debug.conf.json'
+
+          # --- Windows 32 构建 --- #
+          - platform: 'windows-latest'
+            args: '--target i686-pc-windows-msvc'
+            config: 'src-tauri/tauri.debug.conf.json'
+
+          # --- Android 构建 --- #
+          # 安卓必须用 mobile 版配置：CLI 会按 identifier 推导 gen/android 下的工程目录，
+          # 换成桌面那份（identifier 已改为 com.igolib.ldu.debug）会直接报目录不存在
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target aarch64'
+            config: 'src-tauri/tauri.debug.mobile.conf.json'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target armv7'
+            config: 'src-tauri/tauri.debug.mobile.conf.json'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target x86_64'
+            config: 'src-tauri/tauri.debug.mobile.conf.json'
+            mobile: 'android'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || 'i686-pc-windows-msvc') }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Setup Java
+        if: matrix.mobile == 'android'
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        if: matrix.mobile == 'android'
+        uses: android-actions/setup-android@v4
+
+      # --- 安卓签名 --- #
+      - name: Prepare Android Signing
+        if: matrix.mobile == 'android'
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          # 确保目录存在
+          mkdir -p src-tauri/gen/android/app
+
+          # 1. 解码 Keystore 文件
+          echo "$KEYSTORE_BASE64" | base64 --decode > src-tauri/gen/android/app/release.jks
+
+          # 2. 生成 properties 文件
+          cat <<EOF > src-tauri/gen/android/keystore.properties
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.jks
+          EOF
+
+      # --- Tauri Action --- #
+      # 诊断版不传更新签名密钥（配置里 createUpdaterArtifacts=false），
+      # 避免产出可被当作正式更新源的签名产物
+      - uses: tauri-apps/tauri-action@dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 构建戳会进日志启动行、诊断面板与导出报告，用于把用户日志对上具体构建
+          VITE_BUILD_STAMP: ${{ needs.create-release.outputs.stamp }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }} --config ${{ matrix.config }}
+          mobile: ${{ matrix.mobile }}
+          uploadUpdaterSignatures: false
+          uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
+          # 资产名带上标签（含 run 号），用户手里有多个版本时能分清哪个是新的
+          releaseAssetNamePattern: 'igolib_ldu-${{ needs.create-release.outputs.tag }}-[platform]-[arch][setup][ext]'
+
+  # 任务 3：发布 + 清理旧诊断版（构建全绿后才跑）
+  publish-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [create-release, build-tauri]
+
+    steps:
+      - name: Publish release and clean up older builds
+        uses: actions/github-script@v8
+        env:
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+          # 保留最近几份诊断版（含本次），更早的连标签一起清掉
+          KEEP: '2'
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = process.env.TAG;
+
+            // 走到这里说明 8 个构建 job 全部成功，可以安全发布了
+            await github.rest.repos.updateRelease({
+              owner,
+              repo,
+              release_id: Number(process.env.RELEASE_ID),
+              draft: false,
+              prerelease: true
+            });
+            core.info(`已发布 ${tag}`);
+
+            const keep = Number(process.env.KEEP);
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100
+            });
+
+            const debugReleases = releases
+              .filter((release) => release.tag_name.startsWith('debug-'))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            for (const release of debugReleases.slice(keep)) {
+              core.info(`清理旧诊断版: ${release.tag_name}`);
+              await github.rest.repos.deleteRelease({ owner, repo, release_id: release.id });
+              try {
+                await github.rest.git.deleteRef({ owner, repo, ref: `tags/${release.tag_name}` });
+              } catch (error) {
+                core.info(`标签 ${release.tag_name} 删除失败（可忽略）: ${error.message}`);
+              }
+            }

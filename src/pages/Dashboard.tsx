@@ -18,7 +18,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { AuthService } from "../services/AuthService";
 import { DiagnosticsModal } from "@/components/DiagnosticsModal";
 import { createLogger } from "@/lib/logger";
-import { IS_DIAGNOSTIC_BUILD, type ReportContext } from "@/lib/diagnostics";
+import { IS_DEBUG_BUILD, type ReportContext } from "@/lib/diagnostics";
 
 const log = createLogger("Dashboard");
 
@@ -583,7 +583,7 @@ export default function Dashboard() {
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                 <Rocket className="w-5 h-5 text-blue-500" />
                 任务配置
-                {IS_DIAGNOSTIC_BUILD && (
+                {IS_DEBUG_BUILD && (
                   <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold">
                     诊断版
                   </span>

@@ -28,6 +28,7 @@ import {
 import {
   buildReportHeader,
   buildSessionReport,
+  BUILD_STAMP,
   exportDiagnosticReport,
   fetchDiagInfo,
   formatBytes,
@@ -275,6 +276,9 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
                 <span>
                   版本 <span className="font-mono text-neutral-700 dark:text-slate-200">{info?.app_version ?? "读取中"}</span>
+                </span>
+                <span>
+                  构建 <span className="font-mono text-neutral-700 dark:text-slate-200">{BUILD_STAMP}</span>
                 </span>
                 <span>
                   系统 <span className="font-mono text-neutral-700 dark:text-slate-200">{info ? `${info.os} ${info.arch}` : "-"}</span>

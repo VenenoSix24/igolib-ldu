@@ -37,12 +37,18 @@ export interface ReportContext {
 }
 
 /**
- * 诊断版构建标识。
+ * 调试版构建标识。
  *
- * 由 `vite build --mode diagnostic` 置位（见 package.json 的 build:diagnostic
- * 与 src-tauri/tauri.diag.conf.json），用于区分正式版与诊断版。
+ * 由 `vite build --mode debug` 置位（见 package.json 的 debug:frontend:build
+ * 与 src-tauri/tauri.debug.conf.json），用于区分正式版与诊断版。
  */
-export const IS_DIAGNOSTIC_BUILD = import.meta.env.MODE === "diagnostic";
+export const IS_DEBUG_BUILD = import.meta.env.MODE === "debug";
+
+/**
+ * 构建戳：CI 注入的「版本-run号-commit-时间」，用于把用户发来的日志对上具体构建。
+ * 本地构建时没有这个变量，显示为「本地构建」。
+ */
+export const BUILD_STAMP = String(import.meta.env.VITE_BUILD_STAMP ?? "").trim() || "本地构建";
 
 export async function fetchDiagInfo(): Promise<DiagInfo | null> {
   try {
@@ -88,8 +94,9 @@ export function buildReportHeader(info: DiagInfo | null, context: ReportContext)
   const lines: string[] = ["===== 我去抢个座 · 诊断报告 ====="];
 
   lines.push(`导出时间: ${new Date().toLocaleString()}`);
+  lines.push(`构建: ${BUILD_STAMP}`);
   if (info) {
-    lines.push(`应用: ${info.app_name} v${info.app_version}${IS_DIAGNOSTIC_BUILD ? "（诊断版）" : ""}`);
+    lines.push(`应用: ${info.app_name} v${info.app_version}${IS_DEBUG_BUILD ? "（诊断版）" : ""}`);
     lines.push(`应用标识: ${info.identifier}`);
     lines.push(`系统: ${info.os} ${info.arch} (${info.family})`);
     lines.push(`Tauri: ${info.tauri_version}`);
