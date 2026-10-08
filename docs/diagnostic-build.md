@@ -54,7 +54,17 @@ pnpm diag:android   # = tauri android build --apk --config src-tauri/tauri.diag.
 
 ### CI
 
-`.github/workflows/diag-build.yml` 手动触发（Actions → Diagnostic Build），默认只构建桌面端，勾选 `android` 才会附带 APK。产物挂在一个 draft Release 上（默认标签 `diag-latest`），不会发布为正式版本。
+`.github/workflows/diag-build.yml` 手动触发（Actions → Diagnostic Build），矩阵与步骤**照搬 `release.yml`**
+（含 macOS 双架构、Linux、Windows x64/x86、安卓三个 ABI），只加了必要的诊断差异。
+产物挂在一个 draft Release 上，默认标签 `diag-latest`：
+
+- 每次运行先删掉同名 Release 再重建，产物集合永远是干净的一套，下载链接按 tag 保持稳定
+  （`/releases/download/diag-latest/<asset>`）
+- 标签必须以 `diag` 开头，否则流程直接失败，避免误删正式 Release
+- Release 始终是 draft + prerelease，不会出现在正式发布列表里
+
+> 踩过的坑：`GET /releases/tags/{tag}` **不返回 draft**，所以"先查再复用"会一直 404 并新建，
+> 重复触发就会堆出多个同名 draft，而下载页恰好指向那个空的。因此这里改用列表接口先清理。
 
 ## 日志位置
 
