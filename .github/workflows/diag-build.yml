@@ -64,38 +64,23 @@ jobs:
               throw error;
             }
 
-  # 任务 2：构建并上传
-  build-tauri:
+  # 任务 2：桌面端（macOS / Linux / Windows）
+  build-desktop:
     needs: create-release
-    # 未勾选 Android 时跳过安卓矩阵，避免因缺少签名配置而失败
-    if: ${{ matrix.mobile != 'android' || inputs.android }}
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          # --- macOS --- #
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
-
-          # --- Linux --- #
           - platform: 'ubuntu-22.04'
             args: ''
-
-          # --- Windows 64 --- #
           - platform: 'windows-latest'
             args: ''
-
-          # --- Android（可选） --- #
-          - platform: 'ubuntu-22.04'
-            args: '--apk --split-per-abi --target aarch64'
-            mobile: 'android'
-          - platform: 'ubuntu-22.04'
-            args: '--apk --split-per-abi --target x86_64'
-            mobile: 'android'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -115,7 +100,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,x86_64-linux-android' || '') }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: Swatinem/rust-cache@v2
 
@@ -128,20 +113,74 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      # 诊断版不做更新签名（tauri.diag.conf.json 里 createUpdaterArtifacts=false）
+      - uses: tauri-apps/tauri-action@dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }} --config src-tauri/tauri.diag.conf.json
+          uploadUpdaterSignatures: false
+          uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
+          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][setup][ext]'
+
+  # 任务 3：Android（可选）
+  # 单独成 job：job 级 if 里不能引用 matrix，只能用 inputs 控制开关
+  build-android:
+    needs: create-release
+    if: ${{ inputs.android }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target aarch64'
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target x86_64'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: 'aarch64-linux-android,x86_64-linux-android'
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
       - name: Setup Java
-        if: matrix.mobile == 'android'
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '17'
 
       - name: Setup Android SDK
-        if: matrix.mobile == 'android'
         uses: android-actions/setup-android@v4
 
-      # --- 安卓签名（与正式版同一 keystore；包名不同以便与正式版共存） --- #
+      # 与正式版同一 keystore；包名不同，以便诊断版 APK 与正式版共存
       - name: Prepare Android Signing
-        if: matrix.mobile == 'android'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -158,8 +197,6 @@ jobs:
           storeFile=release.jks
           EOF
 
-      # --- Tauri Action --- #
-      # 诊断版不做更新签名（tauri.diag.conf.json 里 createUpdaterArtifacts=false）
       - uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,7 +204,6 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }} --config src-tauri/tauri.diag.conf.json
-          mobile: ${{ matrix.mobile }}
+          mobile: 'android'
           uploadUpdaterSignatures: false
-          uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
-          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][setup][ext]'
+          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][ext]'
