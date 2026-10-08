@@ -40,29 +40,43 @@ jobs:
         with:
           script: |
             const tag = process.env.TAG_NAME;
-            try {
-              // 复用已存在的 Release，方便反复覆盖上传新的诊断版产物
-              const { data } = await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag
-              });
-              return data.id;
-            } catch (error) {
-              if (error.status === 404) {
-                const { data } = await github.rest.repos.createRelease({
+
+            // 防呆：下面会删掉同名 Release 再重建，只允许诊断版自己的标签
+            if (!tag.startsWith('diag')) {
+              core.setFailed(`拒绝使用非诊断版标签 "${tag}"：该流程会删除同名 Release 后重建`);
+              return;
+            }
+
+            // 注意：GET /releases/tags/{tag} 不返回 draft，所以这里必须用列表接口。
+            // 先清掉同名 Release（含 draft），保证每次产出的都是一套干净、不重复的产物，
+            // 同时下载链接按 tag 保持稳定。
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            for (const release of releases) {
+              if (release.tag_name === tag) {
+                await github.rest.repos.deleteRelease({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  tag_name: tag,
-                  name: `我去抢个座 诊断版 ${tag}`,
-                  body: '带日志导出的诊断版构建产物，用于收集排障日志，非正式发布版本。',
-                  draft: true,
-                  prerelease: true
+                  release_id: release.id
                 });
-                return data.id;
               }
-              throw error;
             }
+
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `我去抢个座 诊断版 ${tag}`,
+              body: '带日志导出的诊断版构建产物，用于收集排障日志，非正式发布版本。',
+              draft: true,
+              prerelease: true
+            });
+
+            return data.id;
 
   # 任务 2：构建并上传（矩阵与 release.yml 一致）
   build-tauri:
