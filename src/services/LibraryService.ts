@@ -1,5 +1,15 @@
 import { fetch } from '@tauri-apps/plugin-http';
 import { WebSocketService } from './WebSocketService';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger("LibraryService");
+
+/** GraphQL 响应体可能很大（含整层座位列表），出错时优先保留 errors */
+function summarizeGraphql(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object") return payload;
+  const body = payload as { errors?: unknown; data?: unknown };
+  return body.errors ? { errors: body.errors, data: body.data } : payload;
+}
 
 interface Room {
   id: number;
@@ -80,7 +90,7 @@ export class LibraryService {
       "app-version": "2.2.5"
     };
 
-    console.log(`[LibraryService] 初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
+    log.info(`初始化: Base=${this.baseUrl}, Origin=${this.headers.Origin}`);
   }
 
   // 带重试逻辑的通用 GraphQL 发送器
@@ -91,17 +101,18 @@ export class LibraryService {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         if (attempt > 1) {
-          console.log(`[HTTP] 重试第 ${attempt}/${MAX_RETRIES} 次...`);
+          log.warn(`重试第 ${attempt}/${MAX_RETRIES} 次`, { operationName });
           // 简单指数退避：500ms, 1000ms, ...
           await new Promise(r => setTimeout(r, 500 * (attempt - 1)));
         }
 
-        // 调试请求头日志
-        console.log(`[HTTP] 发送操作: ${operationName}`);
-        console.log(`[HTTP] URL: ${this.baseUrl}`);
-        const loggedHeaders = { ...this.headers, Cookie: this.headers.Cookie ? `${this.headers.Cookie.slice(0, 16)}...(len=${this.headers.Cookie.length})` : "" };
-        console.log(`[HTTP] Headers:`, loggedHeaders);
-        console.log(`[HTTP] Variables:`, variables);
+        // Cookie 等凭据由 logger 统一脱敏，这里可以放心带上完整请求头
+        log.debug(`→ ${operationName}`, {
+          url: this.baseUrl,
+          headers: this.headers,
+          variables,
+        });
+        const startedAt = Date.now();
 
         const response = await fetch(this.baseUrl, {
           method: 'POST',
@@ -109,15 +120,18 @@ export class LibraryService {
           body: JSON.stringify({ operationName, query, variables })
         });
 
+        const elapsed = Date.now() - startedAt;
+
         if (!response.ok) {
+          log.error(`← ${operationName} HTTP ${response.status} (${elapsed}ms)`, response.statusText);
           throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
         }
 
         const json = await response.json();
-        console.log(`[HTTP] ${operationName} 响应:`, json);
+        log.debug(`← ${operationName} ${response.status} (${elapsed}ms)`, summarizeGraphql(json));
         return json;
       } catch (error) {
-        console.error(`[HTTP] 请求失败 (第 ${attempt} 次):`, error);
+        log.error(`请求失败 (第 ${attempt} 次)`, { operationName, error });
         lastError = error;
       }
     }
@@ -128,11 +142,14 @@ export class LibraryService {
   async getRoomList(): Promise<Room[]> {
     const query = `query list { userAuth { reserve { libs(libType: -1) { lib_id lib_name is_open lib_rt { seats_has } } } } }`;
     const data = await this.sendGraphql("list", query);
-    console.log("[HTTP] list response:", data);
     const libs = data?.data?.userAuth?.reserve?.libs || [];
 
+    log.info(
+      `场馆列表: ${libs.length} 个`,
+      libs.map((l) => `${l.lib_name}(${l.lib_id}) 余${l.lib_rt?.seats_has ?? 0}`)
+    );
+
     // 过滤开放的场馆并映射字段
-    console.log("[HTTP] 原始场馆数据:", libs);
     return libs.map((l) => ({
       id: l.lib_id,
       name: l.lib_name,
@@ -147,14 +164,20 @@ export class LibraryService {
     const data = await this.sendGraphql("libLayout", query, { libId, libType: -1 });
     const seats = data?.data?.userAuth?.reserve?.libs?.[0]?.lib_layout?.seats || [];
 
-    return seats.filter((s) => {
+    const filtered = seats.filter((s) => {
       // 过滤掉 name 为空的无效元素
       if (!s.name) return false;
       // 明日预约模式下不过滤占用状态，返回全部座位
       if (includeOccupied) return true;
       const seatStatus = s.seat_status !== undefined ? s.seat_status : 1;
       return seatStatus === 1;
-    }).map((s) => ({
+    });
+
+    log.info(
+      `场馆 ${libId} 座位解析: 原始 ${seats.length} 个 → 可用 ${filtered.length} 个 (includeOccupied=${includeOccupied})`
+    );
+
+    return filtered.map((s) => ({
       key: s.key,
       name: s.name,
       status: s.status,
@@ -169,9 +192,10 @@ export class LibraryService {
       if (rooms && rooms.length > 0) {
         return { name: "已登录用户", id: "0000" };
       }
+      log.warn("场馆列表为空，Cookie 可能已失效");
       return null;
     } catch (e) {
-      console.error("[Auth] Cookie validation failed via room list:", e);
+      log.error("通过场馆列表校验 Cookie 失败", e);
       return null;
     }
   }
@@ -182,9 +206,12 @@ export class LibraryService {
     try {
       const seats = await this.getSeatLayout(libId, includeOccupied);
       const match = seats.find(s => s.name === seatNumber);
+      if (!match) {
+        log.warn(`座位号 ${seatNumber} 未在返回列表中匹配到 Key`);
+      }
       return match ? match.key : null;
     } catch (e) {
-      console.error(`[座位解析] 无法解析 ${seatNumber} 的 Key:`, e);
+      log.error(`无法解析座位 ${seatNumber} 的 Key`, e);
       return null;
     }
   }
@@ -195,17 +222,17 @@ export class LibraryService {
       // 只有明日预约需要强制排队
       try {
         const wsService = new WebSocketService(this.cookie, this.baseUrl, this.headers["Origin"]);
-        console.log("[Booking] 1. Starting WebSocket Queue (Tomorrow Mode)...");
+        log.info("1. 明日模式: 进入 WebSocket 排队通道...");
         await wsService.passQueue(mode);
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         if (message.includes("FATAL:")) {
           throw new Error(message.replace("FATAL: ", "排队被拦截: "));
         }
-        console.warn("[Booking] WebSocket queue bypassed/failed, proceeding to HTTP...", e);
+        log.warn("WebSocket 排队失败/被绕过，转走 HTTP", e);
       }
     } else {
-      console.log("[Booking] 1. Today Mode: Skipping WebSocket Queue entirely (Not needed).");
+      log.info("1. 今日模式: 无需排队，跳过 WebSocket");
     }
 
     let preflightQuery = "";
@@ -219,15 +246,15 @@ export class LibraryService {
     }
 
     try {
-      console.log(`[Booking] 2. Pre-flight (Choosing Library for Mode ${mode})...`);
+      log.info(`2. 预请求 (mode=${mode})...`);
       await this.sendGraphql("libLayout", preflightQuery, preflightVars);
       
       // 添加一个短暂的停顿
       await new Promise(resolve => setTimeout(resolve, 200));
     } catch (e) {
-      console.warn("[Booking] Pre-flight warning (non-fatal):", e);
+      log.warn("预请求失败（非致命）", e);
     }
-    console.log("[预约] 3. 正在执行最终预约请求...");
+    log.info(`3. 执行最终${mode === 2 ? "抢座" : "预约"}请求...`);
     let result: GqlResponse;
     if (mode === 2) {
       // 立即抢座 (Today)
@@ -236,6 +263,7 @@ export class LibraryService {
       const opName = isOfficial ? "reserueSeat" : "reserveSeat";
       const query = `mutation ${opName}($libId: Int!, $seatKey: String!, $captchaCode: String, $captcha: String!) { userAuth { reserve { ${opName}(libId: $libId, seatKey: $seatKey, captchaCode: $captchaCode, captcha: $captcha) } } }`;
       const variables = { libId, seatKey, captchaCode: "", captcha };
+      log.info(`使用接口: ${opName} (official=${isOfficial})`);
       result = await this.sendGraphql(opName, query, variables);
 
       // 官方失败时仅返回 false 不带 errors，漏读会误报成功
@@ -258,7 +286,7 @@ export class LibraryService {
     }
 
     try {
-      console.log("[预约] 4. 正在验证预约结果...");
+      log.info("4. 校验预约结果...");
       let validateQuery = "";
       if (mode === 1) {
         validateQuery = `query prereserve { userAuth { prereserve { prereserve { day lib_id seat_key seat_name is_used } } } }`;
@@ -268,7 +296,7 @@ export class LibraryService {
         await this.sendGraphql("reserve", validateQuery);
       }
     } catch (e) {
-      console.warn("[预约] 验证请求失败（非致命网络问题），但主请求已完成。", e);
+      log.warn("校验请求失败（非致命，主请求已完成）", e);
     }
 
     return result;

@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket, Calendar, Clock, Zap, Terminal, StopCircle, Info, CheckCircle, AlertTriangle,
   LayoutList, Eye, EyeOff, Activity, CheckCircle2, AlertCircle, Timer, Moon, Sun, Laptop, Trash2,
-  KeyRound, Building2, Armchair, Settings, RefreshCw, X, QrCode, ClipboardPaste
+  KeyRound, Building2, Armchair, Settings, RefreshCw, X, QrCode, ClipboardPaste, Stethoscope, FileDown
 } from "lucide-react";
 import { submitRequest, cancelTask, getDynamicRooms, getRoomSeats, validateUser, type RoomMapping, type DynamicRoom, type DynamicSeat } from "../services/api";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,17 @@ import { useTheme } from "@/components/theme-provider";
 import { SettingsModal, loadApiConfig, saveApiConfig, type ApiConfig, DEFAULT_CONFIG } from "@/components/SettingsModal";
 import { QRCodeCanvas } from "qrcode.react";
 import { AuthService } from "../services/AuthService";
+import { DiagnosticsModal } from "@/components/DiagnosticsModal";
+import { createLogger } from "@/lib/logger";
+import { IS_DIAGNOSTIC_BUILD, type ReportContext } from "@/lib/diagnostics";
+
+const log = createLogger("Dashboard");
+
+const PRESET_LABEL: Record<ApiConfig["preset"], string> = {
+  ldu: "卤蛋大学",
+  official: "官方原版",
+  custom: "自定义",
+};
 
 interface LogEntry {
   id: string;
@@ -66,6 +77,7 @@ export default function Dashboard() {
   // --- API 配置状态 ---
   const [apiConfig, setApiConfig] = useState<ApiConfig>(DEFAULT_CONFIG);
   const [showSettings, setShowSettings] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authInputUrl, setAuthInputUrl] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -217,9 +229,9 @@ export default function Dashboard() {
           setLibId("");
         }
 
-        console.log(`✅ 动态加载 ${data.rooms.length} 个场馆`);
+        log.info(`动态加载 ${data.rooms.length} 个场馆`);
       } catch (error) {
-        console.warn("动态加载场馆失败，保持现状:", error);
+        log.warn("动态加载场馆失败，保持现状", error);
         setRoomsError(error instanceof Error ? error.message : "加载失败");
       } finally {
         setLoadingRooms(false);
@@ -269,9 +281,9 @@ export default function Dashboard() {
         if (selectedSeatKey && !availableSeats.find(s => s.key === selectedSeatKey)) {
           setSelectedSeatKey("");
         }
-        console.log(`✅ 加载场馆 ${libId} 的 ${availableSeats.length} 个可用座位 (模式: ${opMode})`);
+        log.info(`加载场馆 ${libId} 的 ${availableSeats.length} 个可用座位 (模式: ${opMode})`);
       } catch (error) {
-        console.warn("加载座位列表失败:", error);
+        log.warn("加载座位列表失败", error);
         setDynamicSeats([]);
       } finally {
         setLoadingSeats(false);
@@ -383,6 +395,18 @@ export default function Dashboard() {
   ) => {
     const cleanedMessage = (event === "result" || type === "error") ? formatStatusMessage(message) : message;
     updateStatus(cleanedMessage);
+
+    // 同步进统一日志流，导出诊断报告时能看到完整的任务过程
+    if (type === "error") {
+      log.error(`任务: ${message}`, event);
+    } else if (type === "warning") {
+      log.warn(`任务: ${message}`, event);
+    } else if (event === "countdown") {
+      // 倒计时每秒都在刷新，降级为 debug 避免淹没关键日志
+      log.debug(`任务: ${cleanedMessage}`);
+    } else {
+      log.info(`任务: ${message}`, event);
+    }
 
     // 根据事件类型更新当前阶段
     if (event === "phase" && data?.phase) {
@@ -521,6 +545,22 @@ export default function Dashboard() {
     setShowResultDialog(true);
   };
 
+  // 诊断报告头部信息：只带结论与配置，不含 Cookie 内容
+  const diagContext = useMemo<ReportContext>(() => ({
+    apiPreset: PRESET_LABEL[apiConfig.preset],
+    apiUrl: apiConfig.apiUrl,
+    cookieState: userInfo
+      ? (userInfo.valid ? `已校验通过 (${cookieStr.length} 字符)` : "已失效")
+      : cookieStr ? "未校验" : "未填写",
+    extra: {
+      操作模式: opMode === "scheduled" ? "明日预约" : "立即抢座",
+      执行时间: execTime === "immediate" ? "立即" : (execTime === "2148" ? "21:48:00" : customTime),
+      任务状态: status,
+      场馆: rooms[libId] || (libId ? `#${libId}` : "未选择"),
+      座位号: seatNumber || "未填写",
+    },
+  }), [apiConfig, userInfo, cookieStr, opMode, execTime, customTime, status, rooms, libId, seatNumber]);
+
   return (
     <div className="fixed inset-0 h-screen w-full font-sans overflow-hidden transition-colors duration-300">
       {/* 真正的底层背景 */}
@@ -543,8 +583,22 @@ export default function Dashboard() {
               <h2 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                 <Rocket className="w-5 h-5 text-blue-500" />
                 任务配置
+                {IS_DIAGNOSTIC_BUILD && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold">
+                    诊断版
+                  </span>
+                )}
               </h2>
               <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDiagnostics(true)}
+                  className="w-9 h-9 text-slate-500 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-slate-100"
+                  title="诊断日志"
+                >
+                  <Stethoscope className="w-5 h-5" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -952,7 +1006,16 @@ export default function Dashboard() {
                   <p className="text-xs text-blue-500 font-bold mt-1 animate-pulse">正在执行任务逻辑...</p>
                 )}
               </div>
-              <Button size="icon" variant="ghost" className="ml-auto text-slate-400 hover:text-neutral-600" onClick={() => setLogs([])} title="清空日志">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="ml-auto text-slate-400 hover:text-neutral-600"
+                onClick={() => setShowDiagnostics(true)}
+                title="导出诊断日志"
+              >
+                <FileDown className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant="ghost" className="text-slate-400 hover:text-neutral-600" onClick={() => setLogs([])} title="清空日志">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -1176,7 +1239,7 @@ export default function Dashboard() {
                             const text = await readText();
                             if (text) setAuthInputUrl(text.trim());
                           } catch (err: any) {
-                            console.warn("[Auth] 粘贴失败:", err);
+                            log.warn("读取剪贴板失败", err);
                             alert("无法获取剪贴板内容，请手动长按输入框粘贴");
                           }
                         }}
@@ -1294,7 +1357,25 @@ export default function Dashboard() {
             </div>
           )}
 
-          <DialogFooter className="mt-4 sm:mt-5">
+          <DialogFooter className="mt-4 sm:mt-5 !flex-col gap-2">
+            {status === 'failed' && (
+              <>
+                <p className="text-[11px] text-slate-400 dark:text-neutral-500 text-center">
+                  遇到问题？把日志发给作者能更快定位原因
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowResultDialog(false);
+                    setShowDiagnostics(true);
+                  }}
+                  className="w-full h-10 font-bold rounded-xl dark:border-neutral-700"
+                >
+                  <Stethoscope className="w-4 h-4 mr-1.5" />
+                  导出诊断日志给作者
+                </Button>
+              </>
+            )}
             <Button
               onClick={() => setShowResultDialog(false)}
               className={cn(
@@ -1309,6 +1390,13 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 诊断日志面板 */}
+      <DiagnosticsModal
+        isOpen={showDiagnostics}
+        onClose={() => setShowDiagnostics(false)}
+        context={diagContext}
+      />
 
       {/* 移动端底部导航栏 */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-neutral-800 px-6 pt-2 pb-[calc(env(safe-area-inset-bottom)+8px)] flex justify-around items-center z-40">

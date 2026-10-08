@@ -1,0 +1,173 @@
+name: 'Diagnostic Build'
+
+# 手动触发，构建带日志导出的独立诊断版安装包。
+# 产物与正式版使用不同的应用标识（com.igolib.ldu.diag），可同时安装、不会互相覆盖。
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '存放构建产物的 Release 标签（留空则使用 diag-latest）'
+        required: false
+        default: 'diag-latest'
+      android:
+        description: '是否同时构建 Android APK（需要已配置安卓签名 secret）'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  # 任务 1：创建/复用 Release
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      - name: Create Release
+        id: create-release
+        uses: actions/github-script@v8
+        env:
+          TAG_NAME: ${{ inputs.tag || 'diag-latest' }}
+        with:
+          script: |
+            const tag = process.env.TAG_NAME;
+            try {
+              // 复用已存在的 Release，便于反复覆盖上传新的诊断版产物
+              const { data } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag
+              });
+              return data.id;
+            } catch (error) {
+              if (error.status === 404) {
+                const { data } = await github.rest.repos.createRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_name: tag,
+                  name: `我去抢个座 诊断版 ${tag}`,
+                  body: '带日志导出的诊断版构建产物，用于收集排障日志，非正式发布版本。',
+                  draft: true,
+                  prerelease: true
+                });
+                return data.id;
+              }
+              throw error;
+            }
+
+  # 任务 2：构建并上传
+  build-tauri:
+    needs: create-release
+    # 未勾选 Android 时跳过安卓矩阵，避免因缺少签名配置而失败
+    if: ${{ matrix.mobile != 'android' || inputs.android }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # --- macOS --- #
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+
+          # --- Linux --- #
+          - platform: 'ubuntu-22.04'
+            args: ''
+
+          # --- Windows 64 --- #
+          - platform: 'windows-latest'
+            args: ''
+
+          # --- Android（可选） --- #
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target aarch64'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target x86_64'
+            mobile: 'android'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,x86_64-linux-android' || '') }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Setup Java
+        if: matrix.mobile == 'android'
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        if: matrix.mobile == 'android'
+        uses: android-actions/setup-android@v4
+
+      # --- 安卓签名（与正式版同一 keystore；包名不同以便与正式版共存） --- #
+      - name: Prepare Android Signing
+        if: matrix.mobile == 'android'
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          mkdir -p src-tauri/gen/android/app
+          echo "$KEYSTORE_BASE64" | base64 --decode > src-tauri/gen/android/app/release.jks
+          cat <<EOF > src-tauri/gen/android/keystore.properties
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=release.jks
+          EOF
+
+      # --- Tauri Action --- #
+      # 诊断版不做更新签名（tauri.diag.conf.json 里 createUpdaterArtifacts=false）
+      - uses: tauri-apps/tauri-action@dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IGOLIB_ANDROID_APP_ID: com.igolib.ldu.diag
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }} --config src-tauri/tauri.diag.conf.json
+          mobile: ${{ matrix.mobile }}
+          uploadUpdaterSignatures: false
+          uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
+          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][setup][ext]'

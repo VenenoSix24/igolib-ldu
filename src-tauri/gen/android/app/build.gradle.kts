@@ -34,7 +34,8 @@ android {
 
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.igolib.ldu"
+        // 诊断版通过 IGOLIB_ANDROID_APP_ID 覆盖包名，使诊断版 APK 能与正式版共存
+        applicationId = System.getenv("IGOLIB_ANDROID_APP_ID")?.takeIf { it.isNotBlank() } ?: "com.igolib.ldu"
         minSdk = 24
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

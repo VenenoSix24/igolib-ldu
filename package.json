@@ -9,7 +9,11 @@
     "tauri": "tauri",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:diagnostic": "vite --mode diagnostic",
+    "build:diagnostic": "tsc -b && vite build --mode diagnostic",
+    "diag:dev": "tauri dev --config src-tauri/tauri.diag.conf.json",
+    "diag:build": "tauri build --config src-tauri/tauri.diag.conf.json"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
