@@ -63,6 +63,16 @@ pnpm diag:android   # = tauri android build --apk --config src-tauri/tauri.diag.
 - 标签必须以 `diag` 开头，否则流程直接失败，避免误删正式 Release
 - Release 始终是 draft + prerelease，不会出现在正式发布列表里
 
+**要发给用户之前必须先发布**——draft 只有仓库协作者能看到，外部用户打不开：
+
+```bash
+gh release edit diag-latest --draft=false
+# 或直接在 GitHub 的 Release 页面点 "Publish release"
+```
+
+之后把对应平台的链接发给用户即可，例如
+`https://github.com/VenenoSix24/igolib-ldu/releases/download/diag-latest/igolib_ldu-diag-1.0.28-windows-x64-setup.exe`。
+
 > 踩过的坑：`GET /releases/tags/{tag}` **不返回 draft**，所以"先查再复用"会一直 404 并新建，
 > 重复触发就会堆出多个同名 draft，而下载页恰好指向那个空的。因此这里改用列表接口先清理。
 
