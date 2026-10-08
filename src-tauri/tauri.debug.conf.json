@@ -1,0 +1,14 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "我去抢个座(Debug版)",
+  "identifier": "com.igolib.ldu.debug",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm debug:frontend:dev",
+    "beforeBuildCommand": "pnpm debug:frontend:build"
+  },
+  "bundle": {
+    "createUpdaterArtifacts": false
+  }
+}

@@ -9,7 +9,12 @@
     "tauri": "tauri",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "debug:frontend:dev": "vite --mode debug",
+    "debug:frontend:build": "tsc -b && vite build --mode debug",
+    "debug:dev": "tauri dev --config src-tauri/tauri.debug.conf.json",
+    "debug:build": "tauri build --config src-tauri/tauri.debug.conf.json",
+    "debug:android": "tauri android build --apk --config src-tauri/tauri.debug.mobile.conf.json"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

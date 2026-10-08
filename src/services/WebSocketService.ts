@@ -1,4 +1,7 @@
 import WebSocket from '@tauri-apps/plugin-websocket';
+import { createLogger } from '../lib/logger';
+
+const logger = createLogger("WebSocket");
 
 export class WebSocketService {
   private host: string;
@@ -20,19 +23,21 @@ export class WebSocketService {
       "Cookie": cookie
     };
     
-    console.log(`[WS] 动态初始化成功: Host=${this.host}, Origin=${origin}`);
+    // Cookie 由 logger 统一脱敏
+    logger.debug(`初始化: Host=${this.host}, Origin=${origin}`, this.headers);
   }
 
   async passQueue(mode: number, onStatus?: (msg: string) => void): Promise<boolean> {
-    const log = (msg: string) => {
-      console.log(`[WS] ${msg}`);
+    // 同时写入日志流，便于事后从诊断日志里确认排队到底卡在哪一步
+    const report = (msg: string) => {
+      logger.info(msg);
       onStatus?.(msg);
     };
 
     const ns = "prereserve/queue";
     const wsUrl = `wss://${this.host}/ws?ns=${ns}`;
 
-    log(`尝试进入排队通道 (被请求模式 ${mode}: ${ns})...`);
+    report(`尝试进入排队通道 (被请求模式 ${mode}: ${ns})...`);
 
     try {
       // 使用请求头连接 WebSocket
@@ -40,16 +45,17 @@ export class WebSocketService {
         headers: this.headers
       });
 
-      log("WebSocket 连接成功");
+      report("WebSocket 连接成功");
 
       // 进行完整的 WebSocket 排队轮询验证
       return new Promise<boolean>((resolve, reject) => {
         let isResolved = false;
+        let receivedCount = 0;
 
         // 超时15秒，放弃排队
         const timeout = setTimeout(async () => {
           if (!isResolved) {
-            log("排队等待超时(15s)，放弃排队尝试...");
+            report("排队等待超时(15s)，放弃排队尝试...");
             isResolved = true;
             clearInterval(pollTimer);
             await ws.disconnect();
@@ -59,7 +65,14 @@ export class WebSocketService {
 
         ws.addListener((msg) => {
           if (isResolved) return;
+
+          if (msg.type === "Close") {
+            logger.warn("排队通道被服务端关闭", { received: receivedCount, ...msg.data });
+            return;
+          }
           if (msg.type !== "Text") return;
+
+          receivedCount += 1;
 
           try {
             let serverMsg = msg.data;
@@ -69,13 +82,13 @@ export class WebSocketService {
               // 非 JSON 消息直接用原始字符串
             }
 
-            log(`拉回收到: ${serverMsg}`);
+            report(`拉回收到: ${serverMsg}`);
 
             const lowerMsg = String(serverMsg).toLowerCase();
 
             if (["不在", "未开始", "结束", "已闭馆", "登记了", "已登记"].some(k => lowerMsg.includes(k))) {
               if (mode === 2) {
-                log(`当日推断: 当前时段无需排队 (${serverMsg})，直接放行...`);
+                report(`当日推断: 当前时段无需排队 (${serverMsg})，直接放行...`);
                 isResolved = true;
                 clearTimeout(timeout);
                 clearInterval(pollTimer);
@@ -83,7 +96,7 @@ export class WebSocketService {
                 return;
               } else {
                 // 对于明日预约，这就代表提前返回已知状态
-                log(`排队通道提前返回状态: ${serverMsg}`);
+                report(`排队通道提前返回状态: ${serverMsg}`);
                 isResolved = true;
                 clearTimeout(timeout);
                 clearInterval(pollTimer);
@@ -93,7 +106,7 @@ export class WebSocketService {
             }
 
             if (["ok", "排队成功", "u6392", "您已经预定了座位", "u6210", "不需要排队"].some(k => lowerMsg.includes(k))) {
-              log("排队成功(或无需排队)标志被检测到！");
+              report("排队成功(或无需排队)标志被检测到！");
               isResolved = true;
               clearTimeout(timeout);
               clearInterval(pollTimer);
@@ -103,14 +116,14 @@ export class WebSocketService {
               return;
             }
           } catch (e) {
-            log(`消息解析失败: ${e}`);
+            logger.warn("排队消息解析失败", { raw: msg.data, error: e });
           }
         });
 
         // 使用定时器高频轮询发送
         const payloadStr = JSON.stringify({ ns: ns, msg: "" });
         
-        log("开始发送排队轮询...");
+        report("开始发送排队轮询...");
         ws.send(payloadStr);
 
         // 每隔 200 毫秒发送一次
@@ -123,7 +136,7 @@ export class WebSocketService {
       });
 
     } catch (e) {
-      log(`WebSocket 连接失败: ${e} (类型: ${(e as object)?.constructor?.name})`);
+      logger.error("WebSocket 连接失败", { url: wsUrl, error: e });
       return true;
     }
   }

@@ -10,20 +10,31 @@ import { getVersion } from "@tauri-apps/api/app";
 import { fetch } from "@tauri-apps/plugin-http";
 import { check, Update } from '@tauri-apps/plugin-updater';
 
+import { createLogger } from "./lib/logger";
+import { IS_DEBUG_BUILD } from "./lib/diagnostics";
+
+const log = createLogger("App");
+
 function App() {
   const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
 
   useEffect(() => {
+    // Debug 版使用独立的应用标识，若被正式版自动更新覆盖会直接丢掉诊断能力，因此跳过更新检查
+    if (IS_DEBUG_BUILD) {
+      log.info("Debug 版已跳过更新检查");
+      return;
+    }
+
     const checkForUpdates = async () => {
       try {
         const update = await check();
         if (update) {
-          console.log(`发现新版本 (Native): ${update.version}`);
+          log.info(`发现新版本 (Native): ${update.version}`);
           setUpdateInfo(update);
           return;
         }
       } catch (nativeError) {
-        console.warn("原生更新检查失败或不支持，尝试手动检查:", nativeError);
+        log.warn("原生更新检查失败或不支持，尝试手动检查", nativeError);
       }
       try {
         // 获取当前版本
@@ -45,7 +56,7 @@ function App() {
         // 简单的版本比较
         if (latestVer && latestVer !== currentVer) {
           if (latestVer > currentVer) {
-            console.log(`发现新版本 (Manual): ${latestVer}`);
+            log.info(`发现新版本 (Manual): ${latestVer}`);
             setUpdateInfo({
               version: latestVer,
               body: data.notes,
@@ -56,7 +67,7 @@ function App() {
         }
 
       } catch (manualError) {
-        console.error("手动更新检查失败:", manualError);
+        log.warn("手动更新检查失败", manualError);
       }
     };
 
