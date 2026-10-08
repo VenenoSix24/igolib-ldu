@@ -363,7 +363,7 @@ pub fn run() {
             diag_open_dir
         ])
         .setup(|app| {
-            // 诊断版：release 构建同样把日志落盘，用户遇到问题可直接导出，不再只能发截图
+            // Debug 版：release 构建同样把日志落盘，用户遇到问题可直接导出，不再只能发截图
             let mut targets = Vec::new();
             // 开发时同时打到终端，方便实时观察。
             // Stdout 只有桌面端存在，且 release 下不写 stdout，避免 Windows 弹出控制台

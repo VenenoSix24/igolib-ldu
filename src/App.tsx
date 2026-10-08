@@ -19,9 +19,9 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
 
   useEffect(() => {
-    // 诊断版使用独立的应用标识，若被正式版自动更新覆盖会直接丢掉诊断能力，因此跳过更新检查
+    // Debug 版使用独立的应用标识，若被正式版自动更新覆盖会直接丢掉诊断能力，因此跳过更新检查
     if (IS_DEBUG_BUILD) {
-      log.info("诊断版已跳过更新检查");
+      log.info("Debug 版已跳过更新检查");
       return;
     }
 

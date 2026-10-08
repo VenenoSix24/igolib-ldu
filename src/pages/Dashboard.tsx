@@ -585,7 +585,7 @@ export default function Dashboard() {
                 任务配置
                 {IS_DEBUG_BUILD && (
                   <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold">
-                    诊断版
+                    Debug版
                   </span>
                 )}
               </h2>
@@ -1164,12 +1164,14 @@ export default function Dashboard() {
       <AnimatePresence>
         {showAuthDialog && (
           <>
-            {/* 遮罩层 */}
+            {/* 遮罩层：不要加 backdrop-blur。全屏 backdrop-filter 在透明窗口
+                （Tauri transparent + 透明 html/body）上创建与销毁合成层时，
+                会让整个窗口闪一下，也就是打开/关闭弹窗各闪一次 */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              className="fixed inset-0 bg-black/50 z-50"
               onClick={() => setShowAuthDialog(false)}
             />
 

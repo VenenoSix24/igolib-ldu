@@ -1,12 +1,12 @@
 name: 'Debug Build'
 
-# 手动触发，构建带日志导出的诊断版安装包，用于给用户抓日志。
+# 手动触发，构建带日志导出的 Debug 版安装包，用于给用户抓日志。
 #
 # 与 release.yml 保持同一套写法（矩阵、步骤、动作版本），差异只有：
 #   - 触发方式、Release 标签与命名
 #   - 每个平台追加 --config 切到调试模式
 #   - 构建全绿后才发布（draft -> prerelease），避免用户拿到空的或残缺的 Release
-#   - 发布后清理更早的诊断版
+#   - 发布后清理更早的 Debug 版
 #
 # ⚠️ 文件名请勿改动。GitHub 的工作流注册是按「文件路径」索引的，而本工作流只存在于
 # 特性分支（默认分支 tauri-ts 上刻意不放）。改名后新路径在非默认分支上拿不到
@@ -66,19 +66,19 @@ jobs:
             const link = (name) => `[\`${name}\`](${base}${name})`;
 
             const body = [
-              '这是**诊断版**，用于收集排障日志，不是正式版本。',
+              '这是**Debug版**，用于收集排障日志，不是正式版本。',
               '',
-              '## 怎么用',
+              '## 如何使用',
               '',
-              '1. 下载安装（macOS 首次打开若被系统拦下，请右键 →「打开」）',
+              '1. 下载安装',
               '2. 照常使用，直到问题复现',
-              '3. 点左上角的 **🩺** →「复制报告」把内容发给我（日志大就点「导出文件」）',
+              '3. 点左上角的 **🩺** →「复制报告」或「导出文件」',
               '',
               '## 各平台下载',
               '',
               '| 平台 | 文件 |',
               '| --- | --- |',
-              `| Windows | ${link(`igolib_ldu-${tag}-windows-x64-setup.exe`)} |`,
+              `| Windows | ${link(`igolib_ldu-${tag}-windows-x64.exe`)} |`,
               `| macOS（Apple 芯片） | ${link(`igolib_ldu-${tag}-darwin-aarch64.dmg`)} |`,
               `| macOS（Intel） | ${link(`igolib_ldu-${tag}-darwin-x64.dmg`)} |`,
               `| Android | ${link(`igolib_ldu-${tag}-android-arm64.apk`)} |`,
@@ -87,7 +87,7 @@ jobs:
               '## 说明',
               '',
               '- 日志里的 Cookie / token 等凭据已自动脱敏，只保存在本机，不会自动上传',
-              '- **安卓诊断版会替换正式版**（包名相同）：重装正式版即可切回，历史日志不会丢',
+              '- **安卓Debug版会替换正式版**：重装正式版即可切回，历史日志不会丢',
               '- 桌面版是独立应用，可与正式版共存，也不会被自动更新覆盖'
             ].join('\n');
 
@@ -95,7 +95,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
-              name: `我去抢个座 诊断版 ${tag}`,
+              name: `我去抢个座 Debug版 ${tag}`,
               body,
               draft: true,
               prerelease: true
@@ -218,7 +218,7 @@ jobs:
           EOF
 
       # --- Tauri Action --- #
-      # 诊断版不传更新签名密钥（配置里 createUpdaterArtifacts=false），
+      # Debug 版不传更新签名密钥（配置里 createUpdaterArtifacts=false），
       # 避免产出可被当作正式更新源的签名产物
       - uses: tauri-apps/tauri-action@dev
         env:
@@ -234,7 +234,7 @@ jobs:
           # 资产名带上标签（含 run 号），用户手里有多个版本时能分清哪个是新的
           releaseAssetNamePattern: 'igolib_ldu-${{ needs.create-release.outputs.tag }}-[platform]-[arch][setup][ext]'
 
-  # 任务 3：发布 + 清理旧诊断版（构建全绿后才跑）
+  # 任务 3：发布 + 清理旧 Debug 版（构建全绿后才跑）
   publish-release:
     permissions:
       contents: write
@@ -247,7 +247,7 @@ jobs:
         env:
           RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
           TAG: ${{ needs.create-release.outputs.tag }}
-          # 保留最近几份诊断版（含本次），更早的连标签一起清掉
+          # 保留最近几份 Debug 版（含本次），更早的连标签一起清掉
           KEEP: '2'
         with:
           script: |
@@ -277,7 +277,7 @@ jobs:
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             for (const release of debugReleases.slice(keep)) {
-              core.info(`清理旧诊断版: ${release.tag_name}`);
+              core.info(`清理旧 Debug 版: ${release.tag_name}`);
               await github.rest.repos.deleteRelease({ owner, repo, release_id: release.id });
               try {
                 await github.rest.git.deleteRef({ owner, repo, ref: `tags/${release.tag_name}` });

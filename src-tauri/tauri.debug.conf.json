@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "我去抢个座(诊断版)",
+  "productName": "我去抢个座(Debug版)",
   "identifier": "com.igolib.ldu.debug",
   "build": {
     "frontendDist": "../dist",

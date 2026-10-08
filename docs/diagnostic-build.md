@@ -1,8 +1,9 @@
-# 诊断版（日志分支）
+# Debug 版（日志分支）
 
 这个分支的目标只有一个：**让用户在出问题时能直接把日志发出来，而不是只能发截图。**
 
-它基于发布线 `tauri-ts` 分出（非 2.0 重构线），产出与正式版**互相独立、可同时安装**的诊断版安装包。
+它基于发布线 `tauri-ts` 分出（非 2.0 重构线），产出与正式版**互相独立、可同时安装**的 Debug 版安装包。
+**不改动 `tauri-ts`**，正式版保持零改动。
 
 ## 词汇约定
 
@@ -11,14 +12,14 @@
 | 用途 | 用词 | 出现在 |
 | --- | --- | --- |
 | 对外技术标识 | `debug` | tag、资产名、`tauri.debug*.conf.json`、`debug:*` npm 脚本、`IS_DEBUG_BUILD` |
-| 中文显示名 | 诊断版 | 安装包名、面板标题、Release 标题 |
+| 中文显示名 | Debug 版 | 安装包名、角标、Release 标题 |
 | 代码模块（功能名） | `diagnostics` | `diag_info` 等命令、`DiagnosticsModal`、`diagnostics.ts` |
 
-理由：`debug` 是给用户看的（URL、下载文件名），中文用户一看就懂；「诊断版」比「调试版」更不容易让人以为软件有问题；代码里 `diagnostics` 才是"诊断日志"这个功能的准确术语。
+理由：`debug` 是给用户看的（URL、下载文件名），中文用户一看就懂；代码里 `diagnostics` 才是"诊断日志"这个功能的准确术语。面板标题仍是「诊断日志」——那是功能名，不是构建变体名。
 
 ## 相比正式版做了什么
 
-| 能力 | 正式版 | 诊断版 |
+| 能力 | 正式版 | Debug 版 |
 | --- | --- | --- |
 | release 构建落盘日志 | 无（`tauri-plugin-log` 仅在 debug 启用） | 有，写到应用日志目录，单文件 4MB、保留 3 份 |
 | 前端日志 | 仅 `console.log`，用户看不到 | 统一 logger，脱敏后落盘 |
@@ -34,17 +35,17 @@
 ## 构建
 
 ```bash
-pnpm debug:dev      # 调试模式开发（配置页标题旁会显示「诊断版」角标）
-pnpm debug:build    # 产出诊断版安装包（macOS: .app/.dmg，Windows: nsis/msi，Linux: deb/appimage/rpm）
+pnpm debug:dev      # 调试模式开发（配置页标题旁会显示「Debug版」角标）
+pnpm debug:build    # 产出安装包（macOS: .app/.dmg，Windows: nsis/msi，Linux: deb/appimage/rpm）
 pnpm debug:android  # 安卓 APK
 ```
 
 前两者通过 `src-tauri/tauri.debug.conf.json` 覆盖：
 
-- `productName` → `我去抢个座(诊断版)`
+- `productName` → `我去抢个座(Debug版)`
 - `identifier` → `com.igolib.ldu.debug`（与正式版不同，因此可同时安装、互不覆盖）
-- `bundle.createUpdaterArtifacts` → `false`（诊断版不做更新签名）
-- 前端以 `--mode debug` 构建，`IS_DEBUG_BUILD` 因此为真 → 跳过更新检查、显示「诊断版」角标
+- `bundle.createUpdaterArtifacts` → `false`（Debug 版不做更新签名）
+- 前端以 `--mode debug` 构建，`IS_DEBUG_BUILD` 因此为真 → 跳过更新检查、显示「Debug版」角标
 
 `--config` 只覆盖上面这些，**不动 `app.windows`**，避免覆盖 `tauri.android.conf.json` 里的安卓窗口设置。
 
@@ -57,11 +58,11 @@ pnpm debug:android  # 安卓 APK
 pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug.mobile.conf.json
 ```
 
-代价要说清楚：**安卓诊断版沿用原包名 `com.igolib.ldu`，安装会替换正式版**（反之亦然）。
-诊断能力、面板与「诊断版」角标都不受影响，APK 文件名也带 `debug-`。
+代价要说清楚：**安卓 Debug 版沿用原包名 `com.igolib.ldu`，安装会替换正式版**（反之亦然）。
+诊断能力、面板与「Debug版」角标都不受影响，APK 文件名也带 `debug-`。
 好处是日志目录与正式版相同，来回换版本时历史日志不会丢。
 
-如果确实需要安卓上两个包共存，得为诊断版重建一套安卓工程
+如果确实需要安卓上两个包共存，得为 Debug 版重建一套安卓工程
 （`tauri android init` 会按 identifier 生成 `gen/android`，一个仓库只能有一套），
 或在 `gen/android` 里同时维护两个包名的 MainActivity 并让 gradle 按环境变量切换 namespace，
 两种做法都会碰到 `gen/android` 被重新生成时丢失改动的风险，目前没有采用。
@@ -78,9 +79,9 @@ pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug
 
 一次运行的流程：
 
-1. 生成唯一标签 `debug-<应用版本>-r<run 号>`（如 `debug-1.0.28-r12`）与构建戳，创建 **draft** Release
-2. 8 个构建 job 并行构建并上传资产，资产名带标签：`igolib_ldu-debug-1.0.28-r12-windows-x64-setup.exe`
-3. 全部成功后才**发布为 prerelease**，并清理更早的诊断版（保留最近 2 份，含标签）
+1. 生成唯一标签 `debug-<应用版本>-r<run 号>`（如 `debug-1.0.28-r7`）与构建戳，创建 **draft** Release
+2. 8 个构建 job 并行构建并上传资产，资产名带标签：`igolib_ldu-debug-1.0.28-r7-windows-x64-setup.exe`
+3. 全部成功后才**发布为 prerelease**，并清理更早的 Debug 版（保留最近 2 份，含标签）
 
 设计取舍：
 
@@ -101,10 +102,20 @@ pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug
 
 面板顶部会直接显示当前机器的实际路径，底部「打开日志目录」可在桌面端直接跳转。
 
+## 已知坑
+
+**全屏遮罩不要用 `backdrop-blur`。** 本应用的窗口是 `transparent: true`，且 `html, body` 背景被显式设为
+`transparent`（为配合窗口毛玻璃）。在这种组合下，一个覆盖全屏的 `backdrop-filter` 元素在**创建与销毁**
+合成层时会让整个窗口闪一下 —— 表现就是打开/关闭弹窗各闪一次，而且闪的正好是刚打开的那个弹窗。
+
+- 三个手写遮罩（设置、诊断日志、微信授权）已去掉 `backdrop-blur-sm`，只保留 `bg-black/50`
+- Radix 的确认/结果弹窗本来就没有 backdrop-filter，所以一直没有这个问题（可作为对照）
+- 页面里常驻的 `backdrop-blur`（顶栏、底部导航）不受影响，问题只在全屏遮罩的挂载/卸载瞬间
+
 ## 维护提醒
 
 - 合并回正式线之前，建议**只挑走 logger / 诊断面板**，不要带上 `identifier` 改动、`tauri.debug*.conf.json`
-  与 `debug-build.yml`。另外正式版面向所有用户，建议把日志级别默认降到 Info，
+  与 `diag-build.yml`。另外正式版面向所有用户，建议把日志级别默认降到 Info，
   并在面板里给一个「详细模式」开关，让用户复现前主动打开全量。
 - 脱敏规则集中在 `src/lib/logger.ts`，新增日志字段时若名字命中敏感名单会自动掩码；如需扩名单改
   `SENSITIVE_KEYS` 与 `INLINE_SECRET` 两处。

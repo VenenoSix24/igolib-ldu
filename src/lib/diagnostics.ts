@@ -40,7 +40,7 @@ export interface ReportContext {
  * 调试版构建标识。
  *
  * 由 `vite build --mode debug` 置位（见 package.json 的 debug:frontend:build
- * 与 src-tauri/tauri.debug.conf.json），用于区分正式版与诊断版。
+ * 与 src-tauri/tauri.debug.conf.json），用于区分正式版与 Debug 版。
  */
 export const IS_DEBUG_BUILD = import.meta.env.MODE === "debug";
 
@@ -96,7 +96,7 @@ export function buildReportHeader(info: DiagInfo | null, context: ReportContext)
   lines.push(`导出时间: ${new Date().toLocaleString()}`);
   lines.push(`构建: ${BUILD_STAMP}`);
   if (info) {
-    lines.push(`应用: ${info.app_name} v${info.app_version}${IS_DEBUG_BUILD ? "（诊断版）" : ""}`);
+    lines.push(`应用: ${info.app_name} v${info.app_version}${IS_DEBUG_BUILD ? "（Debug版）" : ""}`);
     lines.push(`应用标识: ${info.identifier}`);
     lines.push(`系统: ${info.os} ${info.arch} (${info.family})`);
     lines.push(`Tauri: ${info.tauri_version}`);
