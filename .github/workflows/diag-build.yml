@@ -7,6 +7,12 @@ name: 'Debug Build'
 #   - 每个平台追加 --config 切到调试模式
 #   - 构建全绿后才发布（draft -> prerelease），避免用户拿到空的或残缺的 Release
 #   - 发布后清理更早的诊断版
+#
+# ⚠️ 文件名请勿改动。GitHub 的工作流注册是按「文件路径」索引的，而本工作流只存在于
+# 特性分支（默认分支 tauri-ts 上刻意不放）。改名后新路径在非默认分支上拿不到
+# workflow_dispatch 入口，Actions 里会直接 404，要等 GitHub 重新索引（时间不确定）
+# 才恢复。Actions 界面显示的是上面的 name 字段，文件名对使用者不可见，
+# 因此保留历史路径名不影响观感。
 on:
   workflow_dispatch:
 

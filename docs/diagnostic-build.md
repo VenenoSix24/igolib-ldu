@@ -68,8 +68,13 @@ pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug
 
 ## CI
 
-`.github/workflows/debug-build.yml` 手动触发（Actions → **Debug Build**），矩阵与步骤**照搬 `release.yml`**
+`.github/workflows/diag-build.yml` 手动触发（Actions → **Debug Build**），矩阵与步骤**照搬 `release.yml`**
 （含 macOS 双架构、Linux、Windows x64/x86、安卓三个 ABI），只加了必要的诊断差异。
+
+> **文件名不要改**（`diag-build.yml` 这个名字是历史遗留，界面显示的是 `name: 'Debug Build'`）。
+> GitHub 的工作流注册按「文件路径」索引，而这个工作流只存在于特性分支上，
+> 改名后新路径在非默认分支上拿不到 `workflow_dispatch` 入口，Actions 里会 404，
+> 要等 GitHub 重新索引才恢复（时间不确定）。
 
 一次运行的流程：
 
