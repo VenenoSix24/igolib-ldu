@@ -1,0 +1,12 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm dev:diagnostic",
+    "beforeBuildCommand": "pnpm build:diagnostic"
+  },
+  "bundle": {
+    "createUpdaterArtifacts": false
+  }
+}

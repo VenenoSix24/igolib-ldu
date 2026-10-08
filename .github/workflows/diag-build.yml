@@ -197,13 +197,15 @@ jobs:
           storeFile=release.jks
           EOF
 
+      # 安卓侧不能改 identifier：CLI 会按它推导 gen/android 下的工程目录，
+      # 改了就会报 "Project directory ... does not exist"，因此安卓诊断版沿用原包名
+      # （安装会替换正式版；诊断能力与角标不受影响）
       - uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IGOLIB_ANDROID_APP_ID: com.igolib.ldu.diag
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: ${{ matrix.args }} --config src-tauri/tauri.diag.conf.json
+          args: ${{ matrix.args }} --config src-tauri/tauri.diag.mobile.conf.json
           mobile: 'android'
           uploadUpdaterSignatures: false
           releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][ext]'

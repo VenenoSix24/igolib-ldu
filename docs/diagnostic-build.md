@@ -13,6 +13,8 @@
 | 应用内查看/导出 | 无 | 「诊断日志」面板，一键复制 / 导出文件 / 打开日志目录 |
 | 网络链路 | 无请求/响应记录 | 记录 operationName、URL、请求头、variables、状态码、耗时、响应体 |
 | 崩溃 | 无记录 | 捕获 `error` / `unhandledrejection` |
+| 应用标识（桌面） | `com.igolib.ldu` | `com.igolib.ldu.diag`，可与正式版共存 |
+| 应用标识（安卓） | `com.igolib.ldu` | 同为 `com.igolib.ldu`，安装会替换正式版（原因见下） |
 
 日志里的 Cookie / Authorization / token / 学号类字段会**自动脱敏**（保留键名与长度，值只留少量前后缀），报告仅落本地、不会自动上传。
 
@@ -34,14 +36,21 @@ pnpm diag:build    # 产出诊断版安装包（macOS: .app/.dmg，Windows: nsis
 
 ### Android
 
-安卓包名由 `src-tauri/gen/android/app/build.gradle.kts` 中的环境变量控制，便于与正式版共存：
+安卓**不能**用改过 `identifier` 的那份配置：Tauri CLI 会按 identifier 推导 `gen/android` 下的工程目录
+（`.../java/com/igolib/ldu/diag`），目录不存在就直接报错。所以安卓用单独的一份配置，只切换成诊断模式：
 
 ```bash
-IGOLIB_ANDROID_APP_ID=com.igolib.ldu.diag \
-  pnpm tauri android build --apk --config src-tauri/tauri.diag.conf.json
+pnpm diag:android   # = tauri android build --apk --config src-tauri/tauri.diag.mobile.conf.json
 ```
 
-> 注意：`src-tauri/gen/android/` 是 `tauri android init` 重新生成的目录，重新初始化后需要把该环境变量改回去。
+代价要说清楚：**安卓诊断版沿用原包名 `com.igolib.ldu`，安装会替换正式版**（反之亦然）。
+诊断能力、面板与「诊断版」角标都不受影响，APK 文件名也带 `-diag-`。
+好处是日志目录与正式版相同，来回换版本时历史日志不会丢。
+
+如果确实需要安卓上两个包共存，得为诊断版重建一套安卓工程
+（`tauri android init` 会按 identifier 生成 `gen/android`，一个仓库只能有一套），
+或在 `gen/android` 里同时维护两个包名的 MainActivity 并让 gradle 按环境变量切换 namespace，
+两种做法都会碰到 `gen/android` 被重新生成时丢失改动的风险，目前没有采用。
 
 ### CI
 
