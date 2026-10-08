@@ -1,7 +1,9 @@
 name: 'Diagnostic Build'
 
-# 手动触发，构建带日志导出的独立诊断版安装包。
-# 产物与正式版使用不同的应用标识（com.igolib.ldu.diag），可同时安装、不会互相覆盖。
+# 手动触发，构建带日志导出的诊断版安装包。
+#
+# 这份工作流刻意与 release.yml 保持同一套写法（矩阵、步骤、动作版本），
+# 只做最小差异：产物挂到诊断版 Release，并给每个平台追加 --config 切到诊断模式。
 on:
   workflow_dispatch:
     inputs:
@@ -9,11 +11,6 @@ on:
         description: '存放构建产物的 Release 标签（留空则使用 diag-latest）'
         required: false
         default: 'diag-latest'
-      android:
-        description: '是否同时构建 Android APK（需要已配置安卓签名 secret）'
-        type: boolean
-        required: false
-        default: false
 
 jobs:
   # 任务 1：创建/复用 Release
@@ -32,6 +29,9 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: Get version
+        run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
       - name: Create Release
         id: create-release
         uses: actions/github-script@v8
@@ -41,7 +41,7 @@ jobs:
           script: |
             const tag = process.env.TAG_NAME;
             try {
-              // 复用已存在的 Release，便于反复覆盖上传新的诊断版产物
+              // 复用已存在的 Release，方便反复覆盖上传新的诊断版产物
               const { data } = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -64,8 +64,8 @@ jobs:
               throw error;
             }
 
-  # 任务 2：桌面端（macOS / Linux / Windows）
-  build-desktop:
+  # 任务 2：构建并上传（矩阵与 release.yml 一致）
+  build-tauri:
     needs: create-release
     permissions:
       contents: write
@@ -73,14 +73,44 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # --- macOS 构建 --- #
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
+            config: 'src-tauri/tauri.diag.conf.json'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
+            config: 'src-tauri/tauri.diag.conf.json'
+
+          # --- Linux 构建 --- #
           - platform: 'ubuntu-22.04'
             args: ''
+            config: 'src-tauri/tauri.diag.conf.json'
+
+          # --- Windows 64 构建 --- #
           - platform: 'windows-latest'
             args: ''
+            config: 'src-tauri/tauri.diag.conf.json'
+
+          # --- Windows 32 构建 --- #
+          - platform: 'windows-latest'
+            args: '--target i686-pc-windows-msvc'
+            config: 'src-tauri/tauri.diag.conf.json'
+
+          # --- Android 构建 --- #
+          # 安卓必须用 mobile 版配置：CLI 会按 identifier 推导 gen/android 下的工程目录，
+          # 换成桌面那份（identifier 已改为 com.igolib.ldu.diag）会直接报目录不存在
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target aarch64'
+            config: 'src-tauri/tauri.diag.mobile.conf.json'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target armv7'
+            config: 'src-tauri/tauri.diag.mobile.conf.json'
+            mobile: 'android'
+          - platform: 'ubuntu-22.04'
+            args: '--apk --split-per-abi --target x86_64'
+            config: 'src-tauri/tauri.diag.mobile.conf.json'
+            mobile: 'android'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -100,7 +130,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || (matrix.mobile == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || 'i686-pc-windows-msvc') }}
 
       - uses: Swatinem/rust-cache@v2
 
@@ -113,74 +143,20 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      # 诊断版不做更新签名（tauri.diag.conf.json 里 createUpdaterArtifacts=false）
-      - uses: tauri-apps/tauri-action@dev
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: ${{ matrix.args }} --config src-tauri/tauri.diag.conf.json
-          uploadUpdaterSignatures: false
-          uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
-          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][setup][ext]'
-
-  # 任务 3：Android（可选）
-  # 单独成 job：job 级 if 里不能引用 matrix，只能用 inputs 控制开关
-  build-android:
-    needs: create-release
-    if: ${{ inputs.android }}
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'ubuntu-22.04'
-            args: '--apk --split-per-abi --target aarch64'
-          - platform: 'ubuntu-22.04'
-            args: '--apk --split-per-abi --target x86_64'
-
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9
-
-      - name: Setup node
-        uses: actions/setup-node@v5
-        with:
-          node-version: lts/*
-          cache: 'pnpm'
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: 'aarch64-linux-android,x86_64-linux-android'
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Install frontend dependencies
-        run: pnpm install
-
       - name: Setup Java
+        if: matrix.mobile == 'android'
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '17'
 
       - name: Setup Android SDK
+        if: matrix.mobile == 'android'
         uses: android-actions/setup-android@v4
 
-      # 与正式版同一 keystore；包名不同，以便诊断版 APK 与正式版共存
+      # --- 安卓签名 --- #
       - name: Prepare Android Signing
+        if: matrix.mobile == 'android'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -188,8 +164,13 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
+          # 确保目录存在
           mkdir -p src-tauri/gen/android/app
+
+          # 1. 解码 Keystore 文件
           echo "$KEYSTORE_BASE64" | base64 --decode > src-tauri/gen/android/app/release.jks
+
+          # 2. 生成 properties 文件
           cat <<EOF > src-tauri/gen/android/keystore.properties
           storePassword=$STORE_PASSWORD
           keyPassword=$KEY_PASSWORD
@@ -197,15 +178,16 @@ jobs:
           storeFile=release.jks
           EOF
 
-      # 安卓侧不能改 identifier：CLI 会按它推导 gen/android 下的工程目录，
-      # 改了就会报 "Project directory ... does not exist"，因此安卓诊断版沿用原包名
-      # （安装会替换正式版；诊断能力与角标不受影响）
+      # --- Tauri Action --- #
+      # 诊断版不传更新签名密钥（配置里 createUpdaterArtifacts=false），
+      # 避免产出可被当作正式更新源的签名产物
       - uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          args: ${{ matrix.args }} --config src-tauri/tauri.diag.mobile.conf.json
-          mobile: 'android'
+          args: ${{ matrix.args }} --config ${{ matrix.config }}
+          mobile: ${{ matrix.mobile }}
           uploadUpdaterSignatures: false
-          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][ext]'
+          uploadPlainBinary: ${{ matrix.platform == 'windows-latest' }}
+          releaseAssetNamePattern: 'igolib_ldu-diag-[version]-[platform]-[arch][setup][ext]'
