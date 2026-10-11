@@ -106,29 +106,33 @@ pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug
 
 **Windows 上打开/关闭弹窗会整窗闪一下（macOS / Android 正常）。**
 
-根因是主配置里 `app.windows[0]` 的 `transparent: true` 加 `windowEffects`（mica/blur/sidebar）：
-Windows 上 WebView2 以透明背景合成，底下压着 DWM 的 Mica/模糊特效，内容一有大的合成变化
-（挂载/卸载一个全屏遮罩就是典型）DWM 背景就要重画一次，表现为整个窗口闪一下，闪的正是刚打开的弹窗。
+排查过程（重要，避免重走弯路）：
 
-三个平台之所以表现不同，是因为：
+- r7（原版：遮罩带 backdrop-blur，窗口透明 + mica）→ Windows 闪
+- r8（去掉遮罩 backdrop-blur，透明 + mica 仍在）→ 仍闪 → backdrop-blur 不是充分原因
+- r9（恢复 blur，窗口改不透明、去掉 mica/blur 特效）→ 仍闪 → 透明与窗口特效也不是
+- macOS 上 60fps 录屏逐帧分析：打开/关闭始终是平滑过渡（该平台本就不闪）
 
-- **Android**：`tauri.android.conf.json` 里窗口数组被整体替换成 `{ label, visible, transparent: false }`，
-  既无透明也无窗口特效 → 不闪
-- **macOS**：WKWebView + NSVisualEffectView 能正确处理透明合成 → 不闪（已录屏逐帧验证）
-- **Windows**：继承主配置的透明 + Mica → 闪
+窗口层的三个嫌疑都被实测排除后，根因指向 **WebView2(Chromium) 的渲染路径**：
+Chromium 上游存在已知的 backdrop-filter 合成闪烁 bug（issues.chromium.org，"Inconsistent
+backdrop-filter painting still has significant flicker"）；WebView2 即 Chromium，而 macOS 的
+WKWebView 没有此问题，与"只有 Windows 闪"吻合。另外本应用 `html/body` 背景是透明的
+（为 macOS 毛玻璃设计），WebView2 的空白底色会在合成切换瞬间露出来。
 
-修复是新增 `src-tauri/tauri.windows.conf.json`，把 Windows 的窗口设回不透明、不带特效
-（内容本身画的就是不透明背景，所以视觉上没有变化）。注意平台配置按
-**JSON Merge Patch (RFC 7396)** 合并：数组是**整体替换**而非逐项合并，
-所以这份文件必须把窗口的完整字段都写上（label/title/width/height/resizable/decorations/visible），
-只写差异字段会把其余字段打回默认值（Android 那份就是这么工作的）。
+当前采取的规避（都只作用于 Windows，其他平台视觉与行为不变）：
 
-验证方式：曾把同样的配置临时放到 `tauri.macos.conf.json` 构建并启动，
-窗口标题按预期变成配置里的值（证明平台文件被读取、合并生效、schema 合法），
-随后改名为 `tauri.windows.conf.json` 重新构建，macOS 标题恢复 → 证明平台隔离正确。
+1. 弹窗遮罩的 `backdrop-blur-sm` 仅在**非 Windows** 平台启用
+   （`src/lib/platform.ts` 的 `IS_WINDOWS` + index.html 内联脚本挂的 `platform-windows` 类）
+2. `html.platform-windows` 的文档背景改为**不透明**（浅色 #f8fafc / 深色 #0a0a0a，与任务页
+   背景一致），即使仍有合成间隙，露出的也是应用自己的底色而非白屏
 
-> 若 Windows 上修完仍有闪烁，下一个嫌疑是弹窗遮罩的 `backdrop-blur`（全屏 backdrop-filter
-> 会放大合成变化），届时优先试这个；macOS 上已录屏验证它不引起闪烁。
+**若 Windows 上仍闪**：诊断面板底部有「闪烁帧捕获」按钮（仅 Windows 显示）。点击后以约
+8 帧/秒连拍应用窗口（BitBlt 屏幕区域 → PNG），存到日志目录的 `captures/` 文件夹；复现一次
+再点停止，把这些 PNG 发给作者，就能看到闪的那几帧到底画了什么。对应命令是
+`diag_capture_screen`（src-tauri/src/diag_capture.rs，Win32 BitBlt 最小 FFI，无新增系统依赖）。
+
+> 踩过的弯路：前两轮（去 blur、关透明/特效）都是单变量猜测且被实测否定。教训是渲染类
+> 问题必须先分平台复现、再结合引擎差异定位，必要时直接给 app 加自截图能力拿第一手画面。
 
 ## 维护提醒
 

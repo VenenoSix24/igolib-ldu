@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { IS_WINDOWS } from "@/lib/platform";
 
 // 预设配置
 export const PRESETS = {
@@ -117,14 +118,13 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* 遮罩层：不要加 backdrop-blur。全屏 backdrop-filter 在透明窗口
-              （Tauri transparent + 透明 html/body）上创建与销毁合成层时，
-              会让整个窗口闪一下，也就是打开/关闭弹窗各闪一次 */}
+          {/* 遮罩层。backdrop-filter 在 Windows 的 WebView2(Chromium) 上有已知的
+              合成闪烁问题（macOS 的 WKWebView 没有），因此仅非 Windows 平台启用 */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50"
+            className={cn("fixed inset-0 bg-black/50 z-50", !IS_WINDOWS && "backdrop-blur-sm")}
             onClick={onClose}
           />
 

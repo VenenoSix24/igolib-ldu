@@ -10,6 +10,8 @@ use tauri::Manager;
 use tauri_plugin_log::{FileOpenStrategy, RotationStrategy, Target, TargetKind, TimezoneStrategy};
 use tauri_plugin_opener::OpenerExt;
 
+mod diag_capture;
+
 /// 日志文件名（不含扩展名），需与 tauri-plugin-log 的 LogDir target 保持一致
 const LOG_FILE_NAME: &str = "igolib";
 /// 单个日志文件上限，超出后按 RotationStrategy 轮转
@@ -114,7 +116,7 @@ struct DiagInfo {
 }
 
 /// 日志目录（与 tauri-plugin-log 的 LogDir target 解析结果一致）
-fn log_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn log_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dir = app
         .path()
         .app_log_dir()
@@ -360,7 +362,8 @@ pub fn run() {
             diag_info,
             diag_read_logs,
             diag_export,
-            diag_open_dir
+            diag_open_dir,
+            diag_capture::diag_capture_screen
         ])
         .setup(|app| {
             // Debug 版：release 构建同样把日志落盘，用户遇到问题可直接导出，不再只能发截图

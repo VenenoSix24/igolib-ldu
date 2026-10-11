@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
+  Camera,
   CheckCircle2,
   Copy,
   Download,
@@ -16,7 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { IS_WINDOWS } from "@/lib/platform";
 import {
   clearLogs,
   formatLogTime,
@@ -93,6 +96,8 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
   const [keyword, setKeyword] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
+  const [captureCount, setCaptureCount] = useState(0);
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -228,6 +233,41 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
     if (!ok) flash("error", "打开日志目录失败，可在下方路径手动查看");
   };
 
+  // 闪烁帧捕获：以固定间隔抓取应用窗口画面存进日志目录。
+  // 用于定位 Windows 上转瞬即逝的弹窗闪烁——肉眼/截图很难抓住的那几帧。
+  useEffect(() => {
+    if (!capturing) return;
+
+    let stopped = false;
+    let ticks = 0;
+    const CAPTURE_LIMIT = 60;
+    setCaptureCount(0);
+
+    const timer = window.setInterval(() => {
+      if (stopped) return;
+      ticks += 1;
+      setCaptureCount(ticks);
+      void invoke<string>("diag_capture_screen")
+        .catch((error) => {
+          if (!stopped) {
+            stopped = true;
+            setCapturing(false);
+            setNotice({ kind: "error", text: `捕获失败: ${error instanceof Error ? error.message : String(error)}` });
+          }
+        });
+      if (ticks >= CAPTURE_LIMIT) {
+        stopped = true;
+        setCapturing(false);
+        setNotice({ kind: "ok", text: `捕获完成，共 ${CAPTURE_LIMIT} 帧，已存入日志目录的 captures 文件夹` });
+      }
+    }, 130);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [capturing]);
+
   const handleClear = () => {
     // 只清当前会话的显示，磁盘上的历史日志保留，便于回看
     clearLogs();
@@ -245,7 +285,7 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className={cn("fixed inset-0 bg-black/50 z-50", !IS_WINDOWS && "backdrop-blur-sm")}
             onClick={onClose}
           />
 
@@ -478,11 +518,27 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
                 <FolderOpen className="w-4 h-4 mr-1.5" />
                 打开日志目录
               </Button>
+              {IS_WINDOWS && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCapturing((prev) => !prev)}
+                  disabled={busy !== null}
+                  className={cn(
+                    "text-slate-500",
+                    capturing && "text-red-500 font-bold"
+                  )}
+                  title="以约 8 帧/秒连拍应用窗口，存入日志目录 captures 文件夹，用于抓取转瞬即逝的闪烁画面"
+                >
+                  <Camera className={cn("w-4 h-4 mr-1.5", capturing && "animate-pulse")} />
+                  {capturing ? `停止捕获 (${captureCount})` : "闪烁帧捕获"}
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={handleClear}
-                className="ml-auto text-slate-400 hover:text-red-500"
+                className={cn("text-slate-400 hover:text-red-500", !IS_WINDOWS && "ml-auto")}
                 title="仅清空当前会话显示，磁盘日志保留"
               >
                 <Trash2 className="w-4 h-4 mr-1.5" />

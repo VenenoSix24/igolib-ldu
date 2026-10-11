@@ -18,6 +18,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { AuthService } from "../services/AuthService";
 import { DiagnosticsModal } from "@/components/DiagnosticsModal";
 import { createLogger } from "@/lib/logger";
+import { IS_WINDOWS } from "@/lib/platform";
 import { IS_DEBUG_BUILD, type ReportContext } from "@/lib/diagnostics";
 
 const log = createLogger("Dashboard");
@@ -1169,7 +1170,7 @@ export default function Dashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              className={cn("fixed inset-0 bg-black/50 z-50", !IS_WINDOWS && "backdrop-blur-sm")}
               onClick={() => setShowAuthDialog(false)}
             />
 

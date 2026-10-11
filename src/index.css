@@ -99,6 +99,18 @@
     @apply text-foreground;
     min-height: 100vh;
   }
+
+  /* Windows(WebView2) 专用规避：文档背景必须不透明。
+     透明的 html/body 会让 WebView2 在合成切换（挂载/卸载全屏弹窗遮罩）的瞬间
+     露出控件空白底色，表现为整个窗口闪一下。颜色与任务页背景一致
+     （bg-slate-50 / dark:bg-neutral-950）。平台类由 index.html 内联脚本挂载。 */
+  html.platform-windows {
+    background-color: #f8fafc;
+  }
+
+  html.platform-windows.dark {
+    background-color: #0a0a0a;
+  }
 }
 
 /* 落地页自定义样式 */
