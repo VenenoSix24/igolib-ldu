@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { IS_WINDOWS } from "@/lib/platform";
+import { ModalOverlay, ModalPanel } from "@/components/modal-surface";
 import {
   clearLogs,
   formatLogTime,
@@ -281,20 +282,12 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
     <AnimatePresence>
       {isOpen && (
         <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={cn("fixed inset-0 bg-black/50 z-50", !IS_WINDOWS && "backdrop-blur-sm")}
-            onClick={onClose}
-          />
+          <ModalOverlay onClose={onClose} className="bg-black/50 backdrop-blur-sm" />
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ type: "spring", damping: 26, stiffness: 320 }}
-            style={{ x: "-50%", y: "-50%" }}
+          <ModalPanel
+            initialScale={0.96}
+            damping={26}
+            stiffness={320}
             className="fixed left-1/2 top-1/2 w-[94%] max-w-3xl h-[84vh] flex flex-col bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border border-slate-200 dark:border-neutral-800"
           >
             {/* 头部 */}
@@ -545,7 +538,7 @@ export function DiagnosticsModal({ isOpen, onClose, context }: DiagnosticsModalP
                 清空显示
               </Button>
             </div>
-          </motion.div>
+          </ModalPanel>
         </>
       )}
     </AnimatePresence>

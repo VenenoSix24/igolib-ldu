@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { IS_WINDOWS } from "@/lib/platform";
+import { ModalOverlay, ModalPanel } from "@/components/modal-surface";
 
 // 预设配置
 export const PRESETS = {
@@ -118,23 +118,13 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* 遮罩层。backdrop-filter 在 Windows 的 WebView2(Chromium) 上有已知的
-              合成闪烁问题（macOS 的 WKWebView 没有），因此仅非 Windows 平台启用 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={cn("fixed inset-0 bg-black/50 z-50", !IS_WINDOWS && "backdrop-blur-sm")}
-            onClick={onClose}
+          <ModalOverlay
+            onClose={onClose}
+            className="bg-black/50 backdrop-blur-sm"
           />
 
           {/* 弹窗 */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ x: "-50%", y: "-50%" }}
+          <ModalPanel
             className="fixed left-1/2 top-1/2 w-[90%] max-w-md bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800"
           >
             {/* 头部 */}
@@ -272,7 +262,7 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
                 </Button>
               </div>
             </div>
-          </motion.div>
+          </ModalPanel>
         </>
       )}
     </AnimatePresence>

@@ -104,32 +104,31 @@ pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug
 
 ## 已知坑
 
-**Windows 上打开/关闭弹窗会整窗闪一下（macOS / Android 正常）。**
+**Windows 上打开/关闭弹窗会"闪"（macOS / Android 正常）。** 真因最终由用户录屏确认：
+**闪的就是弹窗自己的过渡动画**——半透明的弹窗残影挂在变亮的应用上（遮罩的明暗与残影
+不同步），WebView2 里这个半透明中间态被感知为"闪一下"，而 macOS 的 WKWebView 上同样的
+动画是平滑的。
 
-排查过程（重要，避免重走弯路）：
+排查弯路（重要，别重走）：
 
-- r7（原版：遮罩带 backdrop-blur，窗口透明 + mica）→ Windows 闪
-- r8（去掉遮罩 backdrop-blur，透明 + mica 仍在）→ 仍闪 → backdrop-blur 不是充分原因
-- r9（恢复 blur，窗口改不透明、去掉 mica/blur 特效）→ 仍闪 → 透明与窗口特效也不是
-- macOS 上 60fps 录屏逐帧分析：打开/关闭始终是平滑过渡（该平台本就不闪）
+- r8：去掉弹窗遮罩的 `backdrop-blur`（当时怀疑 backdrop-filter）→ 仍闪
+- r9：窗口改不透明、去掉 mica/blur 窗口特效（当时怀疑 DWM 合成）→ 仍闪
+- r10：Windows 上文档背景改不透明、遮罩禁用 backdrop-blur → 仍闪；同时加了
+  「闪烁帧捕获」自截图，但屏幕 DC 的 BitBlt 对 WebView2 这类硬件合成窗口抓出来是黑屏
+- 最终由用户的录屏定位：残影 = 弹窗自己的过渡动画
 
-窗口层的三个嫌疑都被实测排除后，根因指向 **WebView2(Chromium) 的渲染路径**：
-Chromium 上游存在已知的 backdrop-filter 合成闪烁 bug（issues.chromium.org，"Inconsistent
-backdrop-filter painting still has significant flicker"）；WebView2 即 Chromium，而 macOS 的
-WKWebView 没有此问题，与"只有 Windows 闪"吻合。另外本应用 `html/body` 背景是透明的
-（为 macOS 毛玻璃设计），WebView2 的空白底色会在合成切换瞬间露出来。
+**最终修复（r11）**：Windows 上所有弹窗**不做进入/退出过渡动画**，直接出现/消失
+（与原生 Windows 对话框一致）；macOS/Android 保留原有动画。实现见
+`src/components/modal-surface.tsx`（`ModalOverlay` / `ModalPanel`，内部按 `IS_WINDOWS`
+分叉），设置、诊断日志、微信授权三个弹窗已接入；Radix 的确认/结果弹窗
+（`ui/dialog.tsx`）同样在 Windows 上去掉 `animate-in/out` 类。
 
-当前采取的规避（都只作用于 Windows，其他平台视觉与行为不变）：
+「闪烁帧捕获」保留并修复：改用 `PrintWindow(PW_RENDERFULLCONTENT)` 抓窗口自身渲染
+内容（含 WebView2 的 DirectComposition 硬件画面）；屏幕 DC 的 BitBlt 对这类窗口只会
+得到黑屏。
 
-1. 弹窗遮罩的 `backdrop-blur-sm` 仅在**非 Windows** 平台启用
-   （`src/lib/platform.ts` 的 `IS_WINDOWS` + index.html 内联脚本挂的 `platform-windows` 类）
-2. `html.platform-windows` 的文档背景改为**不透明**（浅色 #f8fafc / 深色 #0a0a0a，与任务页
-   背景一致），即使仍有合成间隙，露出的也是应用自己的底色而非白屏
-
-**若 Windows 上仍闪**：诊断面板底部有「闪烁帧捕获」按钮（仅 Windows 显示）。点击后以约
-8 帧/秒连拍应用窗口（BitBlt 屏幕区域 → PNG），存到日志目录的 `captures/` 文件夹；复现一次
-再点停止，把这些 PNG 发给作者，就能看到闪的那几帧到底画了什么。对应命令是
-`diag_capture_screen`（src-tauri/src/diag_capture.rs，Win32 BitBlt 最小 FFI，无新增系统依赖）。
+> 经验教训：渲染类问题先分平台复现，但**单靠推理会连续猜错**——最终定位靠用户录屏。
+> 拿到第一手画面之前，所有"合理解释"都只是假设。
 
 > 踩过的弯路：前两轮（去 blur、关透明/特效）都是单变量猜测且被实测否定。教训是渲染类
 > 问题必须先分平台复现、再结合引擎差异定位，必要时直接给 app 加自截图能力拿第一手画面。

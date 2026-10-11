@@ -1,7 +1,8 @@
 //! 抓取应用窗口当前画面，用于捕获转瞬即逝的渲染问题（如 Windows 上的弹窗闪烁）。
 //!
-//! 仅 Windows 实现：从屏幕 DC 对应用窗口区域做 BitBlt（拿到的是 DWM 合成后
-//! 实际显示的内容），编码为 PNG 存到日志目录的 captures/ 子目录。
+//! 仅 Windows 实现：用 PrintWindow(PW_RENDERFULLCONTENT) 把应用窗口自身
+//! 的渲染内容（含 WebView2 的硬件合成画面）抓成 PNG，存到日志目录的
+//! captures/ 子目录。
 //! 非 Windows 平台返回错误占位，命令保持注册以便前端统一调用。
 
 use std::path::PathBuf;
@@ -42,8 +43,10 @@ fn save_capture(app: &tauri::AppHandle, png: &[u8]) -> Result<String, String> {
 mod win {
     // Win32 最小 FFI：只声明用到的部分，避免为此引入新的依赖
 
-    pub const SRCCOPY: u32 = 0x00CC_0020;
     pub const DIB_RGB_COLORS: u32 = 0;
+    /// PrintWindow 标志：包含 DirectComposition/DX 渲染的内容。
+    /// WebView2 是硬件合成的，不加这个标志抓出来是黑的。
+    pub const PW_RENDERFULLCONTENT: u32 = 0x0000_0002;
 
     #[repr(C)]
     #[derive(Default, Clone, Copy)]
@@ -82,6 +85,7 @@ mod win {
     #[allow(non_snake_case)]
     extern "system" {
         pub fn GetWindowRect(hwnd: isize, rect: *mut Rect) -> i32;
+        pub fn PrintWindow(hwnd: isize, hdc: isize, flags: u32) -> i32;
         pub fn GetDC(hwnd: isize) -> isize;
         pub fn ReleaseDC(hwnd: isize, hdc: isize) -> i32;
     }
@@ -94,17 +98,6 @@ mod win {
         pub fn SelectObject(hdc: isize, obj: isize) -> isize;
         pub fn DeleteObject(obj: isize) -> i32;
         pub fn DeleteDC(hdc: isize) -> i32;
-        pub fn BitBlt(
-            dst: isize,
-            dx: i32,
-            dy: i32,
-            w: i32,
-            h: i32,
-            src: isize,
-            sx: i32,
-            sy: i32,
-            rop: u32,
-        ) -> i32;
         pub fn GetDIBits(
             dc: isize,
             bmp: isize,
@@ -153,7 +146,10 @@ fn capture_window_png(window: &tauri::WebviewWindow) -> Result<Vec<u8>, String> 
             SelectObject(mem_dc, bitmap)
         };
 
-        let blit_ok = BitBlt(mem_dc, 0, 0, width, height, screen_dc, rect.left, rect.top, SRCCOPY);
+        // 用 PrintWindow 直接渲染窗口自身内容（PW_RENDERFULLCONTENT 包含
+        // WebView2 的 DirectComposition 硬件内容）。从屏幕 DC 做 BitBlt 对
+        // 这类硬件合成窗口会得到黑屏。
+        let print_ok = PrintWindow(hwnd, mem_dc, PW_RENDERFULLCONTENT);
 
         // GetDIBits 要求位图未被选入 DC
         SelectObject(mem_dc, old);
@@ -176,7 +172,7 @@ fn capture_window_png(window: &tauri::WebviewWindow) -> Result<Vec<u8>, String> 
             bmiColors: [0; 1],
         };
 
-        let lines = if blit_ok == 0 {
+        let lines = if print_ok == 0 {
             0
         } else {
             GetDIBits(
@@ -195,8 +191,8 @@ fn capture_window_png(window: &tauri::WebviewWindow) -> Result<Vec<u8>, String> 
         DeleteDC(mem_dc);
         ReleaseDC(0, screen_dc);
 
-        if blit_ok == 0 {
-            return Err("BitBlt 失败".into());
+        if print_ok == 0 {
+            return Err("PrintWindow 失败".into());
         }
         if lines == 0 {
             return Err("GetDIBits 失败".into());
