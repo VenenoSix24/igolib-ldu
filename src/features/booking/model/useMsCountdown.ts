@@ -38,3 +38,15 @@ export function execTargetTime(execTime: ExecTime, customTime: string, defaultTi
   if (!timeStr) return "--:--:--";
   return timeStr.length === 5 ? `${timeStr}:00` : timeStr;
 }
+
+/** 下一次执行的时间戳；immediate 或未设时间返回 null（已过时间顺延到明天） */
+export function nextTargetTs(execTime: ExecTime, customTime: string, defaultTime: string): number | null {
+  if (execTime === "immediate") return null;
+  const timeStr = execTime === "2148" ? defaultTime : customTime;
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(":").map(Number);
+  const target = new Date();
+  target.setHours(h || 0, m || 0, 0, 0);
+  if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+  return target.getTime();
+}

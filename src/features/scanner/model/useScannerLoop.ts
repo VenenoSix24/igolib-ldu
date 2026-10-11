@@ -4,6 +4,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { useScannerStore, registerScannerLoopStopper, type ScannerVenue } from "@/stores/scanner";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
 import { useAuthStore, cookieBlocked } from "@/stores/auth";
+import { useRuntimeStore } from "@/stores/runtime";
 import { notify } from "@/lib/notify";
 import { createLogger } from "@/lib/logger";
 
@@ -45,6 +46,11 @@ export function useScannerLoop() {
   useEffect(() => {
     venuesRef.current = venues;
   }, [venues]);
+
+  // 运行态与命中事件广播给灵动岛
+  useEffect(() => {
+    useRuntimeStore.getState().setScanning(running);
+  }, [running]);
 
   const interval = Math.max(3, scanIntervalSec);
 
@@ -119,6 +125,7 @@ export function useScannerLoop() {
           message: "自动预约成功",
           kind: "booked",
         });
+        useRuntimeStore.getState().pushEvent("success", `捡漏成功 · ${room.name} ${target.name} 号`);
         notify("捡漏成功", `${room.name} ${target.name} 号已自动预约`);
         stop();
         return true;
@@ -126,6 +133,7 @@ export function useScannerLoop() {
         const msg = e instanceof Error ? e.message : String(e);
         log.error(`${room.name} 自动预约失败：${msg}`);
         pushHit({ libId: venue.libId, libName: room.name, message: `自动预约失败：${msg}`, kind: "failed" });
+        useRuntimeStore.getState().pushEvent("error", "捡漏预约失败");
         notify("捡漏预约失败", `${room.name}：${msg}`);
         if (msg.includes("Cookie无效")) {
           stop();
