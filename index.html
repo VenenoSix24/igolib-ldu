@@ -22,6 +22,10 @@
       } else {
         document.documentElement.classList.remove('dark');
       }
+      // 平台标记要在 CSS 生效前挂上（Windows 的 WebView2 需要做渲染规避，见 src/index.css）
+      if (/Windows NT/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('platform-windows');
+      }
     })();
   </script>
 </head>
