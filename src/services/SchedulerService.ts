@@ -1,3 +1,7 @@
+import { createLogger } from '../lib/logger';
+
+const log = createLogger("Scheduler");
+
 export class SchedulerService {
   /**
    * 开始目标时间的倒计时。
@@ -9,8 +13,15 @@ export class SchedulerService {
     return new Promise((resolve, reject) => {
       const targetDate = this.parseTargetTime(targetTimeStr);
       if (!targetDate) {
+        log.error(`无效的执行时间格式: ${targetTimeStr}`);
         return reject(new Error("无效的时间格式"));
       }
+
+      log.info(
+        `倒计时开始: 目标 ${targetTimeStr} → ${targetDate.toLocaleString()} (剩余 ${Math.round(
+          (targetDate.getTime() - Date.now()) / 1000
+        )} 秒)`
+      );
 
       const TRIGGER_THRESHOLD = 0.01;
       let lastLoggedSec = -999;
@@ -19,6 +30,7 @@ export class SchedulerService {
       const onAbort = () => {
         clearTimeout(timerId);
         cleanup();
+        log.info("倒计时被取消");
         reject(new Error("Task cancelled"));
       };
 
@@ -42,6 +54,7 @@ export class SchedulerService {
         // 触发条件
         if (remainingSeconds <= TRIGGER_THRESHOLD) {
           cleanup();
+          log.info("倒计时到达目标时间");
           resolve(); // 时间到达
           return;
         }

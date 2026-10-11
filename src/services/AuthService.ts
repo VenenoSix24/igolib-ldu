@@ -4,6 +4,9 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger("Auth");
 
 export class AuthService {
   /**
@@ -40,7 +43,7 @@ export class AuthService {
       throw new Error("链接中未找到授权 Code，请确保链接复制完整。");
     }
 
-    console.log(`[Auth] Domain: ${host}, Code: ${code}`);
+    log.info(`回调域名: ${host}, Code 长度: ${code.length}`);
 
     // 构造认证接口 URL
     const targetDomain = `https://${host}`;
@@ -51,16 +54,19 @@ export class AuthService {
     });
 
     const authEndpoint = `${targetDomain}/index.php/urlNew/auth.html?${params.toString()}`;
-    console.log(`[Auth] 认证地址: ${authEndpoint}`);
+    // URL 里的 code 属于凭据，交由 logger 脱敏后再写入日志
+    log.debug(`认证地址: ${authEndpoint}`);
 
     // 调用 Rust 层执行请求
     const cookieString = await invoke<string>('exchange_cookie', {
       authUrl: authEndpoint
     });
 
-    console.log(`[Auth] 核心提取成功: ${cookieString}`);
-
-    console.log(`[Auth] 核心提取成功: ${cookieString}`);
+    const cookieKeys = cookieString
+      .split(';')
+      .map((item) => item.split('=')[0].trim())
+      .filter(Boolean);
+    log.info(`Cookie 换取成功`, { 项数: cookieKeys.length, 键名: cookieKeys });
 
     return cookieString;
   }

@@ -2115,6 +2115,7 @@ dependencies = [
 name = "igolib-ldu"
 version = "1.0.28"
 dependencies = [
+ "image",
  "log",
  "reqwest 0.12.28",
  "serde",

@@ -29,6 +29,9 @@ export async function getMappings(): Promise<{ rooms: RoomMapping }> {
 }
 
 import { SchedulerService } from './SchedulerService';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger("Task");
 
 // 用于存储活动中断控制器的映射
 const activeControllers = new Map<string, AbortController>();
@@ -39,6 +42,16 @@ export async function submitRequest(
 ): Promise<ApiResponse<void>> {
   const apiUrl = request.apiUrl || DEFAULT_API_CONFIG.apiUrl;
   const service = new LibraryService(request.cookieStr, apiUrl, request.origin, request.referer);
+
+  log.info("收到任务请求", {
+    clientId: request.clientId,
+    libId: request.libId,
+    seatNumber: request.seatNumber,
+    mode: request.mode,
+    timeStr: request.timeStr,
+    hasSeatKey: Boolean(request.seatKey),
+    apiUrl,
+  });
 
   // 为此请求创建 AbortController
   const controller = new AbortController();
@@ -51,7 +64,7 @@ export async function submitRequest(
     if (!request.seatKey) {
       if (request.seatNumber) {
         const msg = `[解析] 正在为您查找座位号 ${request.seatNumber} 的系统标识...`;
-        console.log(msg);
+        log.info(msg);
         if (onStatusUpdate) onStatusUpdate(msg, "info");
         try {
           // 明日预约模式(mode=1)需要包含今日被占用的座位，否则解析不到 Key
@@ -63,7 +76,7 @@ export async function submitRequest(
           if (resolvedKey) {
             request.seatKey = resolvedKey;
             const successMsg = `[解析] 座位标识已锁定 (${resolvedKey})`;
-            console.log(successMsg);
+            log.info(successMsg);
             if (onStatusUpdate) onStatusUpdate(successMsg, "info");
           } else {
             throw new Error(`无法找到座位号 "${request.seatNumber}" 对应的 Key。请检查座位号是否正确或座位是否开放。`);
@@ -78,7 +91,7 @@ export async function submitRequest(
 
     if (request.timeStr) {
       const msg = `执行时间 ${request.timeStr} 已设定`;
-      console.log(msg);
+      log.info(msg);
       if (onStatusUpdate) onStatusUpdate(msg, "phase", { phase: "waiting" });
 
       try {
@@ -91,16 +104,18 @@ export async function submitRequest(
             // 优化显示格式
             const timeStr = m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
             const msg = `距执行还有 ${timeStr}`;
-            console.log(msg);
+            // 倒计时每秒都会触发，降级为 debug 避免淹没关键日志
+            log.debug(msg);
             if (onStatusUpdate) onStatusUpdate(msg, "countdown", { remaining, phase: "waiting" });
           } else {
             const msg = `即将开始！还剩 ${Math.floor(remaining)} 秒`;
-            console.log(msg);
+            log.debug(msg);
             if (onStatusUpdate) onStatusUpdate(msg, "countdown", { remaining, phase: "countdown" });
           }
         }, controller.signal); // 在此处传递信号
 
         // 时间已到
+        log.info("倒计时结束，开始执行");
         if (onStatusUpdate) onStatusUpdate("时间到，正在执行...", "phase", { phase: "executing" });
 
       } catch (e) {
@@ -119,6 +134,7 @@ export async function submitRequest(
       if (result.errors) {
         // 简单错误解析
         const errorMsg = result.errors[0]?.message || result.errors[0]?.msg || 'Booking failed';
+        log.error("预约接口返回错误", result.errors);
 
         if (errorMsg.includes("access denied")) {
           throw new Error("Cookie无效或已过期，请更新。");
@@ -132,8 +148,11 @@ export async function submitRequest(
 
         throw new Error(`操作失败: ${errorMsg}`);
       }
+
+      log.info("预约请求成功");
       return { status: "success", message: "Booking successful", data: undefined };
     } catch (e) {
+      log.error("预约流程失败", e);
       throw new Error(e instanceof Error ? e.message : 'Booking request failed');
     }
   } finally {
@@ -147,9 +166,10 @@ export async function cancelTask(clientId: string): Promise<ApiResponse<void>> {
   if (controller) {
     controller.abort();
     activeControllers.delete(clientId);
-    console.log(`[Task] Cancelled task ${clientId}`);
+    log.info(`已取消任务 ${clientId}`);
     return { status: "success", message: "Task cancelled", data: undefined };
   }
+  log.warn(`取消任务失败：未找到 ${clientId}（可能已结束）`);
   return { status: "warning", message: "Task not found or already finished", data: undefined };
 }
 
