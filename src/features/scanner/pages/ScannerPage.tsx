@@ -79,24 +79,26 @@ export function ScannerPage() {
       <div className="grid items-start gap-4 md:grid-cols-2">
       {/* 扫描状态 */}
       <GlassCard className="rise p-4 md:p-5">
-        <div className="flex items-center gap-3">
-          <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[14px]", running ? "ti-emerald" : "ti-amber")}>
-            <Radar className={cn("h-5 w-5", running && "animate-pulse")} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-[15px] font-bold">场馆捡漏</h2>
-            <p className="text-[11px] text-mut">
-              {running
-                ? `第 ${rounds} 轮 · 正在扫描 ${venues.find((v) => v.libId === currentLibId)?.name ?? "…"} · 间隔 ${interval}s`
-                : `按优先级轮询勾选场馆的余位，命中即自动预约并通知 · 间隔 ${interval}s（下方可调）`}
-            </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[14px]", running ? "ti-emerald" : "ti-slate")}>
+              <Radar className={cn("h-5 w-5", running && "animate-pulse")} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[15px] font-bold">场馆捡漏</h2>
+              <p className="text-[11px] text-mut">
+                {running
+                  ? `第 ${rounds} 轮 · 正在扫描 ${venues.find((v) => v.libId === currentLibId)?.name ?? "…"} · 间隔 ${interval}s`
+                  : `按优先级轮询勾选场馆的余位，命中即自动预约并通知 · 间隔 ${interval}s（监控场馆内可调）`}
+              </p>
+            </div>
           </div>
           {running ? (
-            <button type="button" className="btn danger sm" onClick={stop}>
+            <button type="button" className="btn danger sm w-full sm:w-auto" onClick={stop}>
               <Square className="h-3.5 w-3.5" />停止扫描
             </button>
           ) : (
-            <button type="button" className="btn grad sm" disabled={!cookieReady || venues.length === 0} onClick={start}>
+            <button type="button" className="btn grad sm w-full sm:w-auto" disabled={!cookieReady || venues.length === 0} onClick={start}>
               <Play className="h-3.5 w-3.5" />开始扫描
             </button>
           )}
@@ -248,7 +250,7 @@ export function ScannerPage() {
       </GlassCard>
 
       {/* 命中历史 */}
-      <GlassCard className="rise p-4 md:p-5">
+      <GlassCard className="rise p-4 md:col-span-2 md:p-5">
         <CardHead
           icon={History}
           tile="ti-amber"
@@ -294,7 +296,7 @@ export function ScannerPage() {
       <ScopeConsoleCard
         scope="捡漏"
         title="捡漏控制台"
-        statusText={running ? `第 ${rounds} 轮` : "待命"}
+        statusText={running ? `第 ${rounds} 轮` : "待命中"}
         running={running}
       />
     </div>

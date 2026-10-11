@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Armchair, Building2, Play, Timer } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Building2, Play, Timer } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
+import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
@@ -18,6 +20,7 @@ import { ConsoleCard } from "../components/ConsoleCard";
 import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
 
 export function TomorrowPage() {
+  const navigate = useNavigate();
   const apiConfig = useSettingsStore((s) => s.api);
   const booking = useSettingsStore((s) => s.booking);
   const setBooking = useSettingsStore((s) => s.setBooking);
@@ -49,12 +52,14 @@ export function TomorrowPage() {
 
   const startEnabled = Boolean(booking.libId && booking.seatNumber && booking.cookieStr);
   const running = task.status === "running" || task.status === "connecting";
-  const missing = [
-    !booking.cookieStr && "身份",
-    !booking.libId && "场馆",
-    !booking.seatNumber && "座位",
-    booking.execTime === "custom" && !booking.customTime && "时间",
-  ].filter(Boolean) as string[];
+  const cookieReady = Boolean(booking.cookieStr && booking.cookieStr.trim().length >= 10);
+  const teeth = [
+    { label: "身份", ok: cookieReady, to: "/app/home" },
+    { label: "场馆", ok: Boolean(booking.libId), to: "/app/tomorrow" },
+    { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
+    { label: "时间", ok: booking.execTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
+  ];
+  const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
 
   const launch = () => {
     setShowConfirm(false);
@@ -99,13 +104,23 @@ export function TomorrowPage() {
           {scheduled && (
             <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{msCountdown}</b></span>
           )}
-          <span className="pill slate"><Building2 className="h-3 w-3" />{roomName || "未选场馆"}</span>
-          <span className="pill slate"><Armchair className="h-3 w-3" />{booking.seatNumber ? `${booking.seatNumber} 号` : "未选座位"}</span>
+          <div className="teeth">
+            {teeth.map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                className={cn("tooth", !t.ok && "miss")}
+                onClick={() => navigate(t.to)}
+              >
+                <i />{t.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-[var(--line2)] pt-5">
           <button
             type="button"
-            className="btn grad big"
+            className="btn grad big flex-1 sm:flex-none"
             disabled={!startEnabled || running || loadingRooms}
             onClick={() => setShowConfirm(true)}
           >

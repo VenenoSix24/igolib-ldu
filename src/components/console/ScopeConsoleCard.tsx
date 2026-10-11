@@ -60,7 +60,7 @@ export function ScopeConsoleCard({
         <span className="text-[13px] font-bold">{title}</span>
         <span className={running ? "pill ok h-[22px] px-2 text-[10px]" : "pill slate h-[22px] px-2 text-[10px]"}>
           {running ? <span className="ping" /> : <span className="dot" />}
-          {statusText ?? (running ? "运行中" : "待命")}
+          {statusText ?? (running ? "运行中" : "待命中")}
         </span>
         <span className="mono ml-auto text-[10px] text-sub">{entries.length} 条</span>
       </div>

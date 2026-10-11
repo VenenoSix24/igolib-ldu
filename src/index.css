@@ -232,8 +232,12 @@ html[data-theme="dark"][data-accent="xiang"]{
 
   html,
   body {
-    background-color: transparent;
     overscroll-behavior-y: none;
+  }
+
+  /* 兜底底色：跟随主题的极光渐变（防路由/滚动露白），Tauri 下与 .app-root 同源 */
+  html {
+    background: var(--bg) fixed;
   }
 
   body {
@@ -424,7 +428,7 @@ html[data-accent="ya"] .btn.dark:hover { filter:none; background:var(--glass-3) 
 html[data-theme="dark"] .btn.danger { color:#fda4af }
 .btn.big { height:42px; padding:0 22px; font-size:12.5px }
 .btn.sm { height:30px; padding:0 13px; font-size:11px }
-.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; filter:none }
+.btn:disabled { opacity:.45; cursor:not-allowed; transform:none; filter:grayscale(1); box-shadow:none; border-color:var(--line) }
 
 /* 表单 */
 .seg { display:inline-flex; background:rgba(100,116,139,.1); border:1px solid var(--line2); border-radius:999px; padding:3px; gap:2px }
@@ -579,6 +583,7 @@ html[data-theme="dark"] .dockitem.on { background:color-mix(in srgb,var(--pri) 3
 .ruler .stage.done::before, .ruler .stage.cur::before { background:var(--pri) }
 .ruler .stage.cur .sdot { border-color:var(--pri); box-shadow:0 0 0 4px color-mix(in srgb,var(--pri) 22%,transparent) }
 .ruler .slabel { font-size:10px; font-weight:600; color:var(--sub); transition:color .2s }
+html[data-theme="dark"] .ruler .slabel { color:var(--mut) }
 .ruler .stage.done .slabel, .ruler .stage.cur .slabel { color:var(--pri-text) }
 html[data-theme="dark"] .ruler .stage.done .slabel, html[data-theme="dark"] .ruler .stage.cur .slabel { color:var(--acc-hi) }
 

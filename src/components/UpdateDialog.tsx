@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { getVersion } from "@tauri-apps/api/app";
+import { isTauri } from "@tauri-apps/api/core";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,8 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({ update, onClose }) =
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
-    // 获取当前应用版本
+    // 获取当前应用版本（浏览器模式无 Tauri 运行时，跳过）
+    if (!isTauri()) return;
     getVersion().then(v => setCurrentVersion(v)).catch(console.error);
   }, []);
 

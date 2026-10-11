@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Armchair, Building2, Timer, Zap } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
+import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
@@ -17,6 +19,7 @@ import { ConsoleCard } from "../components/ConsoleCard";
 import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
 
 export function GrabPage() {
+  const navigate = useNavigate();
   const apiConfig = useSettingsStore((s) => s.api);
   const booking = useSettingsStore((s) => s.booking);
   const setBooking = useSettingsStore((s) => s.setBooking);
@@ -46,11 +49,14 @@ export function GrabPage() {
   const timed = effectiveExec === "custom" && Boolean(booking.customTime);
   const targetTime = execTargetTime(effectiveExec, booking.customTime, "21:48");
   const msCountdown = useMsCountdown(effectiveExec, booking.customTime, "21:48");
-  const missing = [
-    !booking.cookieStr && "身份",
-    !booking.libId && "场馆",
-    !booking.seatNumber && "座位",
-  ].filter(Boolean) as string[];
+  const cookieReady = Boolean(booking.cookieStr && booking.cookieStr.trim().length >= 10);
+  const teeth = [
+    { label: "身份", ok: cookieReady, to: "/app/home" },
+    { label: "场馆", ok: Boolean(booking.libId), to: "/app/grab" },
+    { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/grab" },
+    { label: "时间", ok: effectiveExec !== "custom" || Boolean(booking.customTime), to: "/app/grab" },
+  ];
+  const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
 
   const launch = () => {
     setShowConfirm(false);
@@ -88,19 +94,29 @@ export function GrabPage() {
         </div>
         <div className="bigtime">
           <span className="shimmer text-[34px] md:text-[44px]">{timed ? targetTime : "立即"}</span>
-          <span className="cap">{timed ? "到点自动提交" : "选好座位立即提交"}</span>
+          <span className="cap">{timed ? "到点自动提交" : "选好座位后自动提交"}</span>
         </div>
         <div className="sub-row">
           {timed && (
             <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{msCountdown}</b></span>
           )}
-          <span className="pill slate"><Building2 className="h-3 w-3" />{roomName || "未选场馆"}</span>
-          <span className="pill slate"><Armchair className="h-3 w-3" />{booking.seatNumber ? `${booking.seatNumber} 号` : "未选座位"}</span>
+          <div className="teeth">
+            {teeth.map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                className={cn("tooth", !t.ok && "miss")}
+                onClick={() => navigate(t.to)}
+              >
+                <i />{t.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-[var(--line2)] pt-5">
           <button
             type="button"
-            className="btn grad big"
+            className="btn grad big flex-1 sm:flex-none"
             disabled={!startEnabled || running}
             onClick={() => setShowConfirm(true)}
           >
@@ -118,7 +134,11 @@ export function GrabPage() {
         {/* 场馆实时列表 + 执行时间 */}
         <div className="flex flex-col gap-4">
           <GlassCard className="rise p-4 md:p-5">
-            <CardHead icon={Building2} title="阅览室" hint={<span className="pill ok h-[18px] px-1.5 text-[9.5px]"><span className="dot" />实时</span>} />
+            <CardHead
+              icon={Building2}
+              title="阅览室"
+              hint={dynamicRooms.length > 0 ? <span className="pill ok h-[18px] px-1.5 text-[9.5px]"><span className="dot" />实时</span> : undefined}
+            />
             <div className="mt-3">
               <VenueList
                 rooms={dynamicRooms}
@@ -137,7 +157,7 @@ export function GrabPage() {
               onExecTime={(execTime) => setBooking({ execTime })}
               customTime={booking.customTime}
               onCustomTime={(customTime) => setBooking({ customTime })}
-              hint="可改定时提交"
+              hint="可改为定时提交"
             />
           </GlassCard>
         </div>

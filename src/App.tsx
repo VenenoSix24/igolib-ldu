@@ -9,6 +9,7 @@ import { ThemeSync } from "./app/layout/ThemeSync";
 import { AppRouter } from "./app/router";
 
 import { getVersion } from "@tauri-apps/api/app";
+import { isTauri } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { check, Update } from '@tauri-apps/plugin-updater';
 
@@ -16,6 +17,8 @@ function App() {
   const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
 
   useEffect(() => {
+    // 浏览器模式（无 Tauri 运行时）跳过更新检查
+    if (!isTauri()) return;
     const checkForUpdates = async () => {
       try {
         const update = await check();

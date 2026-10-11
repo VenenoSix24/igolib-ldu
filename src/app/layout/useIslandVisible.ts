@@ -30,5 +30,7 @@ export function useIslandVisible(tickMs = 1000): boolean {
   const targetTs = readyish ? nextTargetTs(booking.execTime, booking.customTime, defaultTime) : null;
   const nearTarget = targetTs !== null && targetTs - now < NEAR_WINDOW;
   const eventFresh = lastEvent !== null && now - lastEvent.at < EVENT_WINDOW;
+  // dev 调试：?island=1 强制浮现（生产构建剔除）
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("island")) return true;
   return bookingRunning || scanning || renewing || nearTarget || eventFresh;
 }

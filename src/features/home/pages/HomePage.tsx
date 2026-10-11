@@ -6,13 +6,14 @@ import {
 } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
+import { Dial } from "@/components/glass/Dial";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useSettingsStore } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
 import { ACCENTS, useThemeStore } from "@/stores/theme";
 import { validateUser } from "@/services/api";
-import { cn } from "@/lib/utils";
+import { cn, compactRemaining } from "@/lib/utils";
 import { useCookieExpiry } from "@/lib/useCookieExpiry";
 import { LogsPanel } from "../../logs/components/LogsPanel";
 import { useMsCountdown, execModeLabel, execTargetTime } from "../../booking/model/useMsCountdown";
@@ -92,7 +93,7 @@ export function HomePage() {
     { label: "身份", ok: ready, to: "/app/home" },
     { label: "场馆", ok: Boolean(booking.libId), to: "/app/tomorrow" },
     { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
-    { label: "时间", ok: !scheduled || Boolean(booking.customTime), to: "/app/tomorrow" },
+    { label: "时间", ok: booking.execTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
   ];
   const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
   const startEnabled = Boolean(booking.libId && booking.seatNumber && cookieStr);
@@ -105,9 +106,9 @@ export function HomePage() {
     <span className="pill err"><span className="dot" />已到期</span>
   ) : userInfo && !userInfo.valid ? (
     <span className="pill err"><span className="dot" />Cookie 无效</span>
-  ) : (
-    <span className="pill slate"><span className="dot" />未配置身份</span>
-  );
+  ) : null;
+
+  const cookieRatio = expiry !== null && !expired ? Math.min(1, Math.max(0, (expiry - Date.now()) / 86_400_000)) : 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -115,45 +116,50 @@ export function HomePage() {
       <GlassCard className="hero rise p-5 md:p-7">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            {expiryText && !expired && <span className="chip glassy">Cookie 至 {expiryText}</span>}
-            {statusPill}
-          </div>
+          {statusPill}
         </div>
 
-        <div className="mt-5">
-          <div className="trigger-label">
-            <span className="t">{scheduled ? "下一次自动执行" : "执行方式"}</span>
-            <span className="mode">{modeLabel}</span>
-          </div>
-          <div className="bigtime">
-            <span className="shimmer text-[38px] md:text-[58px]" style={scheduled ? undefined : { fontSize: 44 }}>{scheduled ? targetTime : "立即"}</span>
-            {scheduled && <span className="cap">准时自动提交</span>}
-          </div>
-          <div className="sub-row">
-            {scheduled && (
-              <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{countdown}</b></span>
-            )}
-            <div className="teeth">
-              {teeth.map((t) => (
-                <button
-                  key={t.label}
-                  type="button"
-                  className={cn("tooth", !t.ok && "miss")}
-                  onClick={() => navigate(t.to)}
-                >
-                  <i />{t.label}
-                </button>
-              ))}
+        <div className="mt-5 md:flex md:items-center md:gap-8">
+          <div className="min-w-0 flex-1">
+            <div className="trigger-label">
+              <span className="t">{scheduled ? "下一次自动执行" : "执行方式"}</span>
+              <span className="mode">{modeLabel}</span>
+            </div>
+            <div className="bigtime">
+              <span className="shimmer text-[38px] md:text-[58px]" style={scheduled ? undefined : { fontSize: 44 }}>{scheduled ? targetTime : "立即"}</span>
+              {scheduled && <span className="cap">准时自动提交</span>}
+            </div>
+            <div className="sub-row">
+              {scheduled && (
+                <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{countdown}</b></span>
+              )}
+              <div className="teeth">
+                {teeth.map((t) => (
+                  <button
+                    key={t.label}
+                    type="button"
+                    className={cn("tooth", !t.ok && "miss")}
+                    onClick={() => navigate(t.to)}
+                  >
+                    <i />{t.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+          {expiryText && !expired && (
+            <div className="mt-4 hidden shrink-0 flex-col items-center gap-1.5 md:mt-0 md:flex">
+              <Dial ratio={cookieRatio} tone={expiring ? "warn" : "ok"} label={compactRemaining(expiry!)} />
+              <span className="mono text-[10px] text-sub">Cookie 至 {expiryText}</span>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-[var(--line2)] pt-5">
-          <button type="button" className="btn grad big" disabled={!startEnabled} onClick={() => navigate("/app/tomorrow")}>
+          <button type="button" className="btn grad big flex-1 sm:flex-none" disabled={!startEnabled} onClick={() => navigate("/app/tomorrow")}>
             去预约
           </button>
-          <button type="button" className="btn dark big" onClick={() => navigate("/app/grab")}>
+          <button type="button" className="btn dark big flex-1 sm:flex-none" onClick={() => navigate("/app/grab")}>
             立即抢座
           </button>
           {missing.length > 0 && (
@@ -168,7 +174,12 @@ export function HomePage() {
       <div className="grid items-start gap-4 md:grid-cols-2">
         {/* 身份与 Cookie */}
         <GlassCard className="rise p-4 md:p-5">
-          <CardHead icon={KeyRound} tile="ti-pri" title="身份与 Cookie" hint={statusPill} />
+          <CardHead
+            icon={KeyRound}
+            tile="ti-pri"
+            title="身份与 Cookie"
+            hint={statusPill ?? <span className="pill slate"><span className="dot" />未配置身份</span>}
+          />
 
           <div className="mt-3.5">
             <div className="relative">
@@ -219,12 +230,12 @@ export function HomePage() {
           <CardHead icon={Settings2} tile="ti-slate" title="常用设置" />
 
         <div className="mt-1">
-          <div className="setrow">
-            <div>
+          <div className="setrow flex-wrap">
+            <div className="whitespace-nowrap">
               <div className="sl">强调色</div>
               <div className="sd">{ACCENTS.find((a) => a.id === accent)?.name}</div>
             </div>
-            <div className="sr flex gap-1.5">
+            <div className="sr flex w-full flex-wrap gap-1.5 sm:ml-auto sm:w-auto">
               {ACCENTS.map((a) => (
                 <button
                   key={a.id}

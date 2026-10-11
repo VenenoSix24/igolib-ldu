@@ -12,7 +12,7 @@ import { ScopeConsoleCard } from "@/components/console/ScopeConsoleCard";
 import { ResultCard } from "@/components/console/ResultCard";
 
 const PHASE_TEXT: Record<RenewalPhase, string> = {
-  idle: "待命",
+  idle: "待命中",
   waiting: "等待触发",
   cancelling: "正在取消",
   cooldown: "冷却等待",
@@ -98,20 +98,22 @@ export function RenewalPage() {
 
       {/* 续约控制 */}
       <GlassCard className="rise p-4 md:p-5">
-        <div className="flex items-center gap-3">
-          <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[14px]", running ? "ti-emerald" : "ti-pri")}>
-            <InfinityIcon className={cn("h-5 w-5", running && "animate-pulse")} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-[15px] font-bold">占座续约</h2>
-            <p className="text-[11px] text-mut">临近签到截止自动取消重订保座，优先原座位与备选链</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[14px]", running ? "ti-emerald" : "ti-pri")}>
+              <InfinityIcon className={cn("h-5 w-5", running && "animate-pulse")} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[15px] font-bold">占座续约</h2>
+              <p className="text-[11px] text-mut">临近签到截止自动取消重订保座，优先原座位与备选链</p>
+            </div>
           </div>
           {running ? (
-            <button type="button" className="btn danger sm" onClick={() => stop("手动停止")}>
+            <button type="button" className="btn danger sm w-full sm:w-auto" onClick={() => stop("手动停止")}>
               <Square className="h-3.5 w-3.5" />停止续约
             </button>
           ) : (
-            <button type="button" className="btn grad sm" disabled={!cookieReady || starting} onClick={() => void doStart()}>
+            <button type="button" className="btn grad sm w-full sm:w-auto" disabled={!cookieReady || starting} onClick={() => void doStart()}>
               <Play className="h-3.5 w-3.5" />{starting ? "启动中…" : "开始续约"}
             </button>
           )}
@@ -147,7 +149,7 @@ export function RenewalPage() {
       </GlassCard>
 
       {/* 循环参数 / 场馆规则 */}
-      <div className="grid items-start gap-4 md:grid-cols-2">
+      <div className={cn("grid items-start gap-4", libRule ? "md:grid-cols-2" : "md:grid-cols-1")}>
         <GlassCard className="rise p-4 md:p-5">
           <CardHead icon={Timer} tile="ti-slate" title="循环参数" />
           <div className="mt-3 flex flex-col gap-3">
@@ -181,7 +183,7 @@ export function RenewalPage() {
             </label>
           </div>
           <p className="mt-2 text-[10.5px] text-sub">
-            触发时机优先取服务端 renewTimeNext，无该数据时按「签到截止 − 提前量」计算；连续失败 3 轮自动停止并强提醒。
+            触发时机优先使用服务端返回的下次续约时间（renewTimeNext），无该数据时按「签到截止 − 提前量」计算；连续失败 3 轮自动停止并强提醒。
           </p>
         </GlassCard>
 
@@ -207,7 +209,7 @@ export function RenewalPage() {
       <ScopeConsoleCard
         scope="续约"
         title="续约控制台"
-        statusText={running ? PHASE_TEXT[phase] : "待命"}
+        statusText={running ? PHASE_TEXT[phase] : "待命中"}
         running={running}
       />
     </div>

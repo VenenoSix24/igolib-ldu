@@ -111,7 +111,7 @@ export function ConsoleCard({
 
   const subTitle =
     status === "idle"
-      ? countDownStr ? `已就绪 · 距计划执行 ${countDownStr}` : "已就绪"
+      ? countDownStr ? `待命 · 距计划执行 ${countDownStr}` : "待命"
       : latestLog;
 
   return (
@@ -123,11 +123,11 @@ export function ConsoleCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className={cn("text-[14.5px] font-extrabold", meta.titleCls)}>{meta.title}</div>
-          <div className="mono truncate text-[11px] text-mut">{subTitle}</div>
+          <div className="mono hidden truncate text-[11px] text-mut sm:block">{subTitle}</div>
         </div>
         <span className={meta.pill}>
           {running ? <span className="ping" /> : <span className="dot" />}
-          {running ? "运行中" : status === "idle" ? "待命" : status === "success" ? "完成" : status === "failed" ? "失败" : "已取消"}
+          {running ? "运行中" : status === "idle" ? "待命中" : status === "success" ? "完成" : status === "failed" ? "失败" : "已取消"}
         </span>
         <button
           type="button"
@@ -164,7 +164,7 @@ export function ConsoleCard({
         {visibleLogs.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2.5 py-6">
             <EmptySeatsGlyph />
-            <span className="text-[11.5px] text-[#94a3b8]">座位就绪，等待任务启动</span>
+            <span className="text-[11.5px] text-[#94a3b8]">任务启动后，执行记录实时显示在这里</span>
           </div>
         ) : (
           visibleLogs.map((log, i) => {
