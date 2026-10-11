@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Armchair, Building2, Play, Timer } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { CardHead } from "@/components/glass/CardHead";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
@@ -118,11 +119,11 @@ export function TomorrowPage() {
         </div>
       </GlassCard>
 
-      {/* 目标座位 / 执行时间 双列 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <GlassCard className="rise p-4 md:p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold"><Building2 className="h-4 w-4" />目标座位</h3>
-          <div className="flex flex-col gap-3.5">
+      {/* 目标座位 / 执行安排 双列 */}
+      <div className="grid items-start gap-4 md:grid-cols-5">
+        <GlassCard className="rise p-4 md:col-span-3 md:p-5">
+          <CardHead icon={Building2} title="目标座位" />
+          <div className="mt-3.5 flex flex-col gap-3.5">
             <VenueSelect
               rooms={dynamicRooms}
               loading={loadingRooms}
@@ -143,21 +144,23 @@ export function TomorrowPage() {
               }}
               libId={booking.libId}
             />
-            <BackupChainPanel libId={booking.libId} />
           </div>
         </GlassCard>
-        <GlassCard className="rise p-4 md:p-5">
-          <TimeCard
-            options={["immediate", "2148", "custom"]}
-            execTime={booking.execTime}
-            onExecTime={(execTime) => setBooking({ execTime })}
-            customTime={booking.customTime}
-            onCustomTime={(customTime) => setBooking({ customTime })}
-            hint={`模式默认 ${defaultTime}`}
-            defaultTime={defaultTime}
-            onDefaultTime={(t) => setPrefs({ defaultExecTime: t })}
-          />
-        </GlassCard>
+        <div className="flex flex-col gap-4 md:col-span-2">
+          <GlassCard className="rise p-4 md:p-5">
+            <TimeCard
+              options={["immediate", "2148", "custom"]}
+              execTime={booking.execTime}
+              onExecTime={(execTime) => setBooking({ execTime })}
+              customTime={booking.customTime}
+              onCustomTime={(customTime) => setBooking({ customTime })}
+              hint={`模式默认 ${defaultTime}`}
+              defaultTime={defaultTime}
+              onDefaultTime={(t) => setPrefs({ defaultExecTime: t })}
+            />
+          </GlassCard>
+          <BackupChainPanel libId={booking.libId} />
+        </div>
       </div>
 
       <ConsoleCard

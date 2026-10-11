@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Infinity as InfinityIcon, Play, RefreshCw, Square, Timer } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { CardHead } from "@/components/glass/CardHead";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { useReservation } from "@/features/booking/model/useReservation";
@@ -145,65 +146,62 @@ export function RenewalPage() {
         )}
       </GlassCard>
 
-      {/* 循环参数 */}
-      <GlassCard className="rise p-4 md:p-5">
-        <div className="mb-3 flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide text-sub">
-          <Timer className="h-3.5 w-3.5" />循环参数
-        </div>
-        <div className="flex flex-col gap-3 md:flex-row">
-          <label className="flex flex-1 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3 py-2.5">
-            <span className="whitespace-nowrap text-[12px] font-semibold">取消后等待（秒）</span>
-            <input
-              type="number"
-              min={0}
-              max={600}
-              value={prefs.renewalDelaySec}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (Number.isFinite(v)) setPrefs({ renewalDelaySec: Math.min(600, Math.max(0, Math.round(v))) });
-              }}
-              className="numinput w-20"
-            />
-          </label>
-          <label className="flex flex-1 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3 py-2.5">
-            <span className="whitespace-nowrap text-[12px] font-semibold">触发提前量（分钟）</span>
-            <input
-              type="number"
-              min={0}
-              max={60}
-              value={prefs.renewalLeadMinutes}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (Number.isFinite(v)) setPrefs({ renewalLeadMinutes: Math.min(60, Math.max(0, Math.round(v))) });
-              }}
-              className="numinput w-20"
-            />
-          </label>
-        </div>
-        <p className="mt-2 text-[10.5px] text-sub">
-          触发时机优先取服务端 renewTimeNext，无该数据时按「签到截止 − 提前量」计算；连续失败 3 轮自动停止并强提醒。
-        </p>
-      </GlassCard>
-
-      {/* 场馆规则 */}
-      {libRule && (
+      {/* 循环参数 / 场馆规则 */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
         <GlassCard className="rise p-4 md:p-5">
-          <div className="mb-2 flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide text-sub">
-            <RefreshCw className="h-3.5 w-3.5" />场馆规则
+          <CardHead icon={Timer} tile="ti-slate" title="循环参数" />
+          <div className="mt-3 flex flex-col gap-3">
+            <label className="flex flex-1 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3 py-2.5">
+              <span className="whitespace-nowrap text-[12px] font-semibold">取消后等待（秒）</span>
+              <input
+                type="number"
+                min={0}
+                max={600}
+                value={prefs.renewalDelaySec}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) setPrefs({ renewalDelaySec: Math.min(600, Math.max(0, Math.round(v))) });
+                }}
+                className="numinput w-20"
+              />
+            </label>
+            <label className="flex flex-1 cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3 py-2.5">
+              <span className="whitespace-nowrap text-[12px] font-semibold">触发提前量（分钟）</span>
+              <input
+                type="number"
+                min={0}
+                max={60}
+                value={prefs.renewalLeadMinutes}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) setPrefs({ renewalLeadMinutes: Math.min(60, Math.max(0, Math.round(v))) });
+                }}
+                className="numinput w-20"
+              />
+            </label>
           </div>
-          <div className="flex flex-wrap gap-2 text-[11.5px]">
-            {libRule.libValidateTime !== undefined && (
-              <span className="pill slate"><span className="dot" />签到时限 {libRule.libValidateTime}</span>
-            )}
-            {libRule.libRenewTime !== undefined && (
-              <span className="pill slate"><span className="dot" />续约时限 {libRule.libRenewTime}</span>
-            )}
-            {libRule.openTimeStr && (
-              <span className="pill slate"><span className="dot" />开放 {libRule.openTimeStr} – {libRule.closeTimeStr}</span>
-            )}
-          </div>
+          <p className="mt-2 text-[10.5px] text-sub">
+            触发时机优先取服务端 renewTimeNext，无该数据时按「签到截止 − 提前量」计算；连续失败 3 轮自动停止并强提醒。
+          </p>
         </GlassCard>
-      )}
+
+        {libRule && (
+          <GlassCard className="rise p-4 md:p-5">
+            <CardHead icon={RefreshCw} tile="ti-slate" title="场馆规则" />
+            <div className="mt-3 flex flex-wrap gap-2 text-[11.5px]">
+              {libRule.libValidateTime !== undefined && (
+                <span className="pill slate"><span className="dot" />签到时限 {libRule.libValidateTime}</span>
+              )}
+              {libRule.libRenewTime !== undefined && (
+                <span className="pill slate"><span className="dot" />续约时限 {libRule.libRenewTime}</span>
+              )}
+              {libRule.openTimeStr && (
+                <span className="pill slate"><span className="dot" />开放 {libRule.openTimeStr} – {libRule.closeTimeStr}</span>
+              )}
+            </div>
+          </GlassCard>
+        )}
+      </div>
 
       {/* 任务控制台 */}
       <ScopeConsoleCard

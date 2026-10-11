@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Activity, ArrowDown, ArrowUp, History, Play, Radar, Square, X } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { CardHead } from "@/components/glass/CardHead";
 import { cn } from "@/lib/utils";
 import { getDynamicRooms, type DynamicRoom } from "@/services/api";
 import { useSettingsStore } from "@/stores/settings";
@@ -74,6 +75,8 @@ export function ScannerPage() {
         />
       )}
 
+      {/* 扫描状态 / 监控场馆 / 命中记录 */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
       {/* 扫描状态 */}
       <GlassCard className="rise p-4 md:p-5">
         <div className="flex items-center gap-3">
@@ -133,24 +136,28 @@ export function ScannerPage() {
 
       {/* 场馆配置 */}
       <GlassCard className="rise p-4 md:p-5">
-        <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[10.5px] font-semibold tracking-wide text-sub">
-          <Activity className="h-3.5 w-3.5" />监控场馆（按顺序轮询）
-          <span className="ml-auto flex items-center gap-1.5">
-            <input
-              type="number"
-              min={3}
-              max={300}
-              aria-label="捡漏扫描间隔（秒）"
-              value={scanIntervalSec}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (Number.isFinite(v)) setPrefs({ scanIntervalSec: Math.max(3, Math.min(300, Math.round(v))) });
-              }}
-              className="numinput w-14"
-            />
-            <span className="whitespace-nowrap text-[10.5px]">秒 / 轮（下限 3s）</span>
-          </span>
-        </div>
+        <CardHead
+          icon={Activity}
+          title="监控场馆"
+          hint={
+            <span className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={3}
+                max={300}
+                aria-label="捡漏扫描间隔（秒）"
+                value={scanIntervalSec}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) setPrefs({ scanIntervalSec: Math.max(3, Math.min(300, Math.round(v))) });
+                }}
+                className="numinput w-14"
+              />
+              <span className="whitespace-nowrap text-[10px] text-sub">秒 / 轮 · 下限 3s</span>
+            </span>
+          }
+        />
+        <div className="mt-3">
         {venues.length > 0 && (
           <button
             type="button"
@@ -237,22 +244,26 @@ export function ScannerPage() {
             })}
           </div>
         )}
+        </div>
       </GlassCard>
 
       {/* 命中历史 */}
       <GlassCard className="rise p-4 md:p-5">
-        <div className="mb-3 flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide text-sub">
-          <History className="h-3.5 w-3.5" />命中记录
-          {hits.length > 0 && (
+        <CardHead
+          icon={History}
+          tile="ti-amber"
+          title="命中记录"
+          hint={hits.length > 0 ? (
             <button
               type="button"
               onClick={clearHits}
-              className="ml-auto cursor-pointer text-[10.5px] transition-colors hover:text-err"
+              className="linklike text-sub hover:text-err"
             >
               清空
             </button>
-          )}
-        </div>
+          ) : undefined}
+        />
+        <div className="mt-3">
         {hits.length === 0 ? (
           <p className="py-2 text-center text-[11px] text-sub">暂无记录，开启扫描后发现空位会记在这里</p>
         ) : (
@@ -275,7 +286,9 @@ export function ScannerPage() {
             ))}
           </ul>
         )}
+        </div>
       </GlassCard>
+      </div>
 
       {/* 任务控制台 */}
       <ScopeConsoleCard

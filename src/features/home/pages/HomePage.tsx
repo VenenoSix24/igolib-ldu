@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle, CalendarClock, ChevronRight, Eye, EyeOff, KeyRound,
-  QrCode, Radar, RefreshCw, Settings2, Timer, Zap,
+  AlertTriangle, ChevronRight, Eye, EyeOff, KeyRound,
+  QrCode, Settings2, Timer,
 } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { CardHead } from "@/components/glass/CardHead";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useSettingsStore } from "@/stores/settings";
@@ -25,13 +26,6 @@ function greeting(): string {
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
-
-const ENTRIES = [
-  { to: "/app/tomorrow", icon: CalendarClock, title: "明日预约", desc: "设定执行时间，到点自动提交", tile: "ti-pri" },
-  { to: "/app/grab", icon: Zap, title: "立即抢座", desc: "启动后立即提交预约", tile: "ti-amber" },
-  { to: "/app/scanner", icon: Radar, title: "场馆捡漏", desc: "轮询场馆余位，命中自动预约", tile: "ti-emerald" },
-  { to: "/app/renewal", icon: RefreshCw, title: "占座续约", desc: "临近截止自动取消重订保座", tile: "ti-slate" },
-] as const;
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -170,40 +164,11 @@ export function HomePage() {
         </div>
       </GlassCard>
 
-      {/* 功能入口 */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <GlassCard className="rise p-4 md:p-5">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-[color-mix(in_srgb,var(--pri)_12%,transparent)] text-pri dark:text-acc-hi">
-              <CalendarClock className="h-4 w-4" />
-            </span>
-            <b className="text-[13px] font-bold">功能入口</b>
-          </div>
-          <div className="mt-3">
-            {ENTRIES.map(({ to, icon: Icon, title, desc, tile }) => (
-              <button key={to} type="button" className="taskrow" onClick={() => navigate(to)}>
-                <span className="tl">
-                  <span className={cn("ticon", tile)}><Icon className="h-4 w-4" /></span>
-                  <span className="tt">
-                    <b>{title}</b>
-                    <small>{desc}</small>
-                  </span>
-                </span>
-                <span className="tr"><ChevronRight className="h-4 w-4" /></span>
-              </button>
-            ))}
-          </div>
-        </GlassCard>
-
+      {/* 身份与常用设置 */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
         {/* 身份与 Cookie */}
         <GlassCard className="rise p-4 md:p-5">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-[color-mix(in_srgb,var(--pri)_12%,transparent)] text-pri dark:text-acc-hi">
-              <KeyRound className="h-4 w-4" />
-            </span>
-            <b className="text-[13px] font-bold">身份与 Cookie</b>
-            <span className="ml-auto">{statusPill}</span>
-          </div>
+          <CardHead icon={KeyRound} tile="ti-pri" title="身份与 Cookie" hint={statusPill} />
 
           <div className="mt-3.5">
             <div className="relative">
@@ -248,16 +213,10 @@ export function HomePage() {
             </button>
           </div>
         </GlassCard>
-      </div>
 
-      {/* 常用设置 */}
-      <GlassCard className="rise p-4 md:p-5">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-[rgba(100,116,139,.12)] text-mut">
-            <Settings2 className="h-4 w-4" />
-          </span>
-          <b className="text-[13px] font-bold">常用设置</b>
-        </div>
+        {/* 常用设置 */}
+        <GlassCard className="rise p-4 md:p-5">
+          <CardHead icon={Settings2} tile="ti-slate" title="常用设置" />
 
         <div className="mt-1">
           <div className="setrow">
@@ -352,7 +311,8 @@ export function HomePage() {
             </div>
           </div>
         )}
-      </GlassCard>
+        </GlassCard>
+      </div>
 
       <AuthQrDialog
         isOpen={showQr}

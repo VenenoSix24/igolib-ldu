@@ -1,9 +1,10 @@
 import { ArrowDown, ArrowUp, ListOrdered, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GlassCard } from "@/components/glass/GlassCard";
 import { useBackupSeatsStore, EMPTY_BACKUP_CHAIN } from "@/stores/backupSeats";
 
 /**
- * 备选链面板：主选失败后按序尝试的座位列表，可排序 / 移除。
+ * 备选链卡片：主选失败后按序尝试的座位列表，可排序 / 移除。
  */
 export function BackupChainPanel({ libId, className }: { libId: string; className?: string }) {
   const chain = useBackupSeatsStore((s) => s.chains[libId] ?? EMPTY_BACKUP_CHAIN);
@@ -12,15 +13,15 @@ export function BackupChainPanel({ libId, className }: { libId: string; classNam
   if (!libId) return null;
 
   return (
-    <div className={cn("rounded-2xl border border-[var(--line)] bg-[var(--glass-2)] p-3", className)}>
-      <div className="mb-2 flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide text-sub">
+    <GlassCard className={cn("rise p-4 md:p-5", className)}>
+      <div className="mb-2.5 flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wide text-sub">
         <ListOrdered className="h-3.5 w-3.5" />备选链
         <span className="font-normal">（主选失败后按序尝试）</span>
         {chain.length > 0 && (
           <button
             type="button"
             onClick={() => clear(libId)}
-            className="ml-auto cursor-pointer text-[10.5px] text-sub transition-colors hover:text-err"
+            className="ml-auto cursor-pointer text-[10.5px] transition-colors hover:text-err"
           >
             清空
           </button>
@@ -73,6 +74,6 @@ export function BackupChainPanel({ libId, className }: { libId: string; classNam
           ))}
         </ol>
       )}
-    </div>
+    </GlassCard>
   );
 }

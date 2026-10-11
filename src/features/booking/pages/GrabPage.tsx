@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Armchair, Building2, Timer, Zap } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { CardHead } from "@/components/glass/CardHead";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
@@ -113,41 +114,20 @@ export function GrabPage() {
         </div>
       </GlassCard>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* 场馆实时列表 */}
-        <GlassCard className="rise p-4 md:p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold">
-            <Building2 className="h-4 w-4" />阅览室
-            <span className="pill ok ml-auto h-[18px] px-1.5 text-[9.5px]"><span className="dot" />实时</span>
-          </h3>
-          <VenueList
-            rooms={dynamicRooms}
-            loading={loadingRooms}
-            error={roomsError}
-            libId={booking.libId}
-            onChange={(libId) => { setBooking({ libId }); setSelectedSeatKey(""); }}
-            cookieStr={booking.cookieStr}
-          />
-        </GlassCard>
-
-        {/* 座位 + 执行时间 */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        {/* 场馆实时列表 + 执行时间 */}
         <div className="flex flex-col gap-4">
           <GlassCard className="rise p-4 md:p-5">
-            <h3 className="mb-3 flex items-center gap-2 text-[13px] font-bold"><Armchair className="h-4 w-4" />座位</h3>
-            <SeatSelect
-              seats={dynamicSeats}
-              loading={loadingSeats}
-              seatNumber={booking.seatNumber}
-              onSeatNumber={(seatNumber) => setBooking({ seatNumber })}
-              selectedSeatKey={selectedSeatKey}
-              onSelectSeatKey={(key, name) => {
-                setSelectedSeatKey(key);
-                if (name) setBooking({ seatNumber: name });
-              }}
-              libId={booking.libId}
-            />
+            <CardHead icon={Building2} title="阅览室" hint={<span className="pill ok h-[18px] px-1.5 text-[9.5px]"><span className="dot" />实时</span>} />
             <div className="mt-3">
-              <BackupChainPanel libId={booking.libId} />
+              <VenueList
+                rooms={dynamicRooms}
+                loading={loadingRooms}
+                error={roomsError}
+                libId={booking.libId}
+                onChange={(libId) => { setBooking({ libId }); setSelectedSeatKey(""); }}
+                cookieStr={booking.cookieStr}
+              />
             </div>
           </GlassCard>
           <GlassCard className="rise p-4 md:p-5">
@@ -160,6 +140,28 @@ export function GrabPage() {
               hint="可改定时提交"
             />
           </GlassCard>
+        </div>
+
+        {/* 座位 + 备选链 */}
+        <div className="flex flex-col gap-4">
+          <GlassCard className="rise p-4 md:p-5">
+            <CardHead icon={Armchair} title="座位" />
+            <div className="mt-3">
+              <SeatSelect
+                seats={dynamicSeats}
+                loading={loadingSeats}
+                seatNumber={booking.seatNumber}
+                onSeatNumber={(seatNumber) => setBooking({ seatNumber })}
+                selectedSeatKey={selectedSeatKey}
+                onSelectSeatKey={(key, name) => {
+                  setSelectedSeatKey(key);
+                  if (name) setBooking({ seatNumber: name });
+                }}
+                libId={booking.libId}
+              />
+            </div>
+          </GlassCard>
+          <BackupChainPanel libId={booking.libId} />
         </div>
       </div>
 
