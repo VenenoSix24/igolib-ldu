@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Armchair, CalendarX2, Clock3, RefreshCw, Timer } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { cancelReservation } from "@/services/api";
@@ -59,8 +58,8 @@ export function ReservationCard({
 
   return (
     <GlassCard className="p-4 md:p-5">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-green-500/15 text-green-600 dark:text-green-300">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] bg-gradient-to-br from-acc to-pri text-[var(--pri-ink)] shadow-[0_6px_14px_-4px_color-mix(in_srgb,var(--pri)_50%,transparent)]">
           <Armchair className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
@@ -68,7 +67,7 @@ export function ReservationCard({
             当前预约：{reservation.seatName ? `${reservation.seatName} 号` : "—"}
             {reservation.libName ? ` · ${reservation.libName}` : ""}
           </div>
-          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11.5px] text-slate-500 dark:text-slate-300">
+          <div className="mono mt-0.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-mut">
             {reservation.stime && (
               <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{reservation.stime}{reservation.etime ? ` – ${reservation.etime}` : ""}</span>
             )}
@@ -83,16 +82,16 @@ export function ReservationCard({
             aria-label="刷新当前预约"
             onClick={onRefresh}
             disabled={refreshing || cancelling}
-            className="cursor-pointer rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:hover:bg-white/10 dark:hover:text-slate-200"
+            className="cursor-pointer rounded-[10px] p-2 text-sub transition-colors hover:bg-[rgba(100,116,139,0.1)] hover:text-ink disabled:opacity-50"
           >
             <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
           </button>
           {confirming ? (
             <span className="flex items-center gap-1.5">
-              <Button size="sm" variant="outline" onClick={() => setConfirming(false)}>再想想</Button>
-              <Button size="sm" onClick={doCancel} disabled={cancelling} className="bg-red-500 hover:bg-red-600 text-white">
+              <button type="button" className="btn ghost sm" onClick={() => setConfirming(false)}>再想想</button>
+              <button type="button" className="btn danger sm" onClick={doCancel} disabled={cancelling}>
                 {cancelling ? "取消中…" : "确认取消"}
-              </Button>
+              </button>
             </span>
           ) : (
             <button
@@ -106,7 +105,7 @@ export function ReservationCard({
                     : undefined
               }
               onClick={() => setConfirming(true)}
-              className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] font-bold text-red-600 transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-300"
+              className="btn danger sm"
             >
               <CalendarX2 className="h-3.5 w-3.5" />
               {reservation.forbidWechatCancle ? "禁止取消" : "取消预约"}
@@ -115,7 +114,7 @@ export function ReservationCard({
         </div>
       </div>
       {message && (
-        <p className={cn("mt-2 text-[11px]", message.includes("已取消") ? "text-green-600 dark:text-green-300" : "text-red-500")}>
+        <p className={cn("mt-2 text-[11px]", message.includes("已取消") ? "text-ok-ink dark:text-[#6ee7b7]" : "text-err-ink dark:text-[#fda4af]")}>
           {message}
         </p>
       )}

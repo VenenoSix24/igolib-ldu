@@ -561,3 +561,44 @@ html[data-theme="dark"] .dockitem.on { background:color-mix(in srgb,var(--pri) 3
     transition-duration:.01ms !important;
   }
 }
+
+/* ===================== isle 组件层 2：任务域 ===================== */
+@layer components {
+
+/* 任务刻度尺 */
+.ruler { display:flex; position:relative; padding:4px 0 0 }
+.ruler .stage { flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; position:relative }
+.ruler .stage::before { content:""; position:absolute; top:8.5px; left:calc(-50% + 9px); right:calc(50% + 9px); height:2px; background:var(--line); border-radius:1px }
+.ruler .stage:first-child::before { display:none }
+.ruler .stage::after { content:""; position:absolute; top:4.5px; left:calc(-50% + 5px); right:calc(50% + 5px); height:10px;
+  background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 7px); opacity:.7 }
+.ruler .stage:first-child::after { display:none }
+.ruler .sdot { width:9px; height:9px; border-radius:50%; background:var(--glass-3); border:2px solid var(--line); position:relative; z-index:1;
+  transition:all .25s cubic-bezier(.3,1.2,.4,1) }
+.ruler .stage.done .sdot { background:var(--pri); border-color:var(--pri) }
+.ruler .stage.done::before, .ruler .stage.cur::before { background:var(--pri) }
+.ruler .stage.cur .sdot { border-color:var(--pri); box-shadow:0 0 0 4px color-mix(in srgb,var(--pri) 22%,transparent) }
+.ruler .slabel { font-size:10px; font-weight:600; color:var(--sub); transition:color .2s }
+.ruler .stage.done .slabel, .ruler .stage.cur .slabel { color:var(--pri-text) }
+html[data-theme="dark"] .ruler .stage.done .slabel, html[data-theme="dark"] .ruler .stage.cur .slabel { color:var(--acc-hi) }
+
+/* 日志流（深色内嵌） */
+.logbox { font-family:var(--mono); font-size:10.5px; line-height:1.8; background:var(--log-bg); color:var(--log-ink); border-radius:16px }
+
+/* 筛选小片 */
+.fchip { height:24px; padding:0 10px; border-radius:999px; font-size:10.5px; font-weight:600; color:var(--mut);
+  border:1px solid var(--line); background:var(--glass-2); cursor:pointer }
+.fchip.on { background:var(--ink); color:var(--glass-3); border-color:var(--ink) }
+html[data-theme="dark"] .fchip.on { background:#e2e8f0; color:#0f172a }
+
+/* 状态图标砖（错误态） */
+.ti-err { background:rgba(244,63,94,.12); color:var(--err-ink) }
+html[data-theme="dark"] .ti-err { color:#fda4af }
+
+/* 成功扫光 */
+.success-sweep { position:relative }
+.success-sweep::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+  background:linear-gradient(100deg,transparent 30%,rgba(16,185,129,.18) 50%,transparent 70%); background-size:220% 100%;
+  animation:sweep .8s ease both }
+}
+@keyframes sweep { from{background-position:130% 0} to{background-position:-90% 0} }

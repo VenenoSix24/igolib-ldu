@@ -7,13 +7,14 @@ import {
 import { GlassCard } from "@/components/glass/GlassCard";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
-import { useSettingsStore, type ExecTime } from "@/stores/settings";
+import { useSettingsStore } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
 import { ACCENTS, useThemeStore } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useCookieExpiry } from "@/lib/useCookieExpiry";
 import { LogsPanel } from "../../logs/components/LogsPanel";
+import { useMsCountdown, execModeLabel, execTargetTime } from "../../booking/model/useMsCountdown";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -24,28 +25,6 @@ function greeting(): string {
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
-
-/** 毫秒倒计时（真实时间差，70ms 刷新）；immediate 或未设时间返回占位符 */
-function useMsCountdown(execTime: ExecTime, customTime: string, defaultTime: string) {
-  const [text, setText] = useState("--:--:--.--");
-  useEffect(() => {
-    if (execTime === "immediate") return;
-    const timeStr = execTime === "2148" ? defaultTime : customTime;
-    if (!timeStr) return;
-    const [h, m] = timeStr.split(":").map(Number);
-    const tick = () => {
-      const target = new Date();
-      target.setHours(h || 0, m || 0, 0, 0);
-      if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
-      const ms = Math.max(0, target.getTime() - Date.now());
-      setText(`${pad2(Math.floor(ms / 3600000))}:${pad2(Math.floor((ms % 3600000) / 60000))}:${pad2(Math.floor((ms % 60000) / 1000))}.${pad2(Math.floor((ms % 1000) / 10))}`);
-    };
-    tick();
-    const id = setInterval(tick, 70);
-    return () => clearInterval(id);
-  }, [execTime, customTime, defaultTime]);
-  return text;
-}
 
 const ENTRIES = [
   { to: "/app/tomorrow", icon: CalendarClock, title: "明日预约", desc: "设定执行时间，到点自动提交", tile: "ti-pri" },
@@ -111,14 +90,9 @@ export function HomePage() {
 
   const ready = userInfo?.valid === true;
   const scheduled = booking.execTime !== "immediate";
-  const timeStr = booking.execTime === "2148" ? prefs.defaultExecTime : booking.execTime === "custom" ? booking.customTime : "";
-  const targetTime = timeStr ? (timeStr.length === 5 ? `${timeStr}:00` : timeStr) : "--:--:--";
   const countdown = useMsCountdown(booking.execTime, booking.customTime, prefs.defaultExecTime);
-  const modeLabel = booking.execTime === "2148"
-    ? `默认 ${prefs.defaultExecTime}`
-    : booking.execTime === "custom"
-      ? (booking.customTime ? `自定义 ${booking.customTime}` : "自定义")
-      : "立即";
+  const modeLabel = execModeLabel(booking.execTime, booking.customTime, prefs.defaultExecTime);
+  const targetTime = execTargetTime(booking.execTime, booking.customTime, prefs.defaultExecTime);
 
   const teeth = [
     { label: "身份", ok: ready, to: "/app/home" },
@@ -159,7 +133,7 @@ export function HomePage() {
             <span className="mode">{modeLabel}</span>
           </div>
           <div className="bigtime">
-            <span className="shimmer" style={scheduled ? undefined : { fontSize: 44 }}>{scheduled ? targetTime : "立即"}</span>
+            <span className="shimmer text-[38px] md:text-[58px]" style={scheduled ? undefined : { fontSize: 44 }}>{scheduled ? targetTime : "立即"}</span>
             {scheduled && <span className="cap">准时自动提交</span>}
           </div>
           <div className="sub-row">
