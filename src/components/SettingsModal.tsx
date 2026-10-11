@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Settings, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { PRESETS, DEFAULT_CONFIG, type ApiConfig, type PresetKey } from "@/lib/api-config";
 
@@ -16,7 +13,7 @@ interface SettingsModalProps {
 
 /**
  * 设置弹窗组件
- * 
+ *
  * 支持选择预设配置或自定义 API 参数
  */
 export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModalProps) {
@@ -61,50 +58,48 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.3)] backdrop-blur-[6px] dark:bg-[rgba(2,6,23,0.55)]"
             onClick={onClose}
           />
 
           {/* 弹窗 */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ x: "-50%", y: "-50%" }}
-            className="fixed left-1/2 top-1/2 w-[90%] max-w-md bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800"
+            initial={{ opacity: 0, scale: 0.985, y: 14 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.985 }}
+            transition={{ duration: 0.25, ease: [0.3, 1.15, 0.4, 1] }}
+            style={{ x: "-50%" }}
+            className="fixed left-1/2 top-1/2 z-50 w-[90%] max-w-md overflow-hidden rounded-3xl border border-[var(--gborder)] bg-[var(--glass-3)] shadow-2xl backdrop-blur-2xl"
           >
             {/* 头部 */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-neutral-800">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                <Settings className="w-5 h-5 text-blue-500" />
+            <div className="flex items-center justify-between border-b border-[var(--line2)] p-4">
+              <h2 className="flex items-center gap-2 text-[15px] font-extrabold">
+                <Settings className="h-[18px] w-[18px] text-pri-text dark:text-acc-hi" />
                 API 配置
               </h2>
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                className="cursor-pointer rounded-full p-1.5 text-mut transition-colors hover:bg-[rgba(100,116,139,0.12)] hover:text-ink"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* 内容 */}
-            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto p-4">
               {/* 预设选择 */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-500 uppercase">
-                  选择预设
-                </Label>
+                <p className="text-[10.5px] font-semibold tracking-wide text-sub">选择预设</p>
                 <div className="grid grid-cols-3 gap-2">
                   {(["ldu", "official", "custom"] as PresetKey[]).map((key) => (
                     <button
                       key={key}
                       onClick={() => handlePresetChange(key)}
                       className={cn(
-                        "py-2 px-3 rounded-lg text-xs font-bold transition-all border-2",
+                        "cursor-pointer rounded-[12px] border px-3 py-2 text-[11.5px] font-bold transition-all",
                         localConfig.preset === key
-                          ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "border-slate-200 bg-slate-50 text-neutral-600 hover:bg-slate-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-slate-300"
+                          ? "border-[color-mix(in_srgb,var(--pri)_40%,transparent)] bg-[color-mix(in_srgb,var(--pri)_10%,transparent)] text-pri-text dark:text-acc-hi"
+                          : "border-[var(--line)] bg-[var(--glass-2)] text-mut hover:border-[color-mix(in_srgb,var(--acc)_45%,transparent)]",
                       )}
                     >
                       {key === "ldu" ? "卤蛋大学" : key === "official" ? "官方原版" : "自定义"}
@@ -122,48 +117,40 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
                     exit={{ height: 0, opacity: 0 }}
                     className="space-y-3 overflow-hidden"
                   >
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-slate-500 uppercase">
-                        API URL
-                      </Label>
-                      <Input
+                    <div className="field">
+                      <label>API URL</label>
+                      <input
                         placeholder="https://example.com/index.php/graphql/"
                         value={localConfig.apiUrl}
                         onChange={(e) => setLocalConfig({ ...localConfig, apiUrl: e.target.value })}
-                        className="font-mono text-sm dark:border-neutral-700"
+                        className="input mono text-[12px]"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-slate-500 uppercase">
-                        Origin
-                      </Label>
-                      <Input
+                    <div className="field">
+                      <label>Origin</label>
+                      <input
                         placeholder="https://example.com"
                         value={localConfig.origin}
                         onChange={(e) => setLocalConfig({ ...localConfig, origin: e.target.value })}
-                        className="font-mono text-sm dark:border-neutral-700"
+                        className="input mono text-[12px]"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-slate-500 uppercase">
-                        Referer
-                      </Label>
-                      <Input
+                    <div className="field">
+                      <label>Referer</label>
+                      <input
                         placeholder="https://example.com/"
                         value={localConfig.referer}
                         onChange={(e) => setLocalConfig({ ...localConfig, referer: e.target.value })}
-                        className="font-mono text-sm dark:border-neutral-700"
+                        className="input mono text-[12px]"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-slate-500 uppercase">
-                        微信 AppID
-                      </Label>
-                      <Input
+                    <div className="field">
+                      <label>微信 AppID</label>
+                      <input
                         placeholder="wx..."
                         value={localConfig.wxAppId}
                         onChange={(e) => setLocalConfig({ ...localConfig, wxAppId: e.target.value })}
-                        className="font-mono text-sm dark:border-neutral-700"
+                        className="input mono text-[12px]"
                       />
                     </div>
                   </motion.div>
@@ -172,41 +159,25 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
 
               {/* 当前配置预览 */}
               {localConfig.preset !== "custom" && (
-                <div className="p-3 rounded-lg bg-slate-50 dark:bg-neutral-800/50 space-y-1">
-                  <p className="text-xs text-slate-500">
-                    <span className="font-bold">API:</span>{" "}
-                    <span className="font-mono text-neutral-600 dark:text-slate-300 break-all">
-                      {localConfig.apiUrl}
-                    </span>
+                <div className="mono space-y-1 rounded-2xl border border-[var(--line2)] bg-[var(--glass-2)] p-3 text-[11px] text-mut">
+                  <p className="break-all">
+                    <span className="font-sans font-bold">API: </span>{localConfig.apiUrl}
                   </p>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-bold">Origin:</span>{" "}
-                    <span className="font-mono text-neutral-600 dark:text-slate-300">
-                      {localConfig.origin}
-                    </span>
+                  <p>
+                    <span className="font-sans font-bold">Origin: </span>{localConfig.origin}
                   </p>
                 </div>
               )}
             </div>
 
             {/* 底部按钮 */}
-            <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-800/50">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-                className="text-slate-500"
-              >
-                <RotateCcw className="w-4 h-4 mr-1" />
-                恢复默认
-              </Button>
+            <div className="flex items-center justify-between border-t border-[var(--line2)] p-4">
+              <button type="button" className="btn ghost sm" onClick={handleReset}>
+                <RotateCcw className="h-3.5 w-3.5" />恢复默认
+              </button>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={onClose} className="min-w-[64px]">
-                  取消
-                </Button>
-                <Button size="sm" onClick={handleSave} className="min-w-[64px]">
-                  保存
-                </Button>
+                <button type="button" className="btn ghost sm min-w-[64px]" onClick={onClose}>取消</button>
+                <button type="button" className="btn grad sm min-w-[64px]" onClick={handleSave}>保存</button>
               </div>
             </div>
           </motion.div>

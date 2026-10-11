@@ -5,10 +5,10 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { getLogs, subscribeLogs, type LogEntry, type LogLevel } from "@/lib/logger";
 
 const LEVEL_TAG: Record<LogLevel, { text: string; cls: string }> = {
-  debug: { text: "DEBUG", cls: "bg-slate-500/10 text-slate-500 dark:text-slate-300" },
-  info: { text: "INFO", cls: "bg-sky-500/15 text-sky-600 dark:text-sky-300" },
-  warn: { text: "警告", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-300" },
-  error: { text: "错误", cls: "bg-red-500/15 text-red-600 dark:text-red-300" },
+  debug: { text: "DEBUG", cls: "bg-[rgba(148,163,184,0.12)] text-[#94a3b8]" },
+  info: { text: "INFO", cls: "bg-[rgba(148,163,184,0.16)] text-[#cbd5e1]" },
+  warn: { text: "警告", cls: "bg-[rgba(245,158,11,0.16)] text-[#fcd34d]" },
+  error: { text: "错误", cls: "bg-[rgba(244,63,94,0.16)] text-[#fda4af]" },
 };
 
 function formatTime(ts: number) {
@@ -53,43 +53,35 @@ export function ScopeConsoleCard({
 
   return (
     <GlassCard className={cn("p-4 md:p-5", className)}>
-      <div className="mb-2.5 flex items-center gap-2">
-        <span className={cn(
-          "flex h-7 w-7 items-center justify-center rounded-lg",
-          running ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-slate-500/10 text-slate-500 dark:text-slate-300"
-        )}>
+      <div className="mb-2.5 flex items-center gap-2.5">
+        <span className={cn("grid h-7 w-7 place-items-center rounded-[10px]", running ? "ti-emerald" : "ti-slate")}>
           <Terminal className="h-3.5 w-3.5" />
         </span>
         <span className="text-[13px] font-bold">{title}</span>
-        <span className={cn(
-          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-          running ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-slate-500/10 text-slate-500 dark:text-slate-300"
-        )}>
+        <span className={running ? "pill ok h-[22px] px-2 text-[10px]" : "pill slate h-[22px] px-2 text-[10px]"}>
+          {running ? <span className="ping" /> : <span className="dot" />}
           {statusText ?? (running ? "运行中" : "待命")}
         </span>
-        <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-300">{entries.length} 条</span>
+        <span className="mono ml-auto text-[10px] text-sub">{entries.length} 条</span>
       </div>
 
-      <div
-        ref={listRef}
-        className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2.5 font-mono text-[11px] leading-relaxed dark:border-white/[0.08] dark:bg-black/20"
-      >
+      <div ref={listRef} className="logbox max-h-56 overflow-y-auto p-3">
         {entries.length === 0 ? (
-          <p className="py-3 text-center font-sans text-[11px] text-slate-400 dark:text-slate-300">
+          <p className="py-3 text-center font-sans text-[11px] text-[#94a3b8]">
             暂无日志，任务运行后实时显示在这里
           </p>
         ) : (
           entries.map((entry) => (
             <div key={entry.id} className="flex items-start gap-1.5">
-              <span className="shrink-0 text-slate-400 dark:text-slate-300">{formatTime(entry.time)}</span>
+              <span className="shrink-0 text-[#64748b]">{formatTime(entry.time)}</span>
               <span className={cn("shrink-0 rounded px-1 text-[9.5px] font-bold leading-5", LEVEL_TAG[entry.level].cls)}>
                 {LEVEL_TAG[entry.level].text}
               </span>
               <span className={cn(
                 "min-w-0 flex-1 break-words",
-                entry.level === "error" ? "text-red-600 dark:text-red-300" :
-                  entry.level === "warn" ? "text-amber-700 dark:text-amber-300" :
-                    "text-slate-700 dark:text-slate-200"
+                entry.level === "error" ? "text-[#fda4af]" :
+                  entry.level === "warn" ? "text-[#fcd34d]" :
+                    "text-[var(--log-ink)]",
               )}>
                 {entry.message}
               </span>
@@ -99,7 +91,7 @@ export function ScopeConsoleCard({
       </div>
 
       {latest && (
-        <p className="mt-2 truncate text-[10.5px] text-slate-400 dark:text-slate-300">最近：{latest.message}</p>
+        <p className="mt-2 truncate text-[10.5px] text-sub">最近：{latest.message}</p>
       )}
     </GlassCard>
   );
