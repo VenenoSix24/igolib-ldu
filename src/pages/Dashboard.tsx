@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ModalOverlay, ModalPanel } from "@/components/modal-surface";
 import { useTheme } from "@/components/theme-provider";
 import { SettingsModal, loadApiConfig, saveApiConfig, type ApiConfig, DEFAULT_CONFIG } from "@/components/SettingsModal";
 import { QRCodeCanvas } from "qrcode.react";
@@ -1101,24 +1102,10 @@ export default function Dashboard() {
       <AnimatePresence>
         {showAuthDialog && (
           <>
-            {/* 遮罩层 */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-              onClick={() => setShowAuthDialog(false)}
-            />
+            <ModalOverlay onClose={() => setShowAuthDialog(false)} className="bg-black/50 backdrop-blur-sm" />
 
             {/* 弹窗主体 */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              style={{ x: "-50%", y: "-50%" }}
-              className="fixed left-1/2 top-1/2 w-[90%] max-w-sm bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800"
-            >
+            <ModalPanel className="fixed left-1/2 top-1/2 w-[90%] max-w-sm bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800">
               {/* 头部 */}
               <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-neutral-800">
                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
@@ -1217,7 +1204,7 @@ export default function Dashboard() {
                   链接仅用于本地解析 Code，不会向第三方上传
                 </p>
               </div>
-            </motion.div>
+            </ModalPanel>
           </>
         )}
       </AnimatePresence>
