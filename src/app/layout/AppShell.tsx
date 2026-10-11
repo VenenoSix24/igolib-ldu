@@ -2,7 +2,8 @@ import { Outlet } from "react-router-dom";
 import { SideNav } from "./SideNav";
 import { CookieStatusCard } from "./CookieStatusCard";
 import { Dock } from "./Dock";
-import { TaskIsland, useIslandVisible } from "./TaskIsland";
+import { TaskIsland } from "./TaskIsland";
+import { useIslandVisible } from "./useIslandVisible";
 import { cn } from "@/lib/utils";
 
 /** 2.0 应用壳：极光雾之上浮玻璃岛。桌面 = 侧栏 + 内容区；手机 = 内容区 + 底部 dock */
