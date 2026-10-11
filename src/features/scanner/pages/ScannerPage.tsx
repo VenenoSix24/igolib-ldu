@@ -253,7 +253,6 @@ export function ScannerPage() {
       <GlassCard className="rise p-4 md:col-span-2 md:p-5">
         <CardHead
           icon={History}
-          tile="ti-amber"
           title="命中记录"
           hint={hits.length > 0 ? (
             <button

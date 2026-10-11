@@ -235,9 +235,9 @@ html[data-theme="dark"][data-accent="xiang"]{
     overscroll-behavior-y: none;
   }
 
-  /* 兜底底色：跟随主题的极光渐变（防路由/滚动露白），Tauri 下与 .app-root 同源 */
+  /* 兜底底色：跟随主题的极光渐变（随文档高度绘制，防路由/滚动露白），Tauri 下与 .app-root 同源 */
   html {
-    background: var(--bg) fixed;
+    background: var(--bg);
   }
 
   body {
