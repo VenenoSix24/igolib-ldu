@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ChevronRight, Eye, EyeOff, Image, KeyRound, Moon, QrCode, Settings2, Sun } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import {
+  AlertTriangle, CalendarClock, ChevronRight, Eye, EyeOff, KeyRound,
+  QrCode, Radar, RefreshCw, Settings2, Timer, Zap,
+} from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
-import { useSettingsStore } from "@/stores/settings";
+import { useSettingsStore, type ExecTime } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
-import { useThemeStore, type ThemeMode } from "@/stores/theme";
-import { BUILTIN_WALLPAPERS, thumbOf } from "@/lib/wallpapers";
+import { ACCENTS, useThemeStore } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn } from "@/lib/utils";
 import { useCookieExpiry } from "@/lib/useCookieExpiry";
@@ -22,20 +23,51 @@ function greeting(): string {
   return "晚上好";
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** 毫秒倒计时（真实时间差，70ms 刷新）；immediate 或未设时间返回占位符 */
+function useMsCountdown(execTime: ExecTime, customTime: string, defaultTime: string) {
+  const [text, setText] = useState("--:--:--.--");
+  useEffect(() => {
+    if (execTime === "immediate") return;
+    const timeStr = execTime === "2148" ? defaultTime : customTime;
+    if (!timeStr) return;
+    const [h, m] = timeStr.split(":").map(Number);
+    const tick = () => {
+      const target = new Date();
+      target.setHours(h || 0, m || 0, 0, 0);
+      if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+      const ms = Math.max(0, target.getTime() - Date.now());
+      setText(`${pad2(Math.floor(ms / 3600000))}:${pad2(Math.floor((ms % 3600000) / 60000))}:${pad2(Math.floor((ms % 60000) / 1000))}.${pad2(Math.floor((ms % 1000) / 10))}`);
+    };
+    tick();
+    const id = setInterval(tick, 70);
+    return () => clearInterval(id);
+  }, [execTime, customTime, defaultTime]);
+  return text;
+}
+
+const ENTRIES = [
+  { to: "/app/tomorrow", icon: CalendarClock, title: "明日预约", desc: "设定执行时间，到点自动提交", tile: "ti-pri" },
+  { to: "/app/grab", icon: Zap, title: "立即抢座", desc: "启动后立即提交预约", tile: "ti-amber" },
+  { to: "/app/scanner", icon: Radar, title: "场馆捡漏", desc: "轮询场馆余位，命中自动预约", tile: "ti-emerald" },
+  { to: "/app/renewal", icon: RefreshCw, title: "占座续约", desc: "临近截止自动取消重订保座", tile: "ti-slate" },
+] as const;
+
 export function HomePage() {
   const navigate = useNavigate();
   const apiConfig = useSettingsStore((s) => s.api);
   const setApi = useSettingsStore((s) => s.setApi);
   const prefs = useSettingsStore((s) => s.prefs);
   const setPrefs = useSettingsStore((s) => s.setPrefs);
-  const themeMode = useThemeStore((s) => s.mode);
-  const setThemeMode = useThemeStore((s) => s.setMode);
-  const wallpaper = useThemeStore((s) => s.wallpaper);
-  const cookieStr = useSettingsStore((s) => s.booking.cookieStr);
+  const booking = useSettingsStore((s) => s.booking);
+  const accent = useThemeStore((s) => s.accent);
+  const setAccent = useThemeStore((s) => s.setAccent);
+  const cookieStr = booking.cookieStr;
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
   const { expiry, remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
   const expiryText = expiry !== null
-    ? `${new Date(expiry).getMonth() + 1}/${String(new Date(expiry).getDate()).padStart(2, "0")} ${String(new Date(expiry).getHours()).padStart(2, "0")}:${String(new Date(expiry).getMinutes()).padStart(2, "0")}`
+    ? `${new Date(expiry).getMonth() + 1}/${String(new Date(expiry).getDate()).padStart(2, "0")} ${pad2(new Date(expiry).getHours())}:${pad2(new Date(expiry).getMinutes())}`
     : null;
   const setCookieStatus = useAuthStore((s) => s.setCookieStatus);
 
@@ -78,202 +110,216 @@ export function HomePage() {
   }, [expired, setCookieStatus]);
 
   const ready = userInfo?.valid === true;
+  const scheduled = booking.execTime !== "immediate";
+  const timeStr = booking.execTime === "2148" ? prefs.defaultExecTime : booking.execTime === "custom" ? booking.customTime : "";
+  const targetTime = timeStr ? (timeStr.length === 5 ? `${timeStr}:00` : timeStr) : "--:--:--";
+  const countdown = useMsCountdown(booking.execTime, booking.customTime, prefs.defaultExecTime);
+  const modeLabel = booking.execTime === "2148"
+    ? `默认 ${prefs.defaultExecTime}`
+    : booking.execTime === "custom"
+      ? (booking.customTime ? `自定义 ${booking.customTime}` : "自定义")
+      : "立即";
+
+  const teeth = [
+    { label: "身份", ok: ready, to: "/app/home" },
+    { label: "场馆", ok: Boolean(booking.libId), to: "/app/tomorrow" },
+    { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
+    { label: "时间", ok: !scheduled || Boolean(booking.customTime), to: "/app/tomorrow" },
+  ];
+  const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
+  const startEnabled = Boolean(booking.libId && booking.seatNumber && cookieStr);
+
+  const statusPill = validating ? (
+    <span className="pill warn"><span className="ping" />验证中</span>
+  ) : ready ? (
+    <span className="pill ok"><span className="dot" />身份有效</span>
+  ) : expired ? (
+    <span className="pill err"><span className="dot" />已到期</span>
+  ) : userInfo && !userInfo.valid ? (
+    <span className="pill err"><span className="dot" />Cookie 无效</span>
+  ) : (
+    <span className="pill slate"><span className="dot" />未配置身份</span>
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 欢迎语 */}
-      <GlassCard className="p-5 text-center md:p-6">
-        <h2 className="text-[17px] font-extrabold">
-          {greeting()}，{ready ? "身份就绪，随时可以出手" : "先配置身份再开始抢座"}
-        </h2>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-300">
-          {ready
-            ? "明日预约 / 立即抢座 / 场馆捡漏 全部可用"
-            : "在下方获取或粘贴 Cookie 后，其余页面即可使用"}
-        </p>
-        {ready && (
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => navigate("/app/tomorrow")}
-              className="cursor-pointer rounded-full bg-gradient-to-br from-[#b3d0ff] to-[#7da7ff] px-4 py-2 text-[12px] font-bold text-[#10162a] shadow-[0_6px_18px_rgba(125,167,255,0.35)] transition-transform active:scale-[0.97]"
-            >
-              去明日预约 →
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/app/grab")}
-              className="cursor-pointer rounded-full border border-white/15 bg-white/[0.06] px-4 py-2 text-[12px] font-bold text-slate-700 transition-transform active:scale-[0.97] dark:text-slate-200"
-            >
-              去立即抢座
-            </button>
+      {/* 中枢 hero：状态 + 执行时间 + 就绪梳 */}
+      <GlassCard className="hero rise p-5 md:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            {expiryText && !expired && <span className="chip glassy">Cookie 至 {expiryText}</span>}
+            {statusPill}
           </div>
-        )}
-      </GlassCard>
+        </div>
 
-      {/* 身份 Cookie */}
-      <GlassCard className="p-4 md:p-5">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] tracking-wider text-slate-500 dark:text-slate-300">
-          <KeyRound className="h-3.5 w-3.5" />身份 Cookie
-          <span className="ml-auto">
-            {validating && <span className="animate-pulse text-[10px] text-blue-500">验证中…</span>}
-            {!validating && userInfo?.valid && (
-              <span className={cn("text-[10px]", expired ? "text-red-500" : expiring ? "text-amber-500" : "text-green-500")}>
-                ● {expired ? "已到期" : expiring ? "即将到期" : "有效"}
-              </span>
-            )}
-            {!validating && userInfo && !userInfo.valid && <span className="text-[10px] text-red-500">● 无效</span>}
-            {remainingText && !expired && (
-              <span className={cn("ml-1.5 text-[10px]", expiring ? "text-amber-500" : "text-slate-400")}>
-                剩 {remainingText}
-              </span>
-            )}
-          </span>
-        </div>
-        <div className="relative">
-          <Input
-            type={showCookie ? "text" : "password"}
-            placeholder="粘贴 Cookie 或扫码获取…"
-            value={cookieStr}
-            onChange={(e) => setCookieStr(e.target.value)}
-            autoComplete="off"
-            className={cn(
-              "h-10 pr-10 font-mono text-sm dark:border-white/15",
-              userInfo?.valid ? "border-green-500 bg-green-50/10 focus-visible:ring-green-500" :
-                (userInfo && !userInfo.valid ? "border-red-500 bg-red-50/10 focus-visible:ring-red-500" : ""),
-            )}
-          />
-          <button
-            type="button"
-            aria-label={showCookie ? "隐藏 Cookie" : "显示 Cookie"}
-            onClick={() => setShowCookie(!showCookie)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
-          >
-            {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-        {expiryText && !expired && (
-          <p className="mt-1.5 text-[10.5px] tabular-nums text-slate-500 dark:text-slate-300">
-            到期时间 {expiryText} · 剩 {remainingText}
-          </p>
-        )}
-        {(expiring || expired) && (
-          <div className={cn(
-            "mt-2.5 flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px]",
-            expired
-              ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300"
-              : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-300",
-          )}>
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            <span className="flex-1 leading-relaxed">
-              {expired ? "Cookie 已到期，预约功能将不可用" : `Cookie 即将到期（剩 ${remainingText}）`}
-              ，请重新扫码获取
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowQr(true)}
-              className="shrink-0 cursor-pointer rounded-full bg-white/70 px-2.5 py-1 text-[10.5px] font-bold text-slate-800 transition-transform active:scale-[0.97] dark:bg-white/15 dark:text-slate-100"
-            >
-              重新扫码
-            </button>
+        <div className="mt-5">
+          <div className="trigger-label">
+            <span className="t">{scheduled ? "下一次自动执行" : "执行方式"}</span>
+            <span className="mode">{modeLabel}</span>
           </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowQr(true)}
-          className="mt-2.5 flex cursor-pointer items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600"
-        >
-          <QrCode className="h-3 w-3" />扫码获取 / 更新 Cookie
-        </button>
-      </GlassCard>
-
-      {/* 常用设置 */}
-      <GlassCard className="p-4 md:p-5">
-        <h3 className="mb-2.5 flex items-center gap-2 text-[13.5px] font-extrabold"><Settings2 className="h-4 w-4" />常用设置</h3>
-        <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
-          <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">主题</span>
-          <span className="flex gap-1 rounded-full bg-slate-200/70 p-1 dark:bg-white/[0.08]">
-            {([
-              { mode: "light" as ThemeMode, icon: Sun, label: "浅色" },
-              { mode: "dark" as ThemeMode, icon: Moon, label: "深色" },
-              { mode: "wallpaper" as ThemeMode, icon: Image, label: "壁纸" },
-            ]).map(({ mode, icon: Icon, label }) => (
-              <button
-                key={mode}
-                type="button"
-                aria-label={`主题：${label}`}
-                aria-pressed={themeMode === mode}
-                onClick={() => setThemeMode(mode)}
-                className={
-                  themeMode === mode
-                    ? "flex cursor-pointer items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#131a2a] shadow-sm dark:bg-white/90"
-                    : "flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
-                }
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-            ))}
-          </span>
-        </div>
-        {themeMode === "wallpaper" && (
-          <div className="mt-2 space-y-2">
-            <p className="px-0.5 text-[10.5px] text-slate-400 dark:text-slate-300">选择壁纸</p>
-            <div className="flex gap-2">
-              {BUILTIN_WALLPAPERS.map((url) => (
+          <div className="bigtime">
+            <span className="shimmer" style={scheduled ? undefined : { fontSize: 44 }}>{scheduled ? targetTime : "立即"}</span>
+            {scheduled && <span className="cap">准时自动提交</span>}
+          </div>
+          <div className="sub-row">
+            {scheduled && (
+              <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{countdown}</b></span>
+            )}
+            <div className="teeth">
+              {teeth.map((t) => (
                 <button
-                  key={url}
+                  key={t.label}
                   type="button"
-                  onClick={() => { setThemeMode("wallpaper"); useThemeStore.getState().setWallpaper(url); }}
-                  aria-label="内置壁纸"
-                  className="h-14 w-14 cursor-pointer overflow-hidden rounded-xl border-2 transition-all hover:scale-105 active:scale-95"
-                  style={{
-                    backgroundImage: `url(${thumbOf(url)})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    borderColor: wallpaper === url ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.15)",
-                  }}
-                />
+                  className={cn("tooth", !t.ok && "miss")}
+                  onClick={() => navigate(t.to)}
+                >
+                  <i />{t.label}
+                </button>
               ))}
-              <label className="flex h-14 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed transition-colors hover:border-white/40 active:scale-95" style={{ borderColor: wallpaper.startsWith("data:") ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)" }}>
-                <span className="text-[16px] leading-none">+</span>
-                <span className="text-[9px] text-slate-400 dark:text-slate-300">自定义</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      if (typeof reader.result === "string") {
-                        useThemeStore.getState().setWallpaper(reader.result);
-                      }
-                    };
-                    reader.readAsDataURL(file);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
             </div>
           </div>
-        )}
+        </div>
 
-          <button
-            type="button"
-            onClick={() => setShowSettings(true)}
-            className="flex cursor-pointer items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 text-left transition-colors hover:bg-slate-200/70 dark:bg-white/[0.05] dark:hover:bg-white/[0.09]"
-          >
-            <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">API 预设</span>
-            <span className="flex items-center gap-1 text-[11.5px] text-slate-500">
+        <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-[var(--line2)] pt-5">
+          <button type="button" className="btn grad big" disabled={!startEnabled} onClick={() => navigate("/app/tomorrow")}>
+            去预约
+          </button>
+          <button type="button" className="btn dark big" onClick={() => navigate("/app/grab")}>
+            立即抢座
+          </button>
+          {missing.length > 0 && (
+            <span className="text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
+              还差 {missing.length} 项：{missing.join(" / ")}
+            </span>
+          )}
+        </div>
+      </GlassCard>
+
+      {/* 功能入口 */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <GlassCard className="rise p-4 md:p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-[color-mix(in_srgb,var(--pri)_12%,transparent)] text-pri dark:text-acc-hi">
+              <CalendarClock className="h-4 w-4" />
+            </span>
+            <b className="text-[13px] font-bold">功能入口</b>
+          </div>
+          <div className="mt-3">
+            {ENTRIES.map(({ to, icon: Icon, title, desc, tile }) => (
+              <button key={to} type="button" className="taskrow" onClick={() => navigate(to)}>
+                <span className="tl">
+                  <span className={cn("ticon", tile)}><Icon className="h-4 w-4" /></span>
+                  <span className="tt">
+                    <b>{title}</b>
+                    <small>{desc}</small>
+                  </span>
+                </span>
+                <span className="tr"><ChevronRight className="h-4 w-4" /></span>
+              </button>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* 身份与 Cookie */}
+        <GlassCard className="rise p-4 md:p-5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-[color-mix(in_srgb,var(--pri)_12%,transparent)] text-pri dark:text-acc-hi">
+              <KeyRound className="h-4 w-4" />
+            </span>
+            <b className="text-[13px] font-bold">身份与 Cookie</b>
+            <span className="ml-auto">{statusPill}</span>
+          </div>
+
+          <div className="mt-3.5">
+            <div className="relative">
+              <input
+                type={showCookie ? "text" : "password"}
+                placeholder="粘贴 Cookie，或点下方扫码获取"
+                value={cookieStr}
+                onChange={(e) => setCookieStr(e.target.value)}
+                autoComplete="off"
+                className={cn(
+                  "input mono pr-10 text-[11.5px]",
+                  ready && "border-[rgba(16,185,129,.45)]",
+                  userInfo && !userInfo.valid && "border-[rgba(244,63,94,.45)]",
+                )}
+              />
+              <button
+                type="button"
+                aria-label={showCookie ? "隐藏 Cookie" : "显示 Cookie"}
+                onClick={() => setShowCookie(!showCookie)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer p-1 text-sub hover:text-ink"
+              >
+                {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {expiryText && !expired && (
+              <p className="mt-2 text-[10.5px] tabular-nums text-mut">到期时间 {expiryText} · 剩 {remainingText}</p>
+            )}
+            {(expiring || expired) && (
+              <div className={cn(
+                "mt-2.5 flex items-center gap-2 rounded-[14px] border px-3 py-2 text-[11px]",
+                expired
+                  ? "border-[rgba(244,63,94,.25)] bg-[rgba(244,63,94,.08)] text-err-ink dark:text-[#fda4af]"
+                  : "border-[rgba(245,158,11,.25)] bg-[rgba(245,158,11,.08)] text-warn-ink dark:text-[#fcd34d]",
+              )}>
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span className="flex-1">{expired ? "Cookie 已到期，请重新扫码" : `Cookie 即将到期，剩 ${remainingText}`}</span>
+                <button type="button" className="btn ghost sm shrink-0" onClick={() => setShowQr(true)}>重新扫码</button>
+              </div>
+            )}
+            <button type="button" className="btn ghost sm mt-3" onClick={() => setShowQr(true)}>
+              <QrCode className="h-3.5 w-3.5" />扫码获取 Cookie
+            </button>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* 常用设置 */}
+      <GlassCard className="rise p-4 md:p-5">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-7 w-7 place-items-center rounded-[10px] bg-[rgba(100,116,139,.12)] text-mut">
+            <Settings2 className="h-4 w-4" />
+          </span>
+          <b className="text-[13px] font-bold">常用设置</b>
+        </div>
+
+        <div className="mt-1">
+          <div className="setrow">
+            <div>
+              <div className="sl">强调色</div>
+              <div className="sd">{ACCENTS.find((a) => a.id === accent)?.name}</div>
+            </div>
+            <div className="sr flex gap-1.5">
+              {ACCENTS.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  title={a.name}
+                  aria-label={`强调色：${a.name}`}
+                  aria-pressed={accent === a.id}
+                  onClick={() => setAccent(a.id)}
+                  className={cn("accdot", accent === a.id && "on")}
+                  style={{ background: a.hex }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <button type="button" onClick={() => setShowSettings(true)} className="setrow w-full cursor-pointer text-left">
+            <div><div className="sl">API 预设</div></div>
+            <span className="sr items-center text-[11.5px] text-mut">
               {apiConfig.preset === "ldu" ? "卤蛋大学" : apiConfig.preset === "official" ? "官方原版" : "自定义"}
               <ChevronRight className="h-3.5 w-3.5" />
             </span>
           </button>
-          <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
-            <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">明日默认时间</span>
+
+          <label className="setrow cursor-pointer">
+            <div>
+              <div className="sl">明日默认时间</div>
+              <div className="sd">预约页「默认」档使用</div>
+            </div>
             <input
               type="time"
               aria-label="明日默认执行时间"
@@ -282,59 +328,52 @@ export function HomePage() {
                 const v = e.target.value;
                 if (/^\d{2}:\d{2}$/.test(v)) setPrefs({ defaultExecTime: v });
               }}
-              className="h-8 cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-2 text-center font-mono text-[12px] text-slate-800 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
+              className="numinput cursor-pointer"
             />
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-white/[0.05]">
-            <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">Cookie 到期提醒</span>
+          </label>
+
+          <label className="setrow cursor-pointer">
+            <div><div className="sl">Cookie 到期提醒</div></div>
             <select
               aria-label="Cookie 到期提醒提前量"
               value={prefs.cookieReminderMinutes}
               onChange={(e) => setPrefs({ cookieReminderMinutes: Number(e.target.value) })}
-              className="h-8 cursor-pointer rounded-lg border border-slate-200 bg-white/80 px-2 text-center text-[12px] text-slate-800 focus:border-blue-500 focus:outline-none dark:border-white/15 dark:bg-white/[0.08] dark:text-slate-100"
+              className="select h-[30px] w-auto min-w-[110px] rounded-[10px] text-[11.5px]"
             >
               {[5, 10, 15, 30, 60].map((m) => (
                 <option key={m} value={m}>提前 {m} 分钟</option>
               ))}
             </select>
-          </div>
+          </label>
+
           <button
             type="button"
             onClick={() => setShowMore(!showMore)}
             aria-expanded={showMore}
-            className="flex cursor-pointer items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 text-left transition-colors hover:bg-slate-200/70 dark:bg-white/[0.05] dark:hover:bg-white/[0.09]"
+            className="setrow w-full cursor-pointer text-left"
           >
-            <span className="text-[12.5px] font-bold text-slate-800 dark:text-slate-100">更多设置</span>
-            <ChevronRight className={cn("h-3.5 w-3.5 text-slate-500 transition-transform", showMore && "rotate-90")} />
+            <div><div className="sl">更多设置</div></div>
+            <ChevronRight className={cn("h-4 w-4 text-sub transition-transform", showMore && "rotate-90")} />
           </button>
         </div>
 
-        {/* 二级：更多设置 */}
         {showMore && (
-          <div className="mt-3 flex flex-col gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
+          <div className="mt-3 rounded-[16px] border border-[var(--line)] bg-[rgba(100,116,139,0.06)] p-3">
             <div className="flex items-center justify-between px-1 py-1">
-              <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">LDU 兼容模式</span>
+              <span className="text-[12px] font-bold">LDU 兼容模式</span>
               <button
                 type="button"
                 role="switch"
                 aria-checked={prefs.lduFallbackEnabled}
                 onClick={() => setPrefs({ lduFallbackEnabled: !prefs.lduFallbackEnabled })}
-                className={cn(
-                  "h-6 w-11 cursor-pointer rounded-full p-0.5 transition-colors",
-                  prefs.lduFallbackEnabled ? "bg-blue-500" : "bg-slate-300 dark:bg-white/15",
-                )}
-              >
-                <span className={cn(
-                  "block h-5 w-5 rounded-full bg-white shadow transition-transform",
-                  prefs.lduFallbackEnabled && "translate-x-5",
-                )} />
-              </button>
+                className={cn("switch", prefs.lduFallbackEnabled && "on")}
+              />
             </div>
-            <p className="px-1 text-[10.5px] leading-relaxed text-slate-500">
+            <p className="px-1 text-[10.5px] leading-relaxed text-mut">
               预约失败时自动换官方接口名重试（备用通道，默认关闭）
             </p>
-            <div className="mt-1 border-t border-white/[0.08] pt-2">
-              <p className="mb-1.5 px-1 text-[12px] font-bold text-slate-700 dark:text-slate-200">运行日志</p>
+            <div className="mt-2 border-t border-[var(--line2)] pt-2.5">
+              <p className="mb-1.5 px-1 text-[12px] font-bold">运行日志</p>
               <LogsPanel />
             </div>
           </div>

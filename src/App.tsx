@@ -6,7 +6,6 @@ import Dashboard from "./pages/Dashboard";
 import { ThemeProvider } from "./components/theme-provider";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { ThemeSync } from "./app/layout/ThemeSync";
-import { GlassFilter } from "./components/glass/GlassFilter";
 import { AppRouter } from "./app/router";
 
 import { getVersion } from "@tauri-apps/api/app";
@@ -69,7 +68,6 @@ function App() {
   return (
     <ThemeProvider>
       <ThemeSync />
-      <GlassFilter />
       <BrowserRouter>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
