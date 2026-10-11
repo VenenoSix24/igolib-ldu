@@ -104,13 +104,31 @@ pnpm debug:android  # = tauri android build --apk --config src-tauri/tauri.debug
 
 ## 已知坑
 
-**全屏遮罩不要用 `backdrop-blur`。** 本应用的窗口是 `transparent: true`，且 `html, body` 背景被显式设为
-`transparent`（为配合窗口毛玻璃）。在这种组合下，一个覆盖全屏的 `backdrop-filter` 元素在**创建与销毁**
-合成层时会让整个窗口闪一下 —— 表现就是打开/关闭弹窗各闪一次，而且闪的正好是刚打开的那个弹窗。
+**Windows 上打开/关闭弹窗会整窗闪一下（macOS / Android 正常）。**
 
-- 三个手写遮罩（设置、诊断日志、微信授权）已去掉 `backdrop-blur-sm`，只保留 `bg-black/50`
-- Radix 的确认/结果弹窗本来就没有 backdrop-filter，所以一直没有这个问题（可作为对照）
-- 页面里常驻的 `backdrop-blur`（顶栏、底部导航）不受影响，问题只在全屏遮罩的挂载/卸载瞬间
+根因是主配置里 `app.windows[0]` 的 `transparent: true` 加 `windowEffects`（mica/blur/sidebar）：
+Windows 上 WebView2 以透明背景合成，底下压着 DWM 的 Mica/模糊特效，内容一有大的合成变化
+（挂载/卸载一个全屏遮罩就是典型）DWM 背景就要重画一次，表现为整个窗口闪一下，闪的正是刚打开的弹窗。
+
+三个平台之所以表现不同，是因为：
+
+- **Android**：`tauri.android.conf.json` 里窗口数组被整体替换成 `{ label, visible, transparent: false }`，
+  既无透明也无窗口特效 → 不闪
+- **macOS**：WKWebView + NSVisualEffectView 能正确处理透明合成 → 不闪（已录屏逐帧验证）
+- **Windows**：继承主配置的透明 + Mica → 闪
+
+修复是新增 `src-tauri/tauri.windows.conf.json`，把 Windows 的窗口设回不透明、不带特效
+（内容本身画的就是不透明背景，所以视觉上没有变化）。注意平台配置按
+**JSON Merge Patch (RFC 7396)** 合并：数组是**整体替换**而非逐项合并，
+所以这份文件必须把窗口的完整字段都写上（label/title/width/height/resizable/decorations/visible），
+只写差异字段会把其余字段打回默认值（Android 那份就是这么工作的）。
+
+验证方式：曾把同样的配置临时放到 `tauri.macos.conf.json` 构建并启动，
+窗口标题按预期变成配置里的值（证明平台文件被读取、合并生效、schema 合法），
+随后改名为 `tauri.windows.conf.json` 重新构建，macOS 标题恢复 → 证明平台隔离正确。
+
+> 若 Windows 上修完仍有闪烁，下一个嫌疑是弹窗遮罩的 `backdrop-blur`（全屏 backdrop-filter
+> 会放大合成变化），届时优先试这个；macOS 上已录屏验证它不引起闪烁。
 
 ## 维护提醒
 

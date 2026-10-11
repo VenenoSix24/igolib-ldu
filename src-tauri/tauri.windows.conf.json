@@ -1,0 +1,17 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "我去抢个座",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "decorations": true,
+        "visible": true,
+        "transparent": false
+      }
+    ]
+  }
+}
