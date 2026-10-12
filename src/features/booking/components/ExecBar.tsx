@@ -31,7 +31,7 @@ export function ExecBar({
         </div>
 
         {/* 档位 seg：手机换行通栏三等分，桌面收缩为内容宽度并居中（防背景拉通） */}
-        <div className="seg order-3 col-span-2 flex md:order-none md:col-span-1 md:justify-self-center">
+        <div className="seg order-2 col-span-2 flex md:order-none md:col-span-1 md:justify-self-center">
           {options.map((t) => (
             <button
               key={t}
@@ -44,10 +44,10 @@ export function ExecBar({
           ))}
         </div>
 
-        {/* 手机第一行右端 = 编辑器/说明；桌面同在右端 */}
-        <div className="order-2 flex min-w-0 items-center justify-end md:order-none">
+        {/* 手机在档位下方通栏；桌面在右端 */}
+        <div className="order-3 col-span-2 flex min-w-0 items-center md:order-none md:col-span-1 md:justify-self-end">
           {editingDefault ? (
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2 md:w-auto">
               <span className="hidden whitespace-nowrap text-[11px] font-semibold text-mut sm:block">默认时间</span>
               <input
                 type="time"
@@ -57,7 +57,7 @@ export function ExecBar({
                   if (/^\d{2}:\d{2}$/.test(v)) onDefaultTime?.(v);
                 }}
                 aria-label="修改默认执行时间"
-                className="numinput w-[96px]"
+                className="numinput w-full md:w-[110px]"
               />
             </div>
           ) : editingCustom ? (
@@ -67,7 +67,7 @@ export function ExecBar({
               value={customTime}
               onChange={(e) => onCustomTime(e.target.value)}
               aria-label="自定义执行时间"
-              className="input mono h-[30px] w-[140px] text-center text-[12px]"
+              className="input mono h-[30px] w-full text-center text-[12px] md:w-[140px]"
             />
           ) : (
             <span className="whitespace-nowrap text-[10.5px] text-sub">

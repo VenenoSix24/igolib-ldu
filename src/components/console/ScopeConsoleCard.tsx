@@ -58,7 +58,7 @@ export function ScopeConsoleCard({
   const latest = useMemo(() => entries[entries.length - 1], [entries]);
 
   return (
-    <GlassCard className={cn("p-4 md:p-5", className)}>
+    <GlassCard className={cn("flex flex-col gap-3.5 p-4 md:p-5", className)}>
       <div className="flex items-center gap-3">
         <span className={cn("grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[12px]", running ? "ti-emerald" : "ti-slate")}>
           <Terminal className={cn("h-5 w-5", running && "animate-pulse")} />
@@ -75,7 +75,7 @@ export function ScopeConsoleCard({
       </div>
 
       {stages && stages.labels.length > 0 && (
-        <div className="ruler mb-3.5">
+        <div className="ruler">
           {stages.labels.map((label, i) => (
             <div key={label} className={cn("stage", stages.current > i && "done", stages.current === i && "cur")}>
               <span className="sdot" />
@@ -85,7 +85,7 @@ export function ScopeConsoleCard({
         </div>
       )}
 
-      <div ref={listRef} className="logbox max-h-56 overflow-y-auto p-3">
+      <div ref={listRef} className="logbox max-h-56 flex-1 overflow-y-auto p-3">
         {entries.length === 0 ? (
           <p className="py-3 text-center font-sans text-[11px] text-[#94a3b8]">
             暂无日志，任务运行后实时显示在这里

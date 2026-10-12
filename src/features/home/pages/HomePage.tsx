@@ -97,7 +97,6 @@ export function HomePage() {
     { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
     { label: "时间", ok: booking.tomorrowExecTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
   ];
-  const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
 
   // 一句话系统状态（运行任务优先于就绪度）
   const stateText = bookingRunning
@@ -156,11 +155,6 @@ export function HomePage() {
             <button type="button" className="btn dark big mt-2.5 w-full" onClick={() => navigate("/app/grab")}>
               立即抢座
             </button>
-            {missing.length > 0 && (
-              <p className="mt-2 flex justify-center">
-                <span className="pill warn"><span className="dot" />缺：{missing.join(" / ")}</span>
-              </p>
-            )}
           </div>
         </div>
       </GlassCard>
@@ -182,7 +176,14 @@ export function HomePage() {
             icon={KeyRound}
             tile="ti-pri"
             title="身份与 Cookie"
-            hint={statusPill ?? <span className="pill slate"><span className="dot" />未配置身份</span>}
+            hint={
+              <span className="flex items-center gap-2">
+                {statusPill ?? <span className="pill slate"><span className="dot" />未配置身份</span>}
+                <button type="button" className="btn grad sm" onClick={() => setShowQr(true)}>
+                  <QrCode className="h-3.5 w-3.5" />扫码获取
+                </button>
+              </span>
+            }
           />
 
           <div className="mt-3.5">
@@ -223,9 +224,6 @@ export function HomePage() {
                 <button type="button" className="btn ghost sm shrink-0" onClick={() => setShowQr(true)}>重新扫码</button>
               </div>
             )}
-            <button type="button" className="btn ghost sm mt-3" onClick={() => setShowQr(true)}>
-              <QrCode className="h-3.5 w-3.5" />扫码获取 Cookie
-            </button>
           </div>
         </GlassCard>
 

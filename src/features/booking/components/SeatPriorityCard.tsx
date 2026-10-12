@@ -134,7 +134,7 @@ export function SeatPriorityCard({
 
       {/* 工具行：场馆选择 + 座位号输入 + 加入（手机自动换行） */}
       <div className="mt-3.5 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-[300px]">
+        <div className="relative w-full sm:w-auto sm:max-w-[300px] sm:flex-1">
           <select
             aria-label="阅览室"
             className="select h-[34px] appearance-none pr-8 text-[12px]"
@@ -156,30 +156,32 @@ export function SeatPriorityCard({
           </select>
           <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-sub" />
         </div>
-        <input
-          placeholder="输入座位号，如 056"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && input.trim()) {
+        <div className="flex w-full gap-2 sm:w-auto sm:max-w-[240px] sm:flex-1">
+          <input
+            placeholder="输入座位号，如 056"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && input.trim()) {
+                addSeat(input.trim(), input.trim());
+                setInput("");
+              }
+            }}
+            autoComplete="off"
+            className="input mono h-[34px] min-w-0 flex-1 text-center text-[12px] tracking-widest"
+          />
+          <button
+            type="button"
+            className="btn grad sm shrink-0"
+            disabled={!input.trim()}
+            onClick={() => {
               addSeat(input.trim(), input.trim());
               setInput("");
-            }
-          }}
-          autoComplete="off"
-          className="input mono h-[34px] w-full min-w-[150px] flex-1 text-center text-[12px] tracking-widest sm:max-w-[220px]"
-        />
-        <button
-          type="button"
-          className="btn grad sm shrink-0"
-          disabled={!input.trim()}
-          onClick={() => {
-            addSeat(input.trim(), input.trim());
-            setInput("");
-          }}
-        >
-          + 加入
-        </button>
+            }}
+          >
+            + 加入
+          </button>
+        </div>
       </div>
 
       {/* 顺位四方卡 */}

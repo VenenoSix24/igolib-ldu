@@ -57,7 +57,6 @@ export function TomorrowPage() {
     { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
     { label: "时间", ok: execTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
   ];
-  const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
 
   const launch = () => {
     setShowConfirm(false);
@@ -127,11 +126,6 @@ export function TomorrowPage() {
             >
               <Play className="h-4 w-4" />{running ? "任务运行中" : "启动预约"}
             </button>
-            {missing.length > 0 && (
-              <p className="mt-2 flex justify-center">
-                <span className="pill warn"><span className="dot" />缺：{missing.join(" / ")}</span>
-              </p>
-            )}
           </div>
         </div>
       </GlassCard>
