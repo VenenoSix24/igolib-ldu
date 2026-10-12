@@ -94,11 +94,11 @@ export function ScannerPage() {
             </div>
           </div>
           {running ? (
-            <button type="button" className="btn danger sm w-full sm:w-auto" onClick={stop}>
+            <button type="button" className="btn danger w-full sm:w-auto" onClick={stop}>
               <Square className="h-3.5 w-3.5" />停止扫描
             </button>
           ) : (
-            <button type="button" className="btn grad sm w-full sm:w-auto" disabled={!cookieReady || venues.length === 0} onClick={start}>
+            <button type="button" className="btn grad w-full sm:w-auto" disabled={!cookieReady || venues.length === 0} onClick={start}>
               <Play className="h-3.5 w-3.5" />开始扫描
             </button>
           )}

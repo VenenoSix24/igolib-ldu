@@ -109,11 +109,11 @@ export function RenewalPage() {
             </div>
           </div>
           {running ? (
-            <button type="button" className="btn danger sm w-full sm:w-auto" onClick={() => stop("手动停止")}>
+            <button type="button" className="btn danger w-full sm:w-auto" onClick={() => stop("手动停止")}>
               <Square className="h-3.5 w-3.5" />停止续约
             </button>
           ) : (
-            <button type="button" className="btn grad sm w-full sm:w-auto" disabled={!cookieReady || starting} onClick={() => void doStart()}>
+            <button type="button" className="btn grad w-full sm:w-auto" disabled={!cookieReady || starting} onClick={() => void doStart()}>
               <Play className="h-3.5 w-3.5" />{starting ? "启动中…" : "开始续约"}
             </button>
           )}

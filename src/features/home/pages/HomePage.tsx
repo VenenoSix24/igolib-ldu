@@ -2,21 +2,24 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle, ChevronRight, Eye, EyeOff, KeyRound,
-  QrCode, Settings2, Timer,
+  QrCode, Settings2,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
 import { Dial } from "@/components/glass/Dial";
+import { ReservationCard } from "@/features/booking/components/ReservationCard";
+import { useReservation } from "@/features/booking/model/useReservation";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
 import { SettingsModal } from "@/components/SettingsModal";
 import { useSettingsStore } from "@/stores/settings";
 import { useAuthStore } from "@/stores/auth";
+import { useRuntimeStore } from "@/stores/runtime";
 import { ACCENTS, useThemeStore } from "@/stores/theme";
 import { validateUser } from "@/services/api";
 import { cn, compactRemaining } from "@/lib/utils";
 import { useCookieExpiry } from "@/lib/useCookieExpiry";
 import { LogsPanel } from "../../logs/components/LogsPanel";
-import { useMsCountdown, execModeLabel, execTargetTime } from "../../booking/model/useMsCountdown";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -44,6 +47,10 @@ export function HomePage() {
     ? `${new Date(expiry).getMonth() + 1}/${String(new Date(expiry).getDate()).padStart(2, "0")} ${pad2(new Date(expiry).getHours())}:${pad2(new Date(expiry).getMinutes())}`
     : null;
   const setCookieStatus = useAuthStore((s) => s.setCookieStatus);
+  const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(cookieStr, apiConfig);
+  const bookingRunning = useRuntimeStore((s) => s.bookingRunning);
+  const scanning = useRuntimeStore((s) => s.scanning);
+  const renewing = useRuntimeStore((s) => s.renewing);
 
   const [showCookie, setShowCookie] = useState(false);
   const [showQr, setShowQr] = useState(false);
@@ -84,19 +91,26 @@ export function HomePage() {
   }, [expired, setCookieStatus]);
 
   const ready = userInfo?.valid === true;
-  const scheduled = booking.execTime !== "immediate";
-  const countdown = useMsCountdown(booking.execTime, booking.customTime, prefs.defaultExecTime);
-  const modeLabel = execModeLabel(booking.execTime, booking.customTime, prefs.defaultExecTime);
-  const targetTime = execTargetTime(booking.execTime, booking.customTime, prefs.defaultExecTime);
 
   const teeth = [
     { label: "身份", ok: ready, to: "/app/home" },
     { label: "场馆", ok: Boolean(booking.libId), to: "/app/tomorrow" },
     { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
-    { label: "时间", ok: booking.execTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
+    { label: "时间", ok: booking.tomorrowExecTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
   ];
   const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
-  const startEnabled = Boolean(booking.libId && booking.seatNumber && cookieStr);
+
+  // 一句话系统状态（运行任务优先于就绪度）
+  const stateText = bookingRunning
+    ? "预约任务执行中"
+    : scanning
+      ? "场馆捡漏扫描中"
+      : renewing
+        ? "占座续约运行中"
+        : ready
+          ? "任务就绪"
+          : "待配置身份";
+  const stateOk = bookingRunning || scanning || renewing || ready;
 
   const statusPill = validating ? (
     <span className="pill warn"><span className="ping" />验证中</span>
@@ -112,63 +126,66 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 中枢 hero：状态 + 执行时间 + 就绪梳 */}
+      {/* 中枢 hero：系统状态 + 就绪梳 + 双入口 + Cookie 表盘 */}
       <GlassCard className="hero rise p-5 md:p-7">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
           {statusPill}
         </div>
+        <p className="mt-1.5 flex items-center gap-2 text-[12.5px] font-semibold text-mut">
+          <span className={cn(
+            "h-1.5 w-1.5 rounded-full",
+            stateOk ? "bg-[var(--ok)]" : "bg-[var(--warn)]",
+            (bookingRunning || scanning || renewing) && "animate-pulse",
+          )} />
+          {stateText}
+        </p>
 
-        <div className="mt-5 md:flex md:items-center md:gap-8">
+        <div className="mt-6 md:flex md:items-center md:gap-8">
           <div className="min-w-0 flex-1">
-            <div className="trigger-label">
-              <span className="t">{scheduled ? "下一次自动执行" : "执行方式"}</span>
-              <span className="mode">{modeLabel}</span>
+            <div className="teeth">
+              {teeth.map((t) => (
+                <button
+                  key={t.label}
+                  type="button"
+                  className={cn("tooth", !t.ok && "miss")}
+                  onClick={() => navigate(t.to)}
+                >
+                  <i />{t.label}
+                </button>
+              ))}
             </div>
-            <div className="bigtime">
-              <span className="shimmer text-[38px] md:text-[58px]" style={scheduled ? undefined : { fontSize: 44 }}>{scheduled ? targetTime : "立即"}</span>
-              {scheduled && <span className="cap">准时自动提交</span>}
-            </div>
-            <div className="sub-row">
-              {scheduled && (
-                <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{countdown}</b></span>
+            <div className="mt-6 flex flex-wrap items-center gap-2.5">
+              <button type="button" className="btn grad big flex-1 sm:flex-none" onClick={() => navigate("/app/tomorrow")}>
+                去明日预约
+              </button>
+              <button type="button" className="btn dark big flex-1 sm:flex-none" onClick={() => navigate("/app/grab")}>
+                立即抢座
+              </button>
+              {missing.length > 0 && (
+                <span className="text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
+                  还差 {missing.length} 项：{missing.join(" / ")}
+                </span>
               )}
-              <div className="teeth">
-                {teeth.map((t) => (
-                  <button
-                    key={t.label}
-                    type="button"
-                    className={cn("tooth", !t.ok && "miss")}
-                    onClick={() => navigate(t.to)}
-                  >
-                    <i />{t.label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
           {expiryText && !expired && (
-            <div className="mt-4 hidden shrink-0 flex-col items-center gap-1.5 md:mt-0 md:flex">
+            <div className="mt-5 hidden shrink-0 flex-col items-center gap-1.5 md:mt-0 md:flex">
               <Dial ratio={cookieRatio} tone={expiring ? "warn" : "ok"} label={compactRemaining(expiry!)} />
               <span className="mono text-[10px] text-sub">Cookie 至 {expiryText}</span>
             </div>
           )}
         </div>
-
-        <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-[var(--line2)] pt-5">
-          <button type="button" className="btn grad big flex-1 sm:flex-none" disabled={!startEnabled} onClick={() => navigate("/app/tomorrow")}>
-            去预约
-          </button>
-          <button type="button" className="btn dark big flex-1 sm:flex-none" onClick={() => navigate("/app/grab")}>
-            立即抢座
-          </button>
-          {missing.length > 0 && (
-            <span className="text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
-              还差 {missing.length} 项：{missing.join(" / ")}
-            </span>
-          )}
-        </div>
       </GlassCard>
+
+      {/* 当前预约 */}
+      {reservation?.seatName && (
+        <ReservationCard
+          reservation={reservation}
+          refreshing={loadingReservation}
+          onRefresh={() => void refreshReservation()}
+        />
+      )}
 
       {/* 身份与常用设置 */}
       <div className="grid items-start gap-4 md:grid-cols-2">
@@ -229,99 +246,112 @@ export function HomePage() {
         <GlassCard className="rise p-4 md:p-5">
           <CardHead icon={Settings2} tile="ti-slate" title="常用设置" />
 
-        <div className="mt-1">
-          <div className="setrow flex-wrap">
-            <div className="whitespace-nowrap">
-              <div className="sl">强调色</div>
-              <div className="sd">{ACCENTS.find((a) => a.id === accent)?.name}</div>
+          <div className="mt-1">
+            <div className="setrow flex-wrap">
+              <div className="whitespace-nowrap">
+                <div className="sl">强调色</div>
+                <div className="sd">{ACCENTS.find((a) => a.id === accent)?.name}</div>
+              </div>
+              <div className="sr flex w-full flex-wrap gap-1.5 sm:ml-auto sm:w-auto">
+                {ACCENTS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    title={a.name}
+                    aria-label={`强调色：${a.name}`}
+                    aria-pressed={accent === a.id}
+                    onClick={() => setAccent(a.id)}
+                    className={cn("accdot", accent === a.id && "on")}
+                    style={{ background: a.hex }}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="sr flex w-full flex-wrap gap-1.5 sm:ml-auto sm:w-auto">
-              {ACCENTS.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  title={a.name}
-                  aria-label={`强调色：${a.name}`}
-                  aria-pressed={accent === a.id}
-                  onClick={() => setAccent(a.id)}
-                  className={cn("accdot", accent === a.id && "on")}
-                  style={{ background: a.hex }}
-                />
-              ))}
-            </div>
-          </div>
 
-          <button type="button" onClick={() => setShowSettings(true)} className="setrow w-full cursor-pointer text-left">
-            <div><div className="sl">API 预设</div></div>
-            <span className="sr items-center text-[11.5px] text-mut">
-              {apiConfig.preset === "ldu" ? "卤蛋大学" : apiConfig.preset === "official" ? "官方原版" : "自定义"}
-              <ChevronRight className="h-3.5 w-3.5" />
-            </span>
-          </button>
+            <button type="button" onClick={() => setShowSettings(true)} className="setrow w-full cursor-pointer text-left">
+              <div><div className="sl">API 预设</div></div>
+              <span className="sr items-center text-[11.5px] text-mut">
+                {apiConfig.preset === "ldu" ? "卤蛋大学" : apiConfig.preset === "official" ? "官方原版" : "自定义"}
+                <ChevronRight className="h-3.5 w-3.5" />
+              </span>
+            </button>
 
-          <label className="setrow cursor-pointer">
-            <div>
-              <div className="sl">明日默认时间</div>
-              <div className="sd">预约页「默认」档使用</div>
-            </div>
-            <input
-              type="time"
-              aria-label="明日默认执行时间"
-              value={prefs.defaultExecTime}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (/^\d{2}:\d{2}$/.test(v)) setPrefs({ defaultExecTime: v });
-              }}
-              className="numinput cursor-pointer"
-            />
-          </label>
-
-          <label className="setrow cursor-pointer">
-            <div><div className="sl">Cookie 到期提醒</div></div>
-            <select
-              aria-label="Cookie 到期提醒提前量"
-              value={prefs.cookieReminderMinutes}
-              onChange={(e) => setPrefs({ cookieReminderMinutes: Number(e.target.value) })}
-              className="select h-[30px] w-auto min-w-[110px] rounded-[10px] text-[11.5px]"
-            >
-              {[5, 10, 15, 30, 60].map((m) => (
-                <option key={m} value={m}>提前 {m} 分钟</option>
-              ))}
-            </select>
-          </label>
-
-          <button
-            type="button"
-            onClick={() => setShowMore(!showMore)}
-            aria-expanded={showMore}
-            className="setrow w-full cursor-pointer text-left"
-          >
-            <div><div className="sl">更多设置</div></div>
-            <ChevronRight className={cn("h-4 w-4 text-sub transition-transform", showMore && "rotate-90")} />
-          </button>
-        </div>
-
-        {showMore && (
-          <div className="mt-3 rounded-[16px] border border-[var(--line)] bg-[rgba(100,116,139,0.06)] p-3">
-            <div className="flex items-center justify-between px-1 py-1">
-              <span className="text-[12px] font-bold">LDU 兼容模式</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={prefs.lduFallbackEnabled}
-                onClick={() => setPrefs({ lduFallbackEnabled: !prefs.lduFallbackEnabled })}
-                className={cn("switch", prefs.lduFallbackEnabled && "on")}
+            <label className="setrow cursor-pointer">
+              <div>
+                <div className="sl">明日默认时间</div>
+                <div className="sd">预约页「默认」档使用</div>
+              </div>
+              <input
+                type="time"
+                aria-label="明日默认执行时间"
+                value={prefs.defaultExecTime}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d{2}:\d{2}$/.test(v)) setPrefs({ defaultExecTime: v });
+                }}
+                className="numinput cursor-pointer"
               />
-            </div>
-            <p className="px-1 text-[10.5px] leading-relaxed text-mut">
-              预约失败时自动换官方接口名重试（备用通道，默认关闭）
-            </p>
-            <div className="mt-2 border-t border-[var(--line2)] pt-2.5">
-              <p className="mb-1.5 px-1 text-[12px] font-bold">运行日志</p>
-              <LogsPanel />
-            </div>
+            </label>
+
+            <label className="setrow cursor-pointer">
+              <div><div className="sl">Cookie 到期提醒</div></div>
+              <select
+                aria-label="Cookie 到期提醒提前量"
+                value={prefs.cookieReminderMinutes}
+                onChange={(e) => setPrefs({ cookieReminderMinutes: Number(e.target.value) })}
+                className="select h-[30px] w-auto min-w-[110px] rounded-[10px] text-[11.5px]"
+              >
+                {[5, 10, 15, 30, 60].map((m) => (
+                  <option key={m} value={m}>提前 {m} 分钟</option>
+                ))}
+              </select>
+            </label>
+
+            <button type="button" onClick={() => navigate("/app/about")} className="setrow w-full cursor-pointer text-left">
+              <div><div className="sl">关于</div></div>
+              <span className="sr items-center text-[11.5px] text-mut">
+                版本与检查更新
+                <ChevronRight className="h-3.5 w-3.5" />
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowMore(!showMore)}
+              aria-expanded={showMore}
+              className="setrow w-full cursor-pointer text-left"
+            >
+              <div><div className="sl">更多设置</div></div>
+              <ChevronRight className={cn("h-4 w-4 text-sub transition-transform", showMore && "rotate-90")} />
+            </button>
           </div>
-        )}
+
+          {showMore && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mt-3 overflow-hidden rounded-[16px] border border-[var(--line)] bg-[rgba(100,116,139,0.06)] p-3"
+            >
+              <div className="flex items-center justify-between px-1 py-1">
+                <span className="text-[12px] font-bold">LDU 兼容模式</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={prefs.lduFallbackEnabled}
+                  onClick={() => setPrefs({ lduFallbackEnabled: !prefs.lduFallbackEnabled })}
+                  className={cn("switch", prefs.lduFallbackEnabled && "on")}
+                />
+              </div>
+              <p className="px-1 text-[10.5px] leading-relaxed text-mut">
+                预约失败时自动换官方接口名重试（备用通道，默认关闭）
+              </p>
+              <div className="mt-2 border-t border-[var(--line2)] pt-2.5">
+                <p className="mb-1.5 px-1 text-[12px] font-bold">运行日志</p>
+                <LogsPanel />
+              </div>
+            </motion.div>
+          )}
         </GlassCard>
       </div>
 

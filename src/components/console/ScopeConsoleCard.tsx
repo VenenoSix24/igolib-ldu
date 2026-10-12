@@ -72,7 +72,7 @@ export function ScopeConsoleCard({
           </p>
         ) : (
           entries.map((entry) => (
-            <div key={entry.id} className="flex items-start gap-1.5">
+            <div key={entry.id} className="logrow flex items-start gap-1.5">
               <span className="shrink-0 text-[#64748b]">{formatTime(entry.time)}</span>
               <span className={cn("shrink-0 rounded px-1 text-[9.5px] font-bold leading-5", LEVEL_TAG[entry.level].cls)}>
                 {LEVEL_TAG[entry.level].text}

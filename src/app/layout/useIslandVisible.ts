@@ -27,7 +27,7 @@ export function useIslandVisible(tickMs = 1000): boolean {
   }, [tickMs]);
 
   const readyish = cookieStatus === "valid" && Boolean(booking.libId) && Boolean(booking.seatNumber);
-  const targetTs = readyish ? nextTargetTs(booking.execTime, booking.customTime, defaultTime) : null;
+  const targetTs = readyish ? nextTargetTs(booking.tomorrowExecTime, booking.customTime, defaultTime) : null;
   const nearTarget = targetTs !== null && targetTs - now < NEAR_WINDOW;
   const eventFresh = lastEvent !== null && now - lastEvent.at < EVENT_WINDOW;
   // dev 调试：?island=1 强制浮现（生产构建剔除）

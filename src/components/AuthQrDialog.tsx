@@ -48,14 +48,15 @@ export function AuthQrDialog({ isOpen, onClose, apiConfig, onCookie }: AuthQrDia
             onClick={onClose}
           />
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.985, y: 14 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.985 }}
-            transition={{ duration: 0.25, ease: [0.3, 1.15, 0.4, 1] }}
-            style={{ x: "-50%" }}
-            className="fixed left-1/2 top-1/2 z-50 w-[90%] max-w-sm overflow-hidden rounded-3xl border border-[var(--gborder)] bg-[var(--glass-3)] shadow-2xl backdrop-blur-2xl"
-          >
+          {/* 居中定位 wrapper：motion 只做浮入动画，不参与定位 transform */}
+          <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.985, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.985 }}
+              transition={{ duration: 0.25, ease: [0.3, 1.15, 0.4, 1] }}
+              className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-3xl border border-[var(--gborder)] bg-[var(--glass-3)] shadow-2xl backdrop-blur-2xl"
+            >
             <div className="flex items-center justify-between border-b border-[var(--line2)] p-4">
               <h2 className="flex items-center gap-2 text-[15px] font-extrabold">
                 <KeyRound className="h-[18px] w-[18px] text-pri-text dark:text-acc-hi" />
@@ -145,7 +146,8 @@ export function AuthQrDialog({ isOpen, onClose, apiConfig, onCookie }: AuthQrDia
                 链接仅用于本地解析 Code，不会向第三方上传
               </p>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

@@ -53,10 +53,10 @@ export function TaskIsland() {
   }, [popOpen]);
 
   const readyish = cookieStatus === "valid" && Boolean(booking.libId) && Boolean(booking.seatNumber);
-  const targetTs = readyish ? nextTargetTs(booking.execTime, booking.customTime, defaultTime) : null;
+  const targetTs = readyish ? nextTargetTs(booking.tomorrowExecTime, booking.customTime, defaultTime) : null;
   const eventFresh = lastEvent !== null && now - lastEvent.at < EVENT_WINDOW;
   const busy = bookingRunning || scanning || renewing;
-  const modeLabel = execModeLabel(booking.execTime, booking.customTime, defaultTime);
+  const modeLabel = execModeLabel(booking.tomorrowExecTime, booking.customTime, defaultTime);
   const ctxText = eventFresh && lastEvent ? lastEvent.text : context || "未设定目标";
 
   return createPortal(

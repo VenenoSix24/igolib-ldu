@@ -62,15 +62,15 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
             onClick={onClose}
           />
 
-          {/* 弹窗 */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.985, y: 14 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.985 }}
-            transition={{ duration: 0.25, ease: [0.3, 1.15, 0.4, 1] }}
-            style={{ x: "-50%" }}
-            className="fixed left-1/2 top-1/2 z-50 w-[90%] max-w-md overflow-hidden rounded-3xl border border-[var(--gborder)] bg-[var(--glass-3)] shadow-2xl backdrop-blur-2xl"
-          >
+          {/* 居中定位 wrapper：motion 只做浮入动画，不参与定位 transform */}
+          <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.985, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.985 }}
+              transition={{ duration: 0.25, ease: [0.3, 1.15, 0.4, 1] }}
+              className="pointer-events-auto w-full max-w-md overflow-hidden rounded-3xl border border-[var(--gborder)] bg-[var(--glass-3)] shadow-2xl backdrop-blur-2xl"
+            >
             {/* 头部 */}
             <div className="flex items-center justify-between border-b border-[var(--line2)] p-4">
               <h2 className="flex items-center gap-2 text-[15px] font-extrabold">
@@ -180,7 +180,8 @@ export function SettingsModal({ isOpen, onClose, config, onSave }: SettingsModal
                 <button type="button" className="btn grad sm min-w-[64px]" onClick={handleSave}>保存</button>
               </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

@@ -5,6 +5,7 @@ import { TomorrowPage } from "../features/booking/pages/TomorrowPage";
 import { GrabPage } from "../features/booking/pages/GrabPage";
 import { ScannerPage } from "../features/scanner/pages/ScannerPage";
 import { RenewalPage } from "../features/renewal/pages/RenewalPage";
+import { AboutPage } from "../features/about/pages/AboutPage";
 
 /** 2.0 路由：/app/* 为新壳；/dashboard（旧）在功能页迁移完成前保留 */
 export function AppRouter() {
@@ -18,6 +19,7 @@ export function AppRouter() {
         <Route path="grab" element={<GrabPage />} />
         <Route path="scanner" element={<ScannerPage />} />
         <Route path="renewal" element={<RenewalPage />} />
+        <Route path="about" element={<AboutPage />} />
       </Route>
       {/* 未知路径兜底回首页，避免 No routes matched 警告 */}
       <Route path="*" element={<Navigate to="/app/home" replace />} />
