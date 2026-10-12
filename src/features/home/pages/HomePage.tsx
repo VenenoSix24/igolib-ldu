@@ -127,10 +127,7 @@ export function HomePage() {
       <GlassCard className="hero rise p-5 md:p-7">
         <div className="md:flex md:items-center md:gap-8">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
-              {statusPill}
-            </div>
+            <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
             <p className="mt-1.5 flex items-center gap-2 text-[12.5px] font-semibold text-mut">
               <span className={cn(
                 "h-1.5 w-1.5 rounded-full",
@@ -160,8 +157,8 @@ export function HomePage() {
               立即抢座
             </button>
             {missing.length > 0 && (
-              <p className="mt-2 text-center text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
-                还差 {missing.length} 项：{missing.join(" / ")}
+              <p className="mt-2 flex justify-center">
+                <span className="pill warn"><span className="dot" />缺：{missing.join(" / ")}</span>
               </p>
             )}
           </div>

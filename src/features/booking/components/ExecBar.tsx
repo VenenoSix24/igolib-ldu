@@ -30,8 +30,8 @@ export function ExecBar({
           <span className="whitespace-nowrap text-[11.5px] font-bold tracking-wide">执行档位</span>
         </div>
 
-        {/* 档位 seg：手机换行通栏三等分，桌面居中 */}
-        <div className="seg order-3 col-span-2 flex md:order-none md:col-span-1 md:justify-center">
+        {/* 档位 seg：手机换行通栏三等分，桌面收缩为内容宽度并居中（防背景拉通） */}
+        <div className="seg order-3 col-span-2 flex md:order-none md:col-span-1 md:justify-self-center">
           {options.map((t) => (
             <button
               key={t}

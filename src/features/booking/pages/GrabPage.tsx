@@ -123,8 +123,8 @@ export function GrabPage() {
               <Zap className="h-4 w-4" />{running ? "任务运行中" : "立即抢座"}
             </button>
             {missing.length > 0 && (
-              <p className="mt-2 text-center text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
-                还差 {missing.length} 项：{missing.join(" / ")}
+              <p className="mt-2 flex justify-center">
+                <span className="pill warn"><span className="dot" />缺：{missing.join(" / ")}</span>
               </p>
             )}
           </div>

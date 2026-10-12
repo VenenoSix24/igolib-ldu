@@ -214,6 +214,7 @@ export function RenewalPage() {
         title="续约控制台"
         statusText={running ? PHASE_TEXT[phase] : "待命中"}
         running={running}
+        subtitle={running ? `已完成 ${rounds} 轮 · 连续失败 ${consecutiveFails}/3` : "临近签到截止自动取消重订保座"}
         stages={{
           labels: ["等待触发", "取消", "冷却", "重订"],
           current: phase === "waiting" ? 0 : phase === "cancelling" ? 1 : phase === "cooldown" ? 2 : phase === "rebooking" ? 3 : -1,

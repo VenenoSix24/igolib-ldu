@@ -27,6 +27,7 @@ export function ScopeConsoleCard({
   statusText,
   running = false,
   stages,
+  subtitle,
   className,
 }: {
   scope: string;
@@ -35,6 +36,8 @@ export function ScopeConsoleCard({
   running?: boolean;
   /** 本地化刻度尺：捡漏=按场馆轮询分段，续约=按循环阶段分段 */
   stages?: { labels: string[]; current: number };
+  /** 状态头副标（与预约控制台同构） */
+  subtitle?: string;
   className?: string;
 }) {
   const [entries, setEntries] = useState<LogEntry[]>(() => [...getLogs()].filter((e) => e.scope === scope).slice(-100));
@@ -56,16 +59,19 @@ export function ScopeConsoleCard({
 
   return (
     <GlassCard className={cn("p-4 md:p-5", className)}>
-      <div className="mb-2.5 flex items-center gap-2.5">
-        <span className={cn("grid h-7 w-7 place-items-center rounded-[10px]", running ? "ti-emerald" : "ti-slate")}>
-          <Terminal className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-3">
+        <span className={cn("grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[12px]", running ? "ti-emerald" : "ti-slate")}>
+          <Terminal className={cn("h-5 w-5", running && "animate-pulse")} />
         </span>
-        <span className="text-[13px] font-bold">{title}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14.5px] font-extrabold">{title}</p>
+          {subtitle && <p className="truncate text-[11px] text-mut">{subtitle}</p>}
+        </div>
         <span className={running ? "pill ok h-[22px] px-2 text-[10px]" : "pill slate h-[22px] px-2 text-[10px]"}>
           <Terminal className={cn("h-3 w-3", running && "animate-pulse")} />
           {statusText ?? (running ? "运行中" : "待命中")}
         </span>
-        <span className="mono ml-auto text-[10px] text-sub">{entries.length} 条</span>
+        <span className="mono ml-auto hidden text-[10px] text-sub sm:block">{entries.length} 条</span>
       </div>
 
       {stages && stages.labels.length > 0 && (

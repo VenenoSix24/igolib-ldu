@@ -294,6 +294,9 @@ export function ScannerPage() {
         title="捡漏控制台"
         statusText={running ? `第 ${rounds} 轮` : "待命中"}
         running={running}
+        subtitle={running
+          ? `第 ${rounds} 轮 · 正在扫描 ${venues.find((v) => v.libId === currentLibId)?.name ?? "…"}`
+          : "轮询已选场馆余位"}
         stages={{
           labels: venues.map((v) => v.name),
           current: currentLibId ? venues.findIndex((v) => v.libId === currentLibId) : -1,

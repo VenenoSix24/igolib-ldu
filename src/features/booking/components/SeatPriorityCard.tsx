@@ -111,26 +111,29 @@ export function SeatPriorityCard({
 
   return (
     <GlassCard className="rise p-4 md:p-5">
-      {/* 卡头：标题 + 选座开关 */}
+      {/* 卡头：标题 + 实时余位 + 选座开关 */}
       <div className="flex items-center gap-3">
         <CardHead icon={Building2} title="目标座位" />
-        <button type="button" className="btn ghost sm ml-auto" onClick={toggleCloud} disabled={!libId}>
-          选座
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", cloudOpen && "rotate-180")} />
-        </button>
-      </div>
-
-      {/* 工具行：实时余位 + 场馆选择 */}
-      <div className="mt-3.5 flex flex-wrap items-center gap-2">
         {opMode === "immediate" && selectedRoom && (
           <span className={cn(
-            "pill h-[26px] px-2.5",
+            "pill ml-auto h-[26px] px-2.5",
             !selectedRoom.isOpen ? "slate" : selectedRoom.seatsAvailable <= 0 ? "err" : "ok",
           )}>
             <span className="dot" />
             {!selectedRoom.isOpen ? "未开放" : `余 ${selectedRoom.seatsAvailable}`}
           </span>
         )}
+        <button type="button" className={cn("btn ghost sm", opMode === "immediate" && selectedRoom ? "" : "ml-auto")} onClick={toggleCloud} disabled={!libId}>
+          选座
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", cloudOpen && "rotate-180")} />
+        </button>
+      </div>
+      {roomsError && (
+        <p className="mt-2 text-[11.5px] text-warn-ink dark:text-[#fcd34d]">{roomsError}</p>
+      )}
+
+      {/* 工具行：场馆选择 + 座位号输入 + 加入（手机自动换行） */}
+      <div className="mt-3.5 flex flex-wrap items-center gap-2">
         <div className="relative min-w-0 flex-1 sm:max-w-[300px]">
           <select
             aria-label="阅览室"
@@ -153,10 +156,31 @@ export function SeatPriorityCard({
           </select>
           <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-sub" />
         </div>
+        <input
+          placeholder="输入座位号，如 056"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && input.trim()) {
+              addSeat(input.trim(), input.trim());
+              setInput("");
+            }
+          }}
+          autoComplete="off"
+          className="input mono h-[34px] w-full min-w-[150px] flex-1 text-center text-[12px] tracking-widest sm:max-w-[220px]"
+        />
+        <button
+          type="button"
+          className="btn grad sm shrink-0"
+          disabled={!input.trim()}
+          onClick={() => {
+            addSeat(input.trim(), input.trim());
+            setInput("");
+          }}
+        >
+          + 加入
+        </button>
       </div>
-      {roomsError && (
-        <p className="mt-2 text-[11.5px] text-warn-ink dark:text-[#fcd34d]">{roomsError}</p>
-      )}
 
       {/* 顺位四方卡 */}
       <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -217,34 +241,6 @@ export function SeatPriorityCard({
             ))}
           </>
         )}
-      </div>
-
-      {/* 添加行 */}
-      <div className="mt-3 flex gap-2">
-        <input
-          placeholder="输入座位号，如 056"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && input.trim()) {
-              addSeat(input.trim(), input.trim());
-              setInput("");
-            }
-          }}
-          autoComplete="off"
-          className="input mono h-[32px] w-full max-w-[200px] flex-1 text-center text-[12px] tracking-widest sm:flex-none"
-        />
-        <button
-          type="button"
-          className="btn grad sm shrink-0"
-          disabled={!input.trim()}
-          onClick={() => {
-            addSeat(input.trim(), input.trim());
-            setInput("");
-          }}
-        >
-          + 加入
-        </button>
       </div>
 
       {/* 空闲座位号云（懒加载） */}
