@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Play, Timer } from "lucide-react";
+import { Play, Timer } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
-import { CardHead } from "@/components/glass/CardHead";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
-import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
 import { useCountdown } from "../model/useCountdown";
 import { useMsCountdown, execModeLabel, execTargetTime } from "../model/useMsCountdown";
 import { useReservation } from "../model/useReservation";
 import { ReservationCard } from "../components/ReservationCard";
-import { VenueSelect, SeatSelect, TimeCard } from "../components/SelectionCards";
-import { BackupChainPanel } from "@/features/seats/components/BackupChainPanel";
+import { ExecBar } from "../components/ExecBar";
+import { SeatPriorityCard } from "../components/SeatPriorityCard";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
 import { ConsoleCard } from "../components/ConsoleCard";
 import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
@@ -29,13 +27,13 @@ export function TomorrowPage() {
 
   const { rooms, dynamicRooms, loadingRooms, roomsError } =
     useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
-  const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "scheduled");
   const task = useBookingTask();
-  const countDownStr = useCountdown(booking.execTime, booking.customTime, defaultTime);
-  const msCountdown = useMsCountdown(booking.execTime, booking.customTime, defaultTime);
-  const modeLabel = execModeLabel(booking.execTime, booking.customTime, defaultTime);
-  const targetTime = execTargetTime(booking.execTime, booking.customTime, defaultTime);
-  const scheduled = booking.execTime !== "immediate";
+  const execTime = booking.tomorrowExecTime;
+  const countDownStr = useCountdown(execTime, booking.customTime, defaultTime);
+  const msCountdown = useMsCountdown(execTime, booking.customTime, defaultTime);
+  const modeLabel = execModeLabel(execTime, booking.customTime, defaultTime);
+  const targetTime = execTargetTime(execTime, booking.customTime, defaultTime);
+  const scheduled = execTime !== "immediate";
   const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(booking.cookieStr, apiConfig);
 
   // 抢座成功后刷新当前预约，并停止同场馆的捡漏扫描
@@ -57,7 +55,7 @@ export function TomorrowPage() {
     { label: "身份", ok: cookieReady, to: "/app/home" },
     { label: "场馆", ok: Boolean(booking.libId), to: "/app/tomorrow" },
     { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
-    { label: "时间", ok: booking.execTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
+    { label: "时间", ok: execTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
   ];
   const missing = teeth.filter((t) => !t.ok).map((t) => t.label);
 
@@ -70,7 +68,7 @@ export function TomorrowPage() {
       seatNumber: booking.seatNumber,
       cookieStr: booking.cookieStr,
       opMode: "scheduled",
-      execTime: booking.execTime,
+      execTime: booking.tomorrowExecTime,
       customTime: booking.customTime,
       defaultTime,
       backupSeats: useBackupSeatsStore.getState().chains[booking.libId] ?? [],
@@ -134,49 +132,34 @@ export function TomorrowPage() {
         </div>
       </GlassCard>
 
-      {/* 目标座位 / 执行安排 双列 */}
-      <div className="grid items-start gap-4 md:grid-cols-5">
-        <GlassCard className="rise p-4 md:col-span-3 md:p-5">
-          <CardHead icon={Building2} title="目标座位" />
-          <div className="mt-3.5 flex flex-col gap-3.5">
-            <VenueSelect
-              rooms={dynamicRooms}
-              loading={loadingRooms}
-              error={roomsError}
-              libId={booking.libId}
-              onChange={(libId) => { setBooking({ libId }); setSelectedSeatKey(""); }}
-              cookieStr={booking.cookieStr}
-            />
-            <SeatSelect
-              seats={dynamicSeats}
-              loading={loadingSeats}
-              seatNumber={booking.seatNumber}
-              onSeatNumber={(seatNumber) => setBooking({ seatNumber })}
-              selectedSeatKey={selectedSeatKey}
-              onSelectSeatKey={(key, name) => {
-                setSelectedSeatKey(key);
-                if (name) setBooking({ seatNumber: name });
-              }}
-              libId={booking.libId}
-            />
-          </div>
-        </GlassCard>
-        <div className="flex flex-col gap-4 md:col-span-2">
-          <GlassCard className="rise p-4 md:p-5">
-            <TimeCard
-              options={["immediate", "2148", "custom"]}
-              execTime={booking.execTime}
-              onExecTime={(execTime) => setBooking({ execTime })}
-              customTime={booking.customTime}
-              onCustomTime={(customTime) => setBooking({ customTime })}
-              hint={`模式默认 ${defaultTime}`}
-              defaultTime={defaultTime}
-              onDefaultTime={(t) => setPrefs({ defaultExecTime: t })}
-            />
-          </GlassCard>
-          <BackupChainPanel libId={booking.libId} />
-        </div>
-      </div>
+      {/* 执行档位 */}
+      <ExecBar
+        options={["immediate", "2148", "custom"]}
+        execTime={booking.tomorrowExecTime}
+        onExecTime={(tomorrowExecTime) => setBooking({ tomorrowExecTime })}
+        customTime={booking.customTime}
+        onCustomTime={(customTime) => setBooking({ customTime })}
+        defaultTime={defaultTime}
+        onDefaultTime={(t) => setPrefs({ defaultExecTime: t })}
+      />
+
+      {/* 目标座位：主选 + 顺位备选 */}
+      <SeatPriorityCard
+        cookieStr={booking.cookieStr}
+        apiConfig={apiConfig}
+        rooms={dynamicRooms}
+        loadingRooms={loadingRooms}
+        roomsError={roomsError}
+        libId={booking.libId}
+        onLibId={(libId) => setBooking({ libId })}
+        opMode="scheduled"
+        seatNumber={booking.seatNumber}
+        selectedSeatKey={selectedSeatKey}
+        onPick={(key, name) => {
+          setSelectedSeatKey(key);
+          setBooking({ seatNumber: name });
+        }}
+      />
 
       <ConsoleCard
         status={task.status}
@@ -193,7 +176,7 @@ export function TomorrowPage() {
         onOpenChange={setShowConfirm}
         onConfirm={launch}
         opMode="scheduled"
-        execTime={booking.execTime}
+        execTime={booking.tomorrowExecTime}
         customTime={booking.customTime}
         defaultTime={defaultTime}
         roomName={roomName}

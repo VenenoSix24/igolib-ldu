@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Armchair, Building2, Timer, Zap } from "lucide-react";
+import { Timer, Zap } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
-import { CardHead } from "@/components/glass/CardHead";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
-import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
 import { useMsCountdown, execTargetTime } from "../model/useMsCountdown";
 import { useReservation } from "../model/useReservation";
 import { ReservationCard } from "../components/ReservationCard";
-import { VenueList, SeatSelect, TimeCard } from "../components/SelectionCards";
-import { BackupChainPanel } from "@/features/seats/components/BackupChainPanel";
+import { ExecBar } from "../components/ExecBar";
+import { SeatPriorityCard } from "../components/SeatPriorityCard";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
 import { ConsoleCard } from "../components/ConsoleCard";
 import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
@@ -26,7 +24,6 @@ export function GrabPage() {
 
   const { rooms, dynamicRooms, loadingRooms, roomsError } =
     useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
-  const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "immediate");
   const task = useBookingTask();
   const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(booking.cookieStr, apiConfig);
 
@@ -44,8 +41,8 @@ export function GrabPage() {
   const roomName = rooms[booking.libId];
   const startEnabled = Boolean(booking.libId && booking.seatNumber && booking.cookieStr);
   const running = task.status === "running" || task.status === "connecting";
-  // 抢座页把「默认时间」档视为立即执行
-  const effectiveExec = booking.execTime === "2148" ? "immediate" : booking.execTime;
+  // 抢座页把「默认时间」档视作立即执行（历史数据兼容）
+  const effectiveExec = booking.grabExecTime === "2148" ? "immediate" : booking.grabExecTime;
   const timed = effectiveExec === "custom" && Boolean(booking.customTime);
   const targetTime = execTargetTime(effectiveExec, booking.customTime, "21:48");
   const msCountdown = useMsCountdown(effectiveExec, booking.customTime, "21:48");
@@ -67,7 +64,7 @@ export function GrabPage() {
       seatNumber: booking.seatNumber,
       cookieStr: booking.cookieStr,
       opMode: "immediate",
-      execTime: booking.execTime,
+      execTime: booking.grabExecTime,
       customTime: booking.customTime,
       backupSeats: useBackupSeatsStore.getState().chains[booking.libId] ?? [],
       selectedSeatKey,
@@ -130,60 +127,32 @@ export function GrabPage() {
         </div>
       </GlassCard>
 
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        {/* 场馆实时列表 + 执行时间 */}
-        <div className="flex flex-col gap-4">
-          <GlassCard className="rise p-4 md:p-5">
-            <CardHead
-              icon={Building2}
-              title="阅览室"
-              hint={dynamicRooms.length > 0 ? <span className="pill ok h-[18px] px-1.5 text-[9.5px]"><span className="dot" />实时</span> : undefined}
-            />
-            <div className="mt-3">
-              <VenueList
-                rooms={dynamicRooms}
-                loading={loadingRooms}
-                error={roomsError}
-                libId={booking.libId}
-                onChange={(libId) => { setBooking({ libId }); setSelectedSeatKey(""); }}
-                cookieStr={booking.cookieStr}
-              />
-            </div>
-          </GlassCard>
-          <GlassCard className="rise p-4 md:p-5">
-            <TimeCard
-              options={["immediate", "custom"]}
-              execTime={effectiveExec}
-              onExecTime={(execTime) => setBooking({ execTime })}
-              customTime={booking.customTime}
-              onCustomTime={(customTime) => setBooking({ customTime })}
-              hint="可改为定时提交"
-            />
-          </GlassCard>
-        </div>
+      {/* 执行档位 */}
+      <ExecBar
+        options={["immediate", "custom"]}
+        execTime={effectiveExec}
+        onExecTime={(grabExecTime) => setBooking({ grabExecTime })}
+        customTime={booking.customTime}
+        onCustomTime={(customTime) => setBooking({ customTime })}
+      />
 
-        {/* 座位 + 备选链 */}
-        <div className="flex flex-col gap-4">
-          <GlassCard className="rise p-4 md:p-5">
-            <CardHead icon={Armchair} title="座位" />
-            <div className="mt-3">
-              <SeatSelect
-                seats={dynamicSeats}
-                loading={loadingSeats}
-                seatNumber={booking.seatNumber}
-                onSeatNumber={(seatNumber) => setBooking({ seatNumber })}
-                selectedSeatKey={selectedSeatKey}
-                onSelectSeatKey={(key, name) => {
-                  setSelectedSeatKey(key);
-                  if (name) setBooking({ seatNumber: name });
-                }}
-                libId={booking.libId}
-              />
-            </div>
-          </GlassCard>
-          <BackupChainPanel libId={booking.libId} />
-        </div>
-      </div>
+      {/* 目标座位：主选 + 顺位备选（含实时余位） */}
+      <SeatPriorityCard
+        cookieStr={booking.cookieStr}
+        apiConfig={apiConfig}
+        rooms={dynamicRooms}
+        loadingRooms={loadingRooms}
+        roomsError={roomsError}
+        libId={booking.libId}
+        onLibId={(libId) => setBooking({ libId })}
+        opMode="immediate"
+        seatNumber={booking.seatNumber}
+        selectedSeatKey={selectedSeatKey}
+        onPick={(key, name) => {
+          setSelectedSeatKey(key);
+          setBooking({ seatNumber: name });
+        }}
+      />
 
       <ConsoleCard
         status={task.status}

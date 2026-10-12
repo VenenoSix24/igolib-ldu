@@ -15,6 +15,8 @@ interface BackupSeatsState {
   chains: Record<string, BackupSeat[]>;
   /** 已在链中则移除，否则追加到末尾 */
   toggle: (libId: string, seat: BackupSeat) => void;
+  /** 插入到链首（已存在则先移除再插入） */
+  unshift: (libId: string, seat: BackupSeat) => void;
   remove: (libId: string, key: string) => void;
   /** 上移 / 下移（dir = -1 | 1），越界不动 */
   move: (libId: string, key: string, dir: -1 | 1) => void;
@@ -36,6 +38,13 @@ export const useBackupSeatsStore = create<BackupSeatsState>()(
             },
           };
         }),
+      unshift: (libId, seat) =>
+        set((s) => ({
+          chains: {
+            ...s.chains,
+            [libId]: [seat, ...(s.chains[libId] ?? []).filter((b) => b.key !== seat.key)],
+          },
+        })),
       remove: (libId, key) =>
         set((s) => ({
           chains: { ...s.chains, [libId]: (s.chains[libId] ?? []).filter((b) => b.key !== key) },

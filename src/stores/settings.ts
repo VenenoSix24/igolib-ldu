@@ -11,7 +11,10 @@ export interface BookingState {
   libId: string;
   seatNumber: string;
   opMode: OpMode;
-  execTime: ExecTime;
+  /** 明日预约页的执行档位（与立即抢座页各自记忆） */
+  tomorrowExecTime: ExecTime;
+  /** 立即抢座页的执行档位 */
+  grabExecTime: ExecTime;
   customTime: string;
 }
 
@@ -45,7 +48,8 @@ const DEFAULT_BOOKING: BookingState = {
   libId: "",
   seatNumber: "",
   opMode: "scheduled",
-  execTime: "2148",
+  tomorrowExecTime: "2148",
+  grabExecTime: "immediate",
   customTime: "",
 };
 
@@ -86,8 +90,9 @@ function collectLegacyState(): { api: ApiConfig; booking: BookingState } {
         libId,
         seatNumber,
         opMode: opMode === "immediate" ? "immediate" : "scheduled",
-        execTime:
+        tomorrowExecTime:
           execTime === "immediate" || execTime === "custom" ? execTime : "2148",
+        grabExecTime: execTime === "custom" ? "custom" : "immediate",
         customTime,
       },
     };
@@ -112,14 +117,23 @@ export const useSettingsStore = create<SettingsState>()(
     },
     {
       name: "igolib:settings:v1",
-      version: 3,
+      version: 4,
       migrate: (state) => {
         if (state && typeof state === "object" && "prefs" in state) {
-          const prefs = { ...DEFAULT_PREFS, ...(state as { prefs?: Partial<FeaturePrefs> }).prefs };
+          const s = { ...state } as typeof state & { booking?: Record<string, unknown> };
+          const prefs = { ...DEFAULT_PREFS, ...(s as { prefs?: Partial<FeaturePrefs> }).prefs };
           // v2：prefs 增量字段（如触发提前量）回填默认值，避免旧持久化整体覆盖
           // v3：捡漏扫描间隔旧默认 3s 提到 10s（手动改成其他值的保持不变）
           if (prefs.scanIntervalSec === 3) prefs.scanIntervalSec = 10;
-          return { ...state, prefs };
+          // v4：执行档位按页面拆分记忆（旧 execTime 两边回落，抢座页 2148 视作立即）
+          if (s.booking && "execTime" in s.booking && !("tomorrowExecTime" in s.booking)) {
+            const old = s.booking.execTime as ExecTime;
+            s.booking.tomorrowExecTime =
+              old === "immediate" || old === "custom" ? old : "2148";
+            s.booking.grabExecTime = old === "custom" ? "custom" : "immediate";
+            delete s.booking.execTime;
+          }
+          return { ...s, prefs };
         }
         return state;
       },
