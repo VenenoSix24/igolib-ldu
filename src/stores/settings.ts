@@ -137,6 +137,10 @@ export const useSettingsStore = create<SettingsState>()(
         }
         return state;
       },
+      // 旧持久化的 api 可能缺新字段（浅合并整体覆盖），落回默认配置补全
+      onRehydrateStorage: () => (state) => {
+        if (state) state.api = { ...DEFAULT_CONFIG, ...state.api };
+      },
     },
   ),
 );
