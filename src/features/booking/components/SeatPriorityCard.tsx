@@ -26,8 +26,8 @@ interface SeatPriorityCardProps {
 }
 
 /**
- * 目标座位卡：主选 + 顺位备选一个列表讲完「按序抢座」。
- * 场馆选择在卡头；空闲座位号云懒加载点选加入；无真实座位坐标，网格组件已退役。
+ * 目标座位卡：主选 + 顺位备选一个列表讲完「按序抢座」，四方卡网格呈现。
+ * 场馆选择在工具行；空闲座位号云懒加载点选加入；无真实座位坐标，网格组件已退役。
  */
 export function SeatPriorityCard({
   cookieStr, apiConfig, rooms, loadingRooms, roomsError, libId, onLibId, opMode, seatNumber, selectedSeatKey, onPick,
@@ -111,102 +111,108 @@ export function SeatPriorityCard({
 
   return (
     <GlassCard className="rise p-4 md:p-5">
-      {/* 卡头：标题 + 实时余位 + 场馆 + 选座开关 */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      {/* 卡头：标题 + 选座开关 */}
+      <div className="flex items-center gap-3">
         <CardHead icon={Building2} title="目标座位" />
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {opMode === "immediate" && selectedRoom && (
-            <span className={cn(
-              "pill h-[24px] px-2 text-[10.5px]",
-              !selectedRoom.isOpen ? "slate" : selectedRoom.seatsAvailable <= 0 ? "err" : "ok",
-            )}>
-              <span className="dot" />
-              {!selectedRoom.isOpen ? "未开放" : `余 ${selectedRoom.seatsAvailable}`}
-            </span>
-          )}
-          <div className="relative">
-            <select
-              aria-label="阅览室"
-              className="select h-[32px] w-auto min-w-[190px] appearance-none pr-8 text-[12px]"
-              value={libId}
-              onChange={(e) => onLibId(e.target.value)}
-              disabled={loadingRooms || rooms.length === 0}
-            >
-              {loadingRooms ? (
-                <option>正在获取场馆数据…</option>
-              ) : rooms.length > 0 ? (
-                [...rooms].sort((a, b) => a.name.localeCompare(b.name)).map((room) => (
-                  <option key={room.id} value={room.id}>
-                    {room.name}（{room.seatsAvailable} 座可用）
-                  </option>
-                ))
-              ) : (
-                <option value="">{cookieStr ? "未找到可用场馆" : "请先在首页配置 Cookie"}</option>
-              )}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-sub" />
-          </div>
-          <button type="button" className="btn ghost sm" onClick={toggleCloud} disabled={!libId}>
-            选座
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", cloudOpen && "rotate-180")} />
-          </button>
+        <button type="button" className="btn ghost sm ml-auto" onClick={toggleCloud} disabled={!libId}>
+          选座
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", cloudOpen && "rotate-180")} />
+        </button>
+      </div>
+
+      {/* 工具行：实时余位 + 场馆选择 */}
+      <div className="mt-3.5 flex flex-wrap items-center gap-2">
+        {opMode === "immediate" && selectedRoom && (
+          <span className={cn(
+            "pill h-[26px] px-2.5",
+            !selectedRoom.isOpen ? "slate" : selectedRoom.seatsAvailable <= 0 ? "err" : "ok",
+          )}>
+            <span className="dot" />
+            {!selectedRoom.isOpen ? "未开放" : `余 ${selectedRoom.seatsAvailable}`}
+          </span>
+        )}
+        <div className="relative min-w-0 flex-1 sm:max-w-[300px]">
+          <select
+            aria-label="阅览室"
+            className="select h-[34px] appearance-none pr-8 text-[12px]"
+            value={libId}
+            onChange={(e) => onLibId(e.target.value)}
+            disabled={loadingRooms || rooms.length === 0}
+          >
+            {loadingRooms ? (
+              <option>正在获取场馆数据…</option>
+            ) : rooms.length > 0 ? (
+              [...rooms].sort((a, b) => a.name.localeCompare(b.name)).map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}（{room.seatsAvailable} 座可用）
+                </option>
+              ))
+            ) : (
+              <option value="">{cookieStr ? "未找到可用场馆" : "请先在首页配置 Cookie"}</option>
+            )}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-sub" />
         </div>
       </div>
       {roomsError && (
         <p className="mt-2 text-[11.5px] text-warn-ink dark:text-[#fcd34d]">{roomsError}</p>
       )}
 
-      {/* 顺位列表 */}
-      <div className="mt-3.5 flex flex-col gap-2">
+      {/* 顺位四方卡 */}
+      <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {!seatNumber && chain.length === 0 ? (
-          <div className="rounded-[14px] border border-dashed border-[color-mix(in_srgb,var(--pri)_35%,transparent)] bg-[color-mix(in_srgb,var(--pri)_6%,transparent)] px-4 py-4 text-center text-[11.5px] text-sub">
+          <div className="col-span-full rounded-[14px] border border-dashed border-[color-mix(in_srgb,var(--pri)_35%,transparent)] bg-[color-mix(in_srgb,var(--pri)_6%,transparent)] px-4 py-4 text-center text-[11.5px] text-sub">
             还没有目标座位：从空闲列表点选，或直接输入座位号加入
           </div>
         ) : (
           <>
             {seatNumber && (
-              <div className="flex items-center gap-3 rounded-[14px] border border-[color-mix(in_srgb,var(--pri)_35%,transparent)] bg-[color-mix(in_srgb,var(--pri)_10%,transparent)] px-3 py-2.5">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--pri)] text-[10.5px] font-extrabold text-[var(--pri-ink)]">①</span>
-                <span className="mono text-[15px] font-extrabold text-pri-text dark:text-acc-hi">{seatNumber} 号</span>
-                <span className="text-[10.5px] font-semibold text-mut">主选 · 最先尝试</span>
-                <button
-                  type="button"
-                  aria-label={`移除主选 ${seatNumber}`}
-                  onClick={removePrimary}
-                  className="ml-auto cursor-pointer rounded-md p-1 text-sub transition-colors hover:bg-[rgba(244,63,94,0.1)] hover:text-err"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              <div className="relative rounded-2xl border border-[color-mix(in_srgb,var(--pri)_40%,transparent)] bg-[color-mix(in_srgb,var(--pri)_10%,transparent)] p-3">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-[var(--pri)] text-[10px] font-extrabold text-[var(--pri-ink)]">①</span>
+                  <button
+                    type="button"
+                    aria-label={`移除主选 ${seatNumber}`}
+                    onClick={removePrimary}
+                    className="cursor-pointer rounded-md p-0.5 text-sub transition-colors hover:bg-[rgba(244,63,94,0.1)] hover:text-err"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <p className="mono mt-1.5 text-[18px] font-extrabold leading-none text-pri-text dark:text-acc-hi">{seatNumber} 号</p>
+                <p className="mt-1.5 text-[10.5px] font-semibold text-mut">主选 · 最先尝试</p>
               </div>
             )}
             {chain.map((b, i) => (
               <div
                 key={b.key || b.name}
-                className="flex items-center gap-3 rounded-[14px] border border-[color-mix(in_srgb,var(--acc)_30%,transparent)] bg-[color-mix(in_srgb,var(--acc)_10%,transparent)] px-3 py-2"
+                className="relative rounded-2xl border border-[color-mix(in_srgb,var(--acc)_30%,transparent)] bg-[color-mix(in_srgb,var(--acc)_10%,transparent)] p-3"
               >
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--glass-3)] text-[10.5px] font-extrabold text-ink">
-                  {CIRCLED[i + 1] ?? i + 2}
-                </span>
-                <span className="mono text-[13px] font-bold text-pri-text dark:text-acc-hi">{b.name} 号</span>
-                <span className="text-[10.5px] text-sub">备选</span>
-                <span className="ml-auto flex gap-0.5">
-                  <button
-                    type="button"
-                    aria-label={`上移 ${b.name}`}
-                    onClick={() => (i === 0 ? promoteFirstBackup() : useBackupSeatsStore.getState().move(libId, b.key, -1))}
-                    className="cursor-pointer rounded-md p-1 text-sub transition-colors hover:bg-[var(--glass-3)] hover:text-ink"
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`移除备选 ${b.name}`}
-                    onClick={() => useBackupSeatsStore.getState().remove(libId, b.key)}
-                    className="cursor-pointer rounded-md p-1 text-sub transition-colors hover:bg-[rgba(244,63,94,0.1)] hover:text-err"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-[var(--glass-3)] text-[10px] font-extrabold text-ink">
+                    {CIRCLED[i + 1] ?? i + 2}
+                  </span>
+                  <span className="flex">
+                    <button
+                      type="button"
+                      aria-label={`上移 ${b.name}`}
+                      onClick={() => (i === 0 ? promoteFirstBackup() : useBackupSeatsStore.getState().move(libId, b.key, -1))}
+                      className="cursor-pointer rounded-md p-0.5 text-sub transition-colors hover:bg-[var(--glass-3)] hover:text-ink"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`移除备选 ${b.name}`}
+                      onClick={() => useBackupSeatsStore.getState().remove(libId, b.key)}
+                      className="cursor-pointer rounded-md p-0.5 text-sub transition-colors hover:bg-[rgba(244,63,94,0.1)] hover:text-err"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                </div>
+                <p className="mono mt-1.5 text-[16px] font-bold leading-none text-pri-text dark:text-acc-hi">{b.name} 号</p>
+                <p className="mt-1.5 text-[10.5px] text-sub">备选</p>
               </div>
             ))}
           </>
@@ -226,7 +232,7 @@ export function SeatPriorityCard({
             }
           }}
           autoComplete="off"
-          className="input mono flex-1 text-center tracking-widest"
+          className="input mono h-[32px] w-full max-w-[200px] flex-1 text-center text-[12px] tracking-widest sm:flex-none"
         />
         <button
           type="button"

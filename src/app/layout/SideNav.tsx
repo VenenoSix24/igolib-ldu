@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { GlassCard } from "../../components/glass/GlassCard";
@@ -13,7 +13,6 @@ const THEME_QUICK: { mode: ThemeMode; title: string; icon: typeof Sun }[] = [
 
 /** 桌面侧栏（>860px 唯一导航），玻璃岛形态 */
 export function SideNav() {
-  const navigate = useNavigate();
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
 
@@ -43,19 +42,12 @@ export function SideNav() {
               aria-label={`主题：${title}`}
               aria-pressed={mode === m}
               onClick={() => setMode(m)}
-              className={cn("flex flex-1 justify-center px-0", mode === m && "on")}
+              className={cn("flex flex-1 items-center justify-center px-0", mode === m && "on")}
             >
               <Icon className="h-4 w-4" />
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => navigate("/app/about")}
-          className="mt-2.5 cursor-pointer px-2 text-[10.5px] text-sub transition-colors hover:text-ink"
-        >
-          关于
-        </button>
       </div>
     </GlassCard>
   );

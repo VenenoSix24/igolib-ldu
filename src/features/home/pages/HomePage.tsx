@@ -7,7 +7,6 @@ import {
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
-import { Dial } from "@/components/glass/Dial";
 import { ReservationCard } from "@/features/booking/components/ReservationCard";
 import { useReservation } from "@/features/booking/model/useReservation";
 import { AuthQrDialog } from "@/components/AuthQrDialog";
@@ -17,7 +16,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useRuntimeStore } from "@/stores/runtime";
 import { ACCENTS, useThemeStore } from "@/stores/theme";
 import { validateUser } from "@/services/api";
-import { cn, compactRemaining } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useCookieExpiry } from "@/lib/useCookieExpiry";
 import { LogsPanel } from "../../logs/components/LogsPanel";
 
@@ -122,28 +121,25 @@ export function HomePage() {
     <span className="pill err"><span className="dot" />Cookie 无效</span>
   ) : null;
 
-  const cookieRatio = expiry !== null && !expired ? Math.min(1, Math.max(0, (expiry - Date.now()) / 86_400_000)) : 0;
-
   return (
     <div className="flex flex-col gap-4">
-      {/* 中枢 hero：系统状态 + 就绪梳 + 双入口 + Cookie 表盘 */}
+      {/* 中枢 hero：系统状态 + 就绪梳 + 右侧双入口 */}
       <GlassCard className="hero rise p-5 md:p-7">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
-          {statusPill}
-        </div>
-        <p className="mt-1.5 flex items-center gap-2 text-[12.5px] font-semibold text-mut">
-          <span className={cn(
-            "h-1.5 w-1.5 rounded-full",
-            stateOk ? "bg-[var(--ok)]" : "bg-[var(--warn)]",
-            (bookingRunning || scanning || renewing) && "animate-pulse",
-          )} />
-          {stateText}
-        </p>
-
-        <div className="mt-6 md:flex md:items-center md:gap-8">
+        <div className="md:flex md:items-center md:gap-8">
           <div className="min-w-0 flex-1">
-            <div className="teeth">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">{greeting()}</h1>
+              {statusPill}
+            </div>
+            <p className="mt-1.5 flex items-center gap-2 text-[12.5px] font-semibold text-mut">
+              <span className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                stateOk ? "bg-[var(--ok)]" : "bg-[var(--warn)]",
+                (bookingRunning || scanning || renewing) && "animate-pulse",
+              )} />
+              {stateText}
+            </p>
+            <div className="teeth mt-6">
               {teeth.map((t) => (
                 <button
                   key={t.label}
@@ -155,26 +151,20 @@ export function HomePage() {
                 </button>
               ))}
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
-              <button type="button" className="btn grad big flex-1 sm:flex-none" onClick={() => navigate("/app/tomorrow")}>
-                去明日预约
-              </button>
-              <button type="button" className="btn dark big flex-1 sm:flex-none" onClick={() => navigate("/app/grab")}>
-                立即抢座
-              </button>
-              {missing.length > 0 && (
-                <span className="text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
-                  还差 {missing.length} 项：{missing.join(" / ")}
-                </span>
-              )}
-            </div>
           </div>
-          {expiryText && !expired && (
-            <div className="mt-5 hidden shrink-0 flex-col items-center gap-1.5 md:mt-0 md:flex">
-              <Dial ratio={cookieRatio} tone={expiring ? "warn" : "ok"} label={compactRemaining(expiry!)} />
-              <span className="mono text-[10px] text-sub">Cookie 至 {expiryText}</span>
-            </div>
-          )}
+          <div className="mt-5 shrink-0 md:mt-0 md:w-[190px]">
+            <button type="button" className="btn grad big w-full" onClick={() => navigate("/app/tomorrow")}>
+              去明日预约
+            </button>
+            <button type="button" className="btn dark big mt-2.5 w-full" onClick={() => navigate("/app/grab")}>
+              立即抢座
+            </button>
+            {missing.length > 0 && (
+              <p className="mt-2 text-center text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
+                还差 {missing.length} 项：{missing.join(" / ")}
+              </p>
+            )}
+          </div>
         </div>
       </GlassCard>
 

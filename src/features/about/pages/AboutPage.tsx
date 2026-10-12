@@ -13,10 +13,14 @@ const RELEASES_URL = "https://github.com/VenenoSix24/igolib-ldu/releases";
 const ISSUES_URL = "https://github.com/VenenoSix24/igolib-ldu/issues";
 
 const LINKS = [
-  { label: "项目主页", url: HOME_URL },
-  { label: "更新日志", url: RELEASES_URL },
-  { label: "反馈问题", url: ISSUES_URL },
+  { label: "项目主页", url: HOME_URL, display: "igolib.ivyris.top" },
+  { label: "更新日志", url: RELEASES_URL, display: "github.com/VenenoSix24/igolib-ldu/releases" },
+  { label: "反馈问题", url: ISSUES_URL, display: "github.com/VenenoSix24/igolib-ldu/issues" },
+  { label: "联系邮箱", url: "mailto:feedback@igolib.ivyris.top", display: "feedback@igolib.ivyris.top" },
 ];
+
+/** 占位：群入口待定，仅展示群号 */
+const GROUP_ID = "123456789";
 
 function open(url: string) {
   if (isTauri()) void openUrl(url);
@@ -72,7 +76,7 @@ export function AboutPage() {
         {hint && <p className="mt-2.5 text-[11.5px] text-mut">{hint}</p>}
 
         <div className="mt-4 border-t border-[var(--line2)] pt-1">
-          {LINKS.map(({ label, url }) => (
+          {LINKS.map(({ label, url, display }) => (
             <button
               key={label}
               type="button"
@@ -81,11 +85,15 @@ export function AboutPage() {
             >
               <span className="text-[12.5px] font-semibold">{label}</span>
               <span className="sr items-center text-[11px] text-sub">
-                {url.replace(/^https:\/\//, "")}
+                {display}
                 <ExternalLink className="h-3.5 w-3.5" />
               </span>
             </button>
           ))}
+          <div className="setrow">
+            <span className="text-[12.5px] font-semibold">交流群</span>
+            <span className="sr mono text-[11px] text-sub">{GROUP_ID}（占位）</span>
+          </div>
         </div>
 
         <p className="mt-4 border-t border-[var(--line2)] pt-3 text-[10.5px] leading-relaxed text-sub">

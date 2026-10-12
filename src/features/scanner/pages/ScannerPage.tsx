@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, ArrowDown, ArrowUp, History, Play, Radar, Square, X } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, History, Play, Square, X } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
 import { cn } from "@/lib/utils";
@@ -75,66 +75,63 @@ export function ScannerPage() {
         />
       )}
 
-      {/* 扫描状态 / 监控场馆 / 命中记录 */}
-      <div className="grid items-start gap-4 md:grid-cols-2">
-      {/* 扫描状态 */}
-      <GlassCard className="rise p-4 md:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[14px]", running ? "ti-emerald" : "ti-slate")}>
-              <Radar className={cn("h-5 w-5", running && "animate-pulse")} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-[15px] font-bold">场馆捡漏</h2>
-              <p className="text-[11px] text-mut">
-                {running
-                  ? `第 ${rounds} 轮 · 正在扫描 ${venues.find((v) => v.libId === currentLibId)?.name ?? "…"} · 间隔 ${interval}s`
-                  : `按优先级轮询勾选场馆的余位，命中即自动预约并通知 · 间隔 ${interval}s（监控场馆内可调）`}
-              </p>
+      {/* 扫描 hero */}
+      <GlassCard className="hero rise p-5 md:p-7">
+        <div className="md:flex md:items-center md:gap-8">
+          <div className="min-w-0 flex-1">
+            <div className="trigger-label">
+              <span className="t">场馆捡漏</span>
+              <span className="mode">{running ? `第 ${rounds} 轮` : "待命中"}</span>
             </div>
+            <div className="bigtime">
+              <span className="shimmer text-[30px] md:text-[38px]">{running ? rounds : "--"}</span>
+              <span className="cap">{running ? `轮 · 间隔 ${interval}s` : "轮询已选场馆余位"}</span>
+            </div>
+            {venueStatuses.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {venueStatuses.map((v) => (
+                  <span
+                    key={v.libId}
+                    className={
+                      v.libId === currentLibId
+                        ? "pill pri"
+                        : v.available > 0
+                          ? "pill ok"
+                          : "pill slate"
+                    }
+                  >
+                    {v.libId === currentLibId ? <span className="ping" /> : <span className="dot" />}
+                    {v.name}
+                    {v.available < 0 ? " · 未开放" : ` · 余 ${v.available}`}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          {running ? (
-            <button type="button" className="btn danger w-full sm:w-auto" onClick={stop}>
-              <Square className="h-3.5 w-3.5" />停止扫描
-            </button>
-          ) : (
-            <button type="button" className="btn grad w-full sm:w-auto" disabled={!cookieReady || venues.length === 0} onClick={start}>
-              <Play className="h-3.5 w-3.5" />开始扫描
-            </button>
-          )}
+          <div className="mt-5 shrink-0 md:mt-0 md:w-[200px]">
+            {running ? (
+              <button type="button" className="btn danger big w-full" onClick={stop}>
+                <Square className="h-4 w-4" />停止扫描
+              </button>
+            ) : (
+              <button type="button" className="btn grad big w-full" disabled={!cookieReady || venues.length === 0} onClick={start}>
+                <Play className="h-4 w-4" />开始扫描
+              </button>
+            )}
+          </div>
         </div>
-
         {error && (
-          <p className="mt-3 rounded-[14px] border border-[rgba(244,63,94,0.25)] bg-[rgba(244,63,94,0.08)] px-3 py-2 text-[11.5px] text-err-ink dark:text-[#fda4af]">{error}</p>
+          <p className="mt-4 rounded-[14px] border border-[rgba(244,63,94,0.25)] bg-[rgba(244,63,94,0.08)] px-3 py-2 text-[11.5px] text-err-ink dark:text-[#fda4af]">{error}</p>
         )}
         {!cookieReady && !running && (
           <p className="mt-3 rounded-[14px] border border-[rgba(245,158,11,0.25)] bg-[rgba(245,158,11,0.08)] px-3 py-2 text-[11.5px] text-warn-ink dark:text-[#fcd34d]">
             请先在首页完成扫码登录，再开启捡漏扫描。
           </p>
         )}
-
-        {/* 选中场馆实时余位 */}
-        {venueStatuses.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {venueStatuses.map((v) => (
-              <span
-                key={v.libId}
-                className={
-                  v.libId === currentLibId
-                    ? "pill pri"
-                    : v.available > 0
-                      ? "pill ok"
-                      : "pill slate"
-                }
-              >
-                {v.libId === currentLibId ? <span className="ping" /> : <span className="dot" />}
-                {v.name}
-                {v.available < 0 ? " · 未开放" : ` · 余 ${v.available}`}
-              </span>
-            ))}
-          </div>
-        )}
       </GlassCard>
+
+      {/* 监控场馆 / 命中记录 */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
 
       {/* 场馆配置 */}
       <GlassCard className="rise p-4 md:p-5">
@@ -250,7 +247,7 @@ export function ScannerPage() {
       </GlassCard>
 
       {/* 命中历史 */}
-      <GlassCard className="rise p-4 md:col-span-2 md:p-5">
+      <GlassCard className="rise p-4 md:p-5">
         <CardHead
           icon={History}
           title="命中记录"
@@ -297,6 +294,10 @@ export function ScannerPage() {
         title="捡漏控制台"
         statusText={running ? `第 ${rounds} 轮` : "待命中"}
         running={running}
+        stages={{
+          labels: venues.map((v) => v.name),
+          current: currentLibId ? venues.findIndex((v) => v.libId === currentLibId) : -1,
+        }}
       />
     </div>
   );

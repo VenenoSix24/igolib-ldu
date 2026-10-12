@@ -14,7 +14,7 @@ export function Dock() {
       aria-label="底部导航"
       className="glass fixed bottom-5 left-1/2 z-10 flex -translate-x-1/2 gap-1 rounded-full p-1.5 md:hidden"
     >
-      {NAV_ITEMS.map(({ path, shortLabel, icon: Icon }) => (
+      {NAV_ITEMS.filter((item) => item.dock).map(({ path, shortLabel, icon: Icon }) => (
         <NavLink key={path} to={path} className={({ isActive }) => cn("dockitem", isActive && "on")}>
           <Icon className="h-[18px] w-[18px]" />
           {shortLabel}

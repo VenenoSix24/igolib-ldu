@@ -96,31 +96,34 @@ export function RenewalPage() {
         </GlassCard>
       )}
 
-      {/* 续约控制 */}
-      <GlassCard className="rise p-4 md:p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[14px]", running ? "ti-emerald" : "ti-pri")}>
-              <InfinityIcon className={cn("h-5 w-5", running && "animate-pulse")} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-[15px] font-bold">占座续约</h2>
-              <p className="text-[11px] text-mut">临近签到截止自动取消重订保座，优先原座位与备选链</p>
+      {/* 续约 hero */}
+      <GlassCard className="hero rise p-5 md:p-7">
+        <div className="md:flex md:items-center md:gap-8">
+          <div className="min-w-0 flex-1">
+            <div className="trigger-label">
+              <span className="t">占座续约</span>
+              <span className="mode">{PHASE_TEXT[phase]}</span>
+            </div>
+            <div className="bigtime">
+              <span className="shimmer text-[30px] md:text-[38px]">{running && remainingText ? remainingText : "--:--"}</span>
+              <span className="cap">{running ? (nextActionLabel || "等待下一动作") : "临近截止自动取消重订保座"}</span>
             </div>
           </div>
-          {running ? (
-            <button type="button" className="btn danger w-full sm:w-auto" onClick={() => stop("手动停止")}>
-              <Square className="h-3.5 w-3.5" />停止续约
-            </button>
-          ) : (
-            <button type="button" className="btn grad w-full sm:w-auto" disabled={!cookieReady || starting} onClick={() => void doStart()}>
-              <Play className="h-3.5 w-3.5" />{starting ? "启动中…" : "开始续约"}
-            </button>
-          )}
+          <div className="mt-5 shrink-0 md:mt-0 md:w-[200px]">
+            {running ? (
+              <button type="button" className="btn danger big w-full" onClick={() => stop("手动停止")}>
+                <Square className="h-4 w-4" />停止续约
+              </button>
+            ) : (
+              <button type="button" className="btn grad big w-full" disabled={!cookieReady || starting} onClick={() => void doStart()}>
+                <Play className="h-4 w-4" />{starting ? "启动中…" : "开始续约"}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 状态行 */}
-        <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-2 border-t border-[var(--line2)] pt-5 md:grid-cols-4">
           <StatCell
             label="状态"
             value={PHASE_TEXT[phase]}
@@ -211,6 +214,10 @@ export function RenewalPage() {
         title="续约控制台"
         statusText={running ? PHASE_TEXT[phase] : "待命中"}
         running={running}
+        stages={{
+          labels: ["等待触发", "取消", "冷却", "重订"],
+          current: phase === "waiting" ? 0 : phase === "cancelling" ? 1 : phase === "cooldown" ? 2 : phase === "rebooking" ? 3 : -1,
+        }}
       />
     </div>
   );

@@ -26,12 +26,15 @@ export function ScopeConsoleCard({
   title,
   statusText,
   running = false,
+  stages,
   className,
 }: {
   scope: string;
   title: string;
   statusText?: string;
   running?: boolean;
+  /** 本地化刻度尺：捡漏=按场馆轮询分段，续约=按循环阶段分段 */
+  stages?: { labels: string[]; current: number };
   className?: string;
 }) {
   const [entries, setEntries] = useState<LogEntry[]>(() => [...getLogs()].filter((e) => e.scope === scope).slice(-100));
@@ -59,11 +62,22 @@ export function ScopeConsoleCard({
         </span>
         <span className="text-[13px] font-bold">{title}</span>
         <span className={running ? "pill ok h-[22px] px-2 text-[10px]" : "pill slate h-[22px] px-2 text-[10px]"}>
-          {running ? <span className="ping" /> : <span className="dot" />}
+          <Terminal className={cn("h-3 w-3", running && "animate-pulse")} />
           {statusText ?? (running ? "运行中" : "待命中")}
         </span>
         <span className="mono ml-auto text-[10px] text-sub">{entries.length} 条</span>
       </div>
+
+      {stages && stages.labels.length > 0 && (
+        <div className="ruler mb-3.5">
+          {stages.labels.map((label, i) => (
+            <div key={label} className={cn("stage", stages.current > i && "done", stages.current === i && "cur")}>
+              <span className="sdot" />
+              <span className="slabel">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div ref={listRef} className="logbox max-h-56 overflow-y-auto p-3">
         {entries.length === 0 ? (

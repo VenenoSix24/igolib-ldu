@@ -126,7 +126,7 @@ export function ConsoleCard({
           <div className="mono hidden truncate text-[11px] text-mut sm:block">{subTitle}</div>
         </div>
         <span className={meta.pill}>
-          {running ? <span className="ping" /> : <span className="dot" />}
+          <StatusIcon className={cn("h-3 w-3", running && "animate-pulse")} />
           {running ? "运行中" : status === "idle" ? "待命中" : status === "success" ? "完成" : status === "failed" ? "失败" : "已取消"}
         </span>
         <button

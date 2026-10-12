@@ -85,45 +85,49 @@ export function GrabPage() {
 
       {/* 执行 hero */}
       <GlassCard className="hero rise p-5 md:p-7">
-        <div className="trigger-label">
-          <span className="t">执行方式</span>
-          <span className="mode">{timed ? `定时 ${booking.customTime}` : "立即"}</span>
-        </div>
-        <div className="bigtime">
-          <span className="shimmer text-[34px] md:text-[44px]">{timed ? targetTime : "立即"}</span>
-          <span className="cap">{timed ? "到点自动提交" : "选好座位后自动提交"}</span>
-        </div>
-        <div className="sub-row">
-          {timed && (
-            <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{msCountdown}</b></span>
-          )}
-          <div className="teeth">
-            {teeth.map((t) => (
-              <button
-                key={t.label}
-                type="button"
-                className={cn("tooth", !t.ok && "miss")}
-                onClick={() => navigate(t.to)}
-              >
-                <i />{t.label}
-              </button>
-            ))}
+        <div className="md:flex md:items-center md:gap-8">
+          <div className="min-w-0 flex-1">
+            <div className="trigger-label">
+              <span className="t">执行方式</span>
+              <span className="mode">{timed ? `定时 ${booking.customTime}` : "立即"}</span>
+            </div>
+            <div className="bigtime">
+              <span className="shimmer text-[34px] md:text-[44px]">{timed ? targetTime : "立即"}</span>
+              <span className="cap">{timed ? "到点自动提交" : "选好座位后自动提交"}</span>
+            </div>
+            <div className="sub-row">
+              {timed && (
+                <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{msCountdown}</b></span>
+              )}
+              <div className="teeth">
+                {teeth.map((t) => (
+                  <button
+                    key={t.label}
+                    type="button"
+                    className={cn("tooth", !t.ok && "miss")}
+                    onClick={() => navigate(t.to)}
+                  >
+                    <i />{t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="mt-6 flex flex-wrap items-center gap-2.5 border-t border-[var(--line2)] pt-5">
-          <button
-            type="button"
-            className="btn grad big flex-1 sm:flex-none"
-            disabled={!startEnabled || running}
-            onClick={() => setShowConfirm(true)}
-          >
-            <Zap className="h-4 w-4" />{running ? "任务运行中" : "立即抢座"}
-          </button>
-          {missing.length > 0 && (
-            <span className="text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
-              还差 {missing.length} 项：{missing.join(" / ")}
-            </span>
-          )}
+          <div className="mt-5 shrink-0 md:mt-0 md:w-[200px]">
+            <button
+              type="button"
+              className="btn grad big w-full"
+              disabled={!startEnabled || running}
+              onClick={() => setShowConfirm(true)}
+            >
+              <Zap className="h-4 w-4" />{running ? "任务运行中" : "立即抢座"}
+            </button>
+            {missing.length > 0 && (
+              <p className="mt-2 text-center text-[11px] font-semibold text-warn-ink dark:text-[#fcd34d]">
+                还差 {missing.length} 项：{missing.join(" / ")}
+              </p>
+            )}
+          </div>
         </div>
       </GlassCard>
 
