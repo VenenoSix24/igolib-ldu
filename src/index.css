@@ -574,10 +574,10 @@ html[data-theme="dark"] .dockitem.on { background:color-mix(in srgb,var(--pri) 3
 /* 任务刻度尺 */
 .ruler { display:flex; position:relative; padding:4px 0 0 }
 .ruler .stage { flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; position:relative }
-.ruler .stage::before { content:""; position:absolute; top:8.5px; left:calc(-50% + 9px); right:calc(50% + 9px); height:2px; background:var(--line); border-radius:1px }
+.ruler .stage::before { content:""; position:absolute; top:8.5px; left:calc(-50% + 9px); right:calc(50% + 9px); height:2px; background:rgba(100,116,139,0.35); border-radius:1px }
 .ruler .stage:first-child::before { display:none }
 .ruler .stage::after { content:""; position:absolute; top:4.5px; left:calc(-50% + 5px); right:calc(50% + 5px); height:10px;
-  background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 7px); opacity:.7 }
+  background:repeating-linear-gradient(90deg,rgba(100,116,139,0.4) 0 1px,transparent 1px 7px); opacity:.7 }
 .ruler .stage:first-child::after { display:none }
 .ruler .sdot { width:9px; height:9px; border-radius:50%; background:var(--glass-3); border:2px solid var(--line); position:relative; z-index:1;
   transition:all .25s cubic-bezier(.3,1.2,.4,1) }

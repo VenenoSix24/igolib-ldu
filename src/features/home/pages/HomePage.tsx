@@ -176,14 +176,7 @@ export function HomePage() {
             icon={KeyRound}
             tile="ti-pri"
             title="身份与 Cookie"
-            hint={
-              <span className="flex items-center gap-2">
-                {statusPill ?? <span className="pill slate"><span className="dot" />未配置身份</span>}
-                <button type="button" className="btn grad sm" onClick={() => setShowQr(true)}>
-                  <QrCode className="h-3.5 w-3.5" />扫码获取
-                </button>
-              </span>
-            }
+            hint={statusPill ?? <span className="pill slate"><span className="dot" />未配置身份</span>}
           />
 
           <div className="mt-3.5">
@@ -207,6 +200,11 @@ export function HomePage() {
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer p-1 text-sub hover:text-ink"
               >
                 {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button type="button" className="btn grad sm" onClick={() => setShowQr(true)}>
+                <QrCode className="h-3.5 w-3.5" />扫码获取 Cookie
               </button>
             </div>
             {expiryText && !expired && (

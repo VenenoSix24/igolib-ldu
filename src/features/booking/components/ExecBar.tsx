@@ -47,28 +47,32 @@ export function ExecBar({
         {/* 手机在档位下方通栏；桌面在右端 */}
         <div className="order-3 col-span-2 flex min-w-0 items-center md:order-none md:col-span-1 md:justify-self-end">
           {editingDefault ? (
-            <div className="flex w-full items-center gap-2 md:w-auto">
+            <div className="flex w-full items-center justify-center gap-2 md:w-auto">
               <span className="hidden whitespace-nowrap text-[11px] font-semibold text-mut sm:block">默认时间</span>
-              <input
-                type="time"
-                value={defaultTime}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (/^\d{2}:\d{2}$/.test(v)) onDefaultTime?.(v);
-                }}
-                aria-label="修改默认执行时间"
-                className="numinput w-full md:w-[110px]"
-              />
+              <div className="flex h-[30px] w-full items-center justify-center rounded-[10px] border border-[var(--line)] bg-[var(--glass-3)] px-2 md:w-[140px]">
+                <input
+                  type="time"
+                  value={defaultTime}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (/^\d{2}:\d{2}$/.test(v)) onDefaultTime?.(v);
+                  }}
+                  aria-label="修改默认执行时间"
+                  className="border-0 bg-transparent p-0 text-center font-mono text-[12px] tabular-nums outline-none"
+                />
+              </div>
             </div>
           ) : editingCustom ? (
-            <input
-              type="time"
-              step="1"
-              value={customTime}
-              onChange={(e) => onCustomTime(e.target.value)}
-              aria-label="自定义执行时间"
-              className="input mono h-[30px] w-full text-center text-[12px] md:w-[140px]"
-            />
+            <div className="flex h-[30px] w-full items-center justify-center rounded-[10px] border border-[var(--line)] bg-[var(--glass-3)] px-2 md:w-[150px]">
+              <input
+                type="time"
+                step="1"
+                value={customTime}
+                onChange={(e) => onCustomTime(e.target.value)}
+                aria-label="自定义执行时间"
+                className="border-0 bg-transparent p-0 text-center font-mono text-[12px] tabular-nums outline-none"
+              />
+            </div>
           ) : (
             <span className="whitespace-nowrap text-[10.5px] text-sub">
               {execTime === "immediate" ? "启动后立即提交" : "到点自动排队"}
