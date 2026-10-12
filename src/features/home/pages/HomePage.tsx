@@ -168,10 +168,10 @@ export function HomePage() {
         />
       )}
 
-      {/* 身份与常用设置 */}
-      <div className="grid items-start gap-4 md:grid-cols-2">
+      {/* 身份与常用设置（等高，Cookie 卡扫码按钮沉底右下） */}
+      <div className="grid gap-4 md:grid-cols-2">
         {/* 身份与 Cookie */}
-        <GlassCard className="rise p-4 md:p-5">
+        <GlassCard className="rise flex flex-col p-4 md:p-5">
           <CardHead
             icon={KeyRound}
             tile="ti-pri"
@@ -202,11 +202,6 @@ export function HomePage() {
                 {showCookie ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <div className="mt-3 flex justify-end">
-              <button type="button" className="btn grad sm" onClick={() => setShowQr(true)}>
-                <QrCode className="h-3.5 w-3.5" />扫码获取 Cookie
-              </button>
-            </div>
             {expiryText && !expired && (
               <p className="mt-2 text-[10.5px] tabular-nums text-mut">到期时间 {expiryText} · 剩 {remainingText}</p>
             )}
@@ -222,6 +217,11 @@ export function HomePage() {
                 <button type="button" className="btn ghost sm shrink-0" onClick={() => setShowQr(true)}>重新扫码</button>
               </div>
             )}
+          </div>
+          <div className="mt-auto flex justify-end pt-3">
+            <button type="button" className="btn grad sm" onClick={() => setShowQr(true)}>
+              <QrCode className="h-3.5 w-3.5" />扫码获取 Cookie
+            </button>
           </div>
         </GlassCard>
 

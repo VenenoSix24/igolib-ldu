@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Terminal } from "lucide-react";
+import { Infinity as InfinityIcon, Radar, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { getLogs, subscribeLogs, type LogEntry, type LogLevel } from "@/lib/logger";
@@ -85,11 +85,12 @@ export function ScopeConsoleCard({
         </div>
       )}
 
-      <div ref={listRef} className="logbox max-h-56 flex-1 overflow-y-auto p-3">
+      <div ref={listRef} className="logbox min-h-32 max-h-56 flex-1 overflow-y-auto p-3">
         {entries.length === 0 ? (
-          <p className="py-3 text-center font-sans text-[11px] text-[#94a3b8]">
-            暂无日志，任务运行后实时显示在这里
-          </p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 py-3">
+            {scope === "捡漏" ? <Radar className="h-7 w-7 text-[#475569]" /> : <InfinityIcon className="h-7 w-7 text-[#475569]" />}
+            <span className="text-[11.5px] text-[#94a3b8]">暂无日志，任务运行后实时显示在这里</span>
+          </div>
         ) : (
           entries.map((entry) => (
             <div key={entry.id} className="logrow flex items-start gap-1.5">
