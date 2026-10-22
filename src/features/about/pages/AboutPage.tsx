@@ -14,8 +14,8 @@ const ISSUES_URL = "https://github.com/VenenoSix24/igolib-ldu/issues";
 
 const LINKS = [
   { label: "项目主页", url: HOME_URL, display: "igolib.ivyris.top" },
-  { label: "更新日志", url: RELEASES_URL, display: "github.com/VenenoSix24/igolib-ldu/releases" },
-  { label: "反馈问题", url: ISSUES_URL, display: "github.com/VenenoSix24/igolib-ldu/issues" },
+  { label: "更新日志", url: RELEASES_URL, display: "GitHub Releases" },
+  { label: "反馈问题", url: ISSUES_URL, display: "GitHub Issues" },
   { label: "联系邮箱", url: "mailto:feedback@igolib.ivyris.top", display: "feedback@igolib.ivyris.top" },
 ];
 
@@ -52,7 +52,7 @@ export function AboutPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col items-center gap-4">
       <h1 className="text-[19px] font-extrabold tracking-[-0.02em]">关于</h1>
 
       <GlassCard className="rise mx-auto w-full max-w-[460px] p-5 md:p-6">

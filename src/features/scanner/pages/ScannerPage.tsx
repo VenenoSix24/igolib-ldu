@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, ArrowDown, ArrowUp, History, Play, Square, X } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, Building2, History, Play, Square, X } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { CardHead } from "@/components/glass/CardHead";
 import { cn } from "@/lib/utils";
@@ -84,7 +84,7 @@ export function ScannerPage() {
               <span className="mode">{running ? `第 ${rounds} 轮` : "待命中"}</span>
             </div>
             <div className="bigtime">
-              <span className="shimmer text-[30px] md:text-[38px]">{running ? rounds : "--"}</span>
+              <span className="shimmer text-[30px] md:text-[38px]">{running ? rounds : "-- 轮"}</span>
               <span className="cap">{running ? `轮 · 间隔 ${interval}s` : "轮询已选场馆余位"}</span>
             </div>
             {venueStatuses.length > 0 && (
@@ -219,7 +219,10 @@ export function ScannerPage() {
         {loadingRooms ? (
           <p className="py-2 text-center text-[11px] text-sub">场馆加载中…</p>
         ) : allRooms.length === 0 ? (
-          <p className="py-2 text-center text-[11px] text-sub">无可选场馆（需有效 Cookie）</p>
+          <div className="flex flex-col items-center gap-1.5 py-4 text-center">
+            <Building2 className="h-7 w-7 text-[#475569]" />
+            <p className="text-[11px] text-sub">无可选场馆（需有效 Cookie）</p>
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {allRooms.map((room) => {
@@ -263,7 +266,10 @@ export function ScannerPage() {
         />
         <div className="mt-3">
         {hits.length === 0 ? (
-          <p className="py-2 text-center text-[11px] text-sub">暂无记录，开启扫描后发现空位会记在这里</p>
+          <div className="flex flex-col items-center gap-1.5 py-4 text-center">
+            <History className="h-7 w-7 text-[#475569]" />
+            <p className="text-[11px] text-sub">暂无记录，开启扫描后发现空位会记在这里</p>
+          </div>
         ) : (
           <ul className="flex flex-col gap-1.5">
             {hits.map((hit) => (

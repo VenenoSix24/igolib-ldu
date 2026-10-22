@@ -134,7 +134,7 @@ export function SeatPriorityCard({
 
       {/* 工具行：场馆选择 + 座位号输入 + 加入（手机自动换行） */}
       <div className="mt-3.5 flex flex-wrap items-center gap-2">
-        <div className="relative w-full sm:w-auto sm:max-w-[300px] sm:flex-1">
+        <div className="relative w-full min-w-0 sm:w-auto sm:flex-[3]">
           <select
             aria-label="阅览室"
             className="select h-[34px] appearance-none pr-8 text-[12px]"
@@ -156,7 +156,7 @@ export function SeatPriorityCard({
           </select>
           <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-sub" />
         </div>
-        <div className="flex w-full gap-2 sm:w-auto sm:max-w-[240px] sm:flex-1">
+        <div className="flex w-full min-w-0 gap-2 sm:w-auto sm:flex-[2]">
           <input
             placeholder="输入座位号，如 056"
             value={input}

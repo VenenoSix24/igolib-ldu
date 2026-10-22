@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle, ChevronRight, Eye, EyeOff, KeyRound,
-  QrCode, Settings2,
+  AlertTriangle, ChevronRight, Eye, EyeOff, KeyRound, Monitor,
+  Moon, QrCode, Settings2, Sun,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -39,6 +39,8 @@ export function HomePage() {
   const booking = useSettingsStore((s) => s.booking);
   const accent = useThemeStore((s) => s.accent);
   const setAccent = useThemeStore((s) => s.setAccent);
+  const mode = useThemeStore((s) => s.mode);
+  const setMode = useThemeStore((s) => s.setMode);
   const cookieStr = booking.cookieStr;
   const setCookieStr = (cookieStr: string) => useSettingsStore.getState().setBooking({ cookieStr });
   const { expiry, remainingText, expiring, expired } = useCookieExpiry(cookieStr, prefs.cookieReminderMinutes);
@@ -92,11 +94,11 @@ export function HomePage() {
   const ready = userInfo?.valid === true;
 
   const teeth = [
-    { label: "身份", ok: ready, to: "/app/home" },
-    { label: "场馆", ok: Boolean(booking.libId), to: "/app/tomorrow" },
-    { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/tomorrow" },
-    { label: "时间", ok: booking.tomorrowExecTime !== "custom" || Boolean(booking.customTime), to: "/app/tomorrow" },
-  ];
+    { label: "身份", st: ready ? "ok" : cookieStr.trim() ? "miss" : "idle", to: "/app/home" },
+    { label: "场馆", st: booking.libId ? "ok" : "idle", to: "/app/tomorrow" },
+    { label: "座位", st: booking.seatNumber ? "ok" : "idle", to: "/app/tomorrow" },
+    { label: "时间", st: booking.tomorrowExecTime !== "custom" || booking.customTime ? "ok" : "idle", to: "/app/tomorrow" },
+  ] as const;
 
   // 一句话系统状态（运行任务优先于就绪度）
   const stateText = bookingRunning
@@ -140,7 +142,7 @@ export function HomePage() {
                 <button
                   key={t.label}
                   type="button"
-                  className={cn("tooth", !t.ok && "miss")}
+                  className={cn("tooth", t.st === "ok" && "ok", t.st === "miss" && "miss")}
                   onClick={() => navigate(t.to)}
                 >
                   <i />{t.label}
@@ -168,10 +170,10 @@ export function HomePage() {
         />
       )}
 
-      {/* 身份与常用设置（等高，Cookie 卡扫码按钮沉底右下） */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* 身份与常用设置 */}
+      <div className="grid items-start gap-4 md:grid-cols-2">
         {/* 身份与 Cookie */}
-        <GlassCard className="rise flex flex-col p-4 md:p-5">
+        <GlassCard className="rise p-4 md:p-5">
           <CardHead
             icon={KeyRound}
             tile="ti-pri"
@@ -218,7 +220,7 @@ export function HomePage() {
               </div>
             )}
           </div>
-          <div className="mt-auto flex justify-end pt-3">
+          <div className="flex justify-end pt-3">
             <button type="button" className="btn grad sm" onClick={() => setShowQr(true)}>
               <QrCode className="h-3.5 w-3.5" />扫码获取 Cookie
             </button>
@@ -229,41 +231,21 @@ export function HomePage() {
         <GlassCard className="rise p-4 md:p-5">
           <CardHead icon={Settings2} tile="ti-slate" title="常用设置" />
 
-          <div className="mt-1">
-            <div className="setrow flex-wrap">
-              <div className="whitespace-nowrap">
-                <div className="sl">强调色</div>
-                <div className="sd">{ACCENTS.find((a) => a.id === accent)?.name}</div>
-              </div>
-              <div className="sr flex w-full flex-wrap gap-1.5 sm:ml-auto sm:w-auto">
-                {ACCENTS.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    title={a.name}
-                    aria-label={`强调色：${a.name}`}
-                    aria-pressed={accent === a.id}
-                    onClick={() => setAccent(a.id)}
-                    className={cn("accdot", accent === a.id && "on")}
-                    style={{ background: a.hex }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <button type="button" onClick={() => setShowSettings(true)} className="setrow w-full cursor-pointer text-left">
-              <div><div className="sl">API 预设</div></div>
-              <span className="sr items-center text-[11.5px] text-mut">
+          <div className="mt-3 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="flex h-[46px] cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5 text-left transition-colors hover:border-[var(--line2)] hover:bg-[var(--glass-3)]"
+            >
+              <span className="text-[12px] font-semibold">API 预设</span>
+              <span className="flex items-center gap-1 text-[12px] text-mut">
                 {apiConfig.preset === "ldu" ? "卤蛋大学" : apiConfig.preset === "official" ? "官方原版" : "自定义"}
                 <ChevronRight className="h-3.5 w-3.5" />
               </span>
             </button>
 
-            <label className="setrow cursor-pointer">
-              <div>
-                <div className="sl">明日默认时间</div>
-                <div className="sd">预约页「默认」档使用</div>
-              </div>
+            <label className="flex h-[46px] cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5 transition-colors hover:border-[var(--line2)]">
+              <span className="text-[12px] font-semibold">明日默认时间</span>
               <input
                 type="time"
                 aria-label="明日默认执行时间"
@@ -276,13 +258,13 @@ export function HomePage() {
               />
             </label>
 
-            <label className="setrow cursor-pointer">
-              <div><div className="sl">Cookie 到期提醒</div></div>
+            <label className="flex h-[46px] cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5 transition-colors hover:border-[var(--line2)]">
+              <span className="text-[12px] font-semibold">Cookie 到期提醒</span>
               <select
                 aria-label="Cookie 到期提醒提前量"
                 value={prefs.cookieReminderMinutes}
                 onChange={(e) => setPrefs({ cookieReminderMinutes: Number(e.target.value) })}
-                className="select h-[30px] w-auto min-w-[110px] rounded-[10px] text-[11.5px]"
+                className="select h-[30px] w-[112px] rounded-[10px] text-[11.5px]"
               >
                 {[5, 10, 15, 30, 60].map((m) => (
                   <option key={m} value={m}>提前 {m} 分钟</option>
@@ -290,22 +272,65 @@ export function HomePage() {
               </select>
             </label>
 
-            <button type="button" onClick={() => navigate("/app/about")} className="setrow w-full cursor-pointer text-left">
-              <div><div className="sl">关于</div></div>
-              <span className="sr items-center text-[11.5px] text-mut">
-                版本与检查更新
-                <ChevronRight className="h-3.5 w-3.5" />
-              </span>
-            </button>
+            <div className="flex h-[46px] items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5">
+              <span className="text-[12px] font-semibold">深浅色</span>
+              <div className="seg">
+                {([
+                  { m: "light", title: "浅色", icon: Sun },
+                  { m: "dark", title: "深色", icon: Moon },
+                  { m: "system", title: "跟随系统", icon: Monitor },
+                ] as const).map(({ m, title, icon: Icon }) => (
+                  <button
+                    key={m}
+                    type="button"
+                    title={title}
+                    aria-label={`主题：${title}`}
+                    aria-pressed={mode === m}
+                    onClick={() => setMode(m)}
+                    className={cn("flex items-center justify-center px-0", mode === m && "on")}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                ))}
+              </div>
+            </div>
 
+            <div className="flex min-h-[46px] flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5 py-2">
+              <span className="text-[12px] font-semibold">强调色</span>
+              <span className="flex flex-wrap items-center gap-1.5">
+                {ACCENTS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    title={a.name}
+                    aria-label={`强调色：${a.name}`}
+                    aria-pressed={accent === a.id}
+                    onClick={() => setAccent(a.id)}
+                    className={cn("accdot h-5 w-5", accent === a.id && "on")}
+                    style={{ background: a.hex }}
+                  />
+                ))}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex items-center gap-1">
             <button
               type="button"
               onClick={() => setShowMore(!showMore)}
               aria-expanded={showMore}
-              className="setrow w-full cursor-pointer text-left"
+              className="flex cursor-pointer items-center gap-1 rounded-[10px] px-2.5 py-1.5 text-[11.5px] font-semibold text-mut transition-colors hover:bg-[var(--glass-3)] hover:text-ink"
             >
-              <div><div className="sl">更多设置</div></div>
-              <ChevronRight className={cn("h-4 w-4 text-sub transition-transform", showMore && "rotate-90")} />
+              更多设置
+              <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", showMore && "rotate-90")} />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/app/about")}
+              className="ml-auto flex cursor-pointer items-center gap-1 rounded-[10px] px-2.5 py-1.5 text-[11.5px] font-semibold text-mut transition-colors hover:bg-[var(--glass-3)] hover:text-ink"
+            >
+              关于
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -314,24 +339,26 @@ export function HomePage() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="mt-3 overflow-hidden rounded-[16px] border border-[var(--line)] bg-[rgba(100,116,139,0.06)] p-3"
+              className="overflow-hidden"
             >
-              <div className="flex items-center justify-between px-1 py-1">
-                <span className="text-[12px] font-bold">LDU 兼容模式</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={prefs.lduFallbackEnabled}
-                  onClick={() => setPrefs({ lduFallbackEnabled: !prefs.lduFallbackEnabled })}
-                  className={cn("switch", prefs.lduFallbackEnabled && "on")}
-                />
-              </div>
-              <p className="px-1 text-[10.5px] leading-relaxed text-mut">
-                预约失败时自动换官方接口名重试（备用通道，默认关闭）
-              </p>
-              <div className="mt-2 border-t border-[var(--line2)] pt-2.5">
-                <p className="mb-1.5 px-1 text-[12px] font-bold">运行日志</p>
-                <LogsPanel />
+              <div className="mt-1 rounded-[16px] border border-[var(--line)] bg-[rgba(100,116,139,0.06)] p-3">
+                <div className="flex items-center justify-between px-1 py-1">
+                  <span className="text-[12px] font-bold">LDU 兼容模式</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={prefs.lduFallbackEnabled}
+                    onClick={() => setPrefs({ lduFallbackEnabled: !prefs.lduFallbackEnabled })}
+                    className={cn("switch", prefs.lduFallbackEnabled && "on")}
+                  />
+                </div>
+                <p className="px-1 text-[10.5px] leading-relaxed text-mut">
+                  预约失败时自动换官方接口名重试（备用通道，默认关闭）
+                </p>
+                <div className="mt-2 border-t border-[var(--line2)] pt-2.5">
+                  <p className="mb-1.5 px-1 text-[12px] font-bold">运行日志</p>
+                  <LogsPanel />
+                </div>
               </div>
             </motion.div>
           )}

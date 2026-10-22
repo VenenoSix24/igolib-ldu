@@ -48,11 +48,11 @@ export function GrabPage() {
   const msCountdown = useMsCountdown(effectiveExec, booking.customTime, "21:48");
   const cookieReady = Boolean(booking.cookieStr && booking.cookieStr.trim().length >= 10);
   const teeth = [
-    { label: "身份", ok: cookieReady, to: "/app/home" },
-    { label: "场馆", ok: Boolean(booking.libId), to: "/app/grab" },
-    { label: "座位", ok: Boolean(booking.seatNumber), to: "/app/grab" },
-    { label: "时间", ok: effectiveExec !== "custom" || Boolean(booking.customTime), to: "/app/grab" },
-  ];
+    { label: "身份", st: cookieReady ? "ok" : "idle", to: "/app/home" },
+    { label: "场馆", st: booking.libId ? "ok" : "idle", to: "/app/grab" },
+    { label: "座位", st: booking.seatNumber ? "ok" : "idle", to: "/app/grab" },
+    { label: "时间", st: effectiveExec !== "custom" || booking.customTime ? "ok" : "idle", to: "/app/grab" },
+  ] as const;
 
   const launch = () => {
     setShowConfirm(false);
@@ -85,14 +85,14 @@ export function GrabPage() {
       {/* 执行 hero */}
       <GlassCard className="hero rise p-5 md:p-7">
         <div className="md:flex md:items-center md:gap-8">
-          <div className="min-w-0 flex-1">
+          <div className="hero-center min-w-0 flex-1">
             <div className="trigger-label">
               <span className="t">执行方式</span>
               <span className="mode">{timed ? `定时 ${booking.customTime}` : "立即"}</span>
             </div>
             <div className="bigtime">
               <span className="shimmer text-[34px] md:text-[44px]">{timed ? targetTime : "立即"}</span>
-              <span className="cap">{timed ? "到点自动提交" : "选好座位后自动提交"}</span>
+              <span className={cn("cap", timed && "hidden md:inline")}>{timed ? "到点自动提交" : "选好座位后自动提交"}</span>
             </div>
             <div className="sub-row">
               {timed && (
@@ -103,7 +103,7 @@ export function GrabPage() {
                   <button
                     key={t.label}
                     type="button"
-                    className={cn("tooth", !t.ok && "miss")}
+                    className={cn("tooth", t.st === "ok" && "ok")}
                     onClick={() => navigate(t.to)}
                   >
                     <i />{t.label}

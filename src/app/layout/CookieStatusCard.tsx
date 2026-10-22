@@ -33,6 +33,14 @@ export function CookieStatusCard() {
       : tone === "ok"
         ? "bg-[var(--ok)]"
         : "bg-[rgba(100,116,139,0.4)]";
+  const toneText = invalid ? "无效" : expired ? "已到期" : expiring ? "将到期" : hasCookie ? "正常" : "未配置";
+  const toneTextCls = tone === "err"
+    ? "text-err-ink dark:text-[#fda4af]"
+    : tone === "warn"
+      ? "text-warn-ink dark:text-[#fcd34d]"
+      : tone === "ok"
+        ? "text-ok-ink dark:text-[#6ee7b7]"
+        : "text-sub";
 
   return (
     <GlassCard
@@ -45,7 +53,10 @@ export function CookieStatusCard() {
     >
       <div className="flex items-center gap-1.5 text-[10.5px] font-semibold tracking-wider text-mut">
         <KeyRound className="h-3 w-3" />Cookie 到期
-        <span className={cn("ml-auto h-1.5 w-1.5 rounded-full", dotCls, (tone === "err" || tone === "warn") && "animate-pulse")} />
+        <span className={cn("ml-auto flex items-center gap-1 text-[10px] font-semibold", toneTextCls)}>
+          <span className={cn("h-1.5 w-1.5 rounded-full", dotCls, (tone === "err" || tone === "warn") && "animate-pulse")} />
+          {toneText}
+        </span>
       </div>
       <div className="mt-1 flex items-center gap-2">
         <div className="min-w-0 flex-1">
