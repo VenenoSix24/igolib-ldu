@@ -1,5 +1,14 @@
 # 我去抢个座
 
+> [!IMPORTANT]
+> 2.0 版本已完成，进入测试阶段啦~ 新增捡漏、占座等功能，界面样式升级重写！
+>
+> 想要尝鲜的童鞋，可以前往 Release 下载 [预发布版本（2.0 Pre Release）](https://github.com/VenenoSix24/igolib-ldu/releases/tag/v2.0.0)
+>
+> 有 bug 欢迎及时反馈，不过最近比较忙，可能不能及时修 TvT
+>
+> ⏰ 编辑于 2026 年 10 月 22 日 23:47
+
 <p align="center">
   <img src="public/app-icon.png" width="128" height="128" alt="igolib-ldu Icon" />
   <br /><br />
@@ -15,19 +24,17 @@
   <img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-red?style=flat-square&logo=open-source-initiative&logoColor=white" />
 </p>
 
-
-
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
 
 本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、Windows、macOS 以及 Linux** 平台，提供一致的体验。
 
 > 如果你**需要 Python 做为后端**的版本，请切换到 [**dev 分支**](https://github.com/VenenoSix24/igolib-ldu/tree/dev)。Python 版本可能会更新不及时！
-> 
+>
 > **如果对你有帮助，请 Star 一下项目吧！** ⭐
 
 ![igolib-ts-p1.jpg](https://s2.loli.net/2026/01/25/YaLWsrDVJHZwITf.jpg)
 
-*(基于某个我去图书馆，谁去图书馆？！！)*
+_(基于某个我去图书馆，谁去图书馆？！！)_
 
 ## ✨ 功能特性
 
@@ -55,11 +62,13 @@
 如果您希望参与开发或自行从源码构建应用：
 
 ### 环境要求
+
 - [Node.js](https://nodejs.org/) (推荐 v22+) & [pnpm](https://pnpm.io/)
 - [Rust](https://www.rust-lang.org/)
 - **移动端编译额外要求**: [Android Studio](https://developer.android.com/studio) (Android) 或 [Xcode](https://developer.apple.com/xcode/) (iOS)
 
 ### 开发运行
+
 1. **安装依赖**
    ```bash
    pnpm install
@@ -76,6 +85,7 @@
    ```
 
 ### 编译打包
+
 ```bash
 pnpm tauri build                # 打包桌面端
 pnpm tauri android build        # 打包 Android
@@ -103,15 +113,16 @@ pnpm tauri android build        # 打包 Android
 
 ![igolib-ldu-web-home.png](https://files.seeusercontent.com/2026/03/10/1dzV/igolib-ldu-web-home.png)
 
-![igolib-ts-p4.jpg](https://s2.loli.net/2026/01/25/tYDSefbR5quG8my.jpg)
-
-<img src="https://s2.loli.net/2026/01/25/TCFcJxO317gMfjy.jpg" alt="igolib-ts-p3.jpg" style="zoom: 33%;" />
-
+<table>
+  <tr>
+    <td><img src="https://s2.loli.net/2026/01/25/tYDSefbR5quG8my.jpg" width="1530" /></td>
+    <td><img src="https://s2.loli.net/2026/01/25/TCFcJxO317gMfjy.jpg" width="1100" /></td>
+  </tr>
+</table>
 
 ## 📄 许可证
 
 本项目采用 **AGPL-3.0** 开源许可证。
-
 
 - 任何使用本项目代码的衍生项目 **必须开源**
 - 修改后的代码 **必须以 AGPL-3.0 进行发布**
