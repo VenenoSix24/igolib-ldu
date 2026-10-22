@@ -1,27 +1,29 @@
 import { useEffect, useState } from "react";
-import { Armchair, Building2, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Timer, Zap } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settings";
 import { notifyBookingSuccess } from "@/stores/scanner";
 import { useRooms } from "../model/useRooms";
-import { useSeats } from "../model/useSeats";
 import { useBookingTask } from "../model/useBookingTask";
+import { useMsCountdown, execTargetTime } from "../model/useMsCountdown";
 import { useReservation } from "../model/useReservation";
 import { ReservationCard } from "../components/ReservationCard";
-import { VenueList, SeatSelect, TimeCard } from "../components/SelectionCards";
-import { BackupChainPanel } from "@/features/seats/components/BackupChainPanel";
+import { ExecBar } from "../components/ExecBar";
+import { SeatPriorityCard } from "../components/SeatPriorityCard";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
 import { ConsoleCard } from "../components/ConsoleCard";
 import { ConfirmDialog, ResultDialog } from "../components/BookingDialogs";
 
 export function GrabPage() {
+  const navigate = useNavigate();
   const apiConfig = useSettingsStore((s) => s.api);
   const booking = useSettingsStore((s) => s.booking);
   const setBooking = useSettingsStore((s) => s.setBooking);
 
   const { rooms, dynamicRooms, loadingRooms, roomsError } =
     useRooms(booking.cookieStr, apiConfig, booking.libId, (libId) => setBooking({ libId }));
-  const { dynamicSeats, loadingSeats } = useSeats(booking.cookieStr, apiConfig, booking.libId, "immediate");
   const task = useBookingTask();
   const { reservation, loading: loadingReservation, refresh: refreshReservation } = useReservation(booking.cookieStr, apiConfig);
 
@@ -39,6 +41,18 @@ export function GrabPage() {
   const roomName = rooms[booking.libId];
   const startEnabled = Boolean(booking.libId && booking.seatNumber && booking.cookieStr);
   const running = task.status === "running" || task.status === "connecting";
+  // 抢座页把「默认时间」档视作立即执行（历史数据兼容）
+  const effectiveExec = booking.grabExecTime === "2148" ? "immediate" : booking.grabExecTime;
+  const timed = effectiveExec === "custom" && Boolean(booking.customTime);
+  const targetTime = execTargetTime(effectiveExec, booking.customTime, "21:48");
+  const msCountdown = useMsCountdown(effectiveExec, booking.customTime, "21:48");
+  const cookieReady = Boolean(booking.cookieStr && booking.cookieStr.trim().length >= 10);
+  const teeth = [
+    { label: "身份", st: cookieReady ? "ok" : "idle", to: "/app/home" },
+    { label: "场馆", st: booking.libId ? "ok" : "idle", to: "/app/grab" },
+    { label: "座位", st: booking.seatNumber ? "ok" : "idle", to: "/app/grab" },
+    { label: "时间", st: effectiveExec !== "custom" || booking.customTime ? "ok" : "idle", to: "/app/grab" },
+  ] as const;
 
   const launch = () => {
     setShowConfirm(false);
@@ -49,7 +63,7 @@ export function GrabPage() {
       seatNumber: booking.seatNumber,
       cookieStr: booking.cookieStr,
       opMode: "immediate",
-      execTime: booking.execTime,
+      execTime: booking.grabExecTime,
       customTime: booking.customTime,
       backupSeats: useBackupSeatsStore.getState().chains[booking.libId] ?? [],
       selectedSeatKey,
@@ -68,74 +82,75 @@ export function GrabPage() {
         />
       )}
 
-      {/* 行动卡 */}
-      <GlassCard className="flex items-center gap-3 p-4 md:p-5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-500 dark:text-amber-300">
-          <Zap className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-extrabold">今日实时抢座</div>
-          <div className="text-[11.5px] text-slate-500 dark:text-slate-300">选好座位即刻出手</div>
+      {/* 执行 hero */}
+      <GlassCard className="hero rise p-5 md:p-7">
+        <div className="md:flex md:items-center md:gap-8">
+          <div className="hero-center min-w-0 flex-1">
+            <div className="trigger-label">
+              <span className="t">执行方式</span>
+              <span className="mode">{timed ? `定时 ${booking.customTime}` : "立即"}</span>
+            </div>
+            <div className="bigtime">
+              <span className="shimmer text-[34px] md:text-[44px]">{timed ? targetTime : "立即"}</span>
+              <span className={cn("cap", timed && "hidden md:inline")}>{timed ? "计时结束执行" : "选好座位后自动执行"}</span>
+            </div>
+            <div className="sub-row">
+              {timed && (
+                <span className="cd-pill"><Timer className="h-3.5 w-3.5" />倒计时<b>{msCountdown}</b></span>
+              )}
+              <div className="teeth">
+                {teeth.map((t) => (
+                  <button
+                    key={t.label}
+                    type="button"
+                    className={cn("tooth", t.st === "ok" && "ok")}
+                    onClick={() => navigate(t.to)}
+                  >
+                    <i />{t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-5 shrink-0 md:mt-0 md:w-[200px]">
+            <button
+              type="button"
+              className="btn grad big w-full"
+              disabled={!startEnabled || running}
+              onClick={() => setShowConfirm(true)}
+            >
+              <Zap className="h-4 w-4" />{running ? "任务运行中" : "立即抢座"}
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          disabled={!startEnabled || running}
-          onClick={() => setShowConfirm(true)}
-          className="flex cursor-pointer items-center gap-2 rounded-2xl bg-gradient-to-br from-[#b3d0ff] to-[#7da7ff] px-5 py-2.5 text-[12.5px] font-extrabold text-[#10162a] shadow-[0_8px_24px_rgba(125,167,255,0.35)] transition-transform active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Zap className="h-4 w-4" />{running ? "任务运行中" : "立即抢座"}
-        </button>
       </GlassCard>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* 场馆实时列表 */}
-        <GlassCard className="p-4 md:p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-[13.5px] font-extrabold">
-            <Building2 className="h-4 w-4" />阅览室
-            <span className="ml-auto text-[10px] font-normal text-slate-400">实时</span>
-          </h3>
-          <VenueList
-            rooms={dynamicRooms}
-            loading={loadingRooms}
-            error={roomsError}
-            libId={booking.libId}
-            onChange={(libId) => { setBooking({ libId }); setSelectedSeatKey(""); }}
-            cookieStr={booking.cookieStr}
-          />
-        </GlassCard>
+      {/* 执行档位 */}
+      <ExecBar
+        options={["immediate", "custom"]}
+        execTime={effectiveExec}
+        onExecTime={(grabExecTime) => setBooking({ grabExecTime })}
+        customTime={booking.customTime}
+        onCustomTime={(customTime) => setBooking({ customTime })}
+      />
 
-        {/* 座位 + 执行时间 */}
-        <div className="flex flex-col gap-4">
-          <GlassCard className="p-4 md:p-5">
-            <h3 className="mb-3 flex items-center gap-2 text-[13.5px] font-extrabold"><Armchair className="h-4 w-4" />座位</h3>
-            <SeatSelect
-              seats={dynamicSeats}
-              loading={loadingSeats}
-              seatNumber={booking.seatNumber}
-              onSeatNumber={(seatNumber) => setBooking({ seatNumber })}
-              selectedSeatKey={selectedSeatKey}
-              onSelectSeatKey={(key, name) => {
-                setSelectedSeatKey(key);
-                if (name) setBooking({ seatNumber: name });
-              }}
-              libId={booking.libId}
-            />
-            <div className="mt-3">
-              <BackupChainPanel libId={booking.libId} />
-            </div>
-          </GlassCard>
-          <GlassCard className="p-4 md:p-5">
-            <TimeCard
-              options={["immediate", "custom"]}
-              execTime={booking.execTime === "2148" ? "immediate" : booking.execTime}
-              onExecTime={(execTime) => setBooking({ execTime })}
-              customTime={booking.customTime}
-              onCustomTime={(customTime) => setBooking({ customTime })}
-              hint="支持定时出手"
-            />
-          </GlassCard>
-        </div>
-      </div>
+      {/* 目标座位：主选 + 顺位备选（含实时余位） */}
+      <SeatPriorityCard
+        cookieStr={booking.cookieStr}
+        apiConfig={apiConfig}
+        rooms={dynamicRooms}
+        loadingRooms={loadingRooms}
+        roomsError={roomsError}
+        libId={booking.libId}
+        onLibId={(libId) => setBooking({ libId })}
+        opMode="immediate"
+        seatNumber={booking.seatNumber}
+        selectedSeatKey={selectedSeatKey}
+        onPick={(key, name) => {
+          setSelectedSeatKey(key);
+          setBooking({ seatNumber: name });
+        }}
+      />
 
       <ConsoleCard
         status={task.status}
@@ -151,7 +166,7 @@ export function GrabPage() {
         onOpenChange={setShowConfirm}
         onConfirm={launch}
         opMode="immediate"
-        execTime={booking.execTime === "2148" ? "immediate" : booking.execTime}
+        execTime={effectiveExec}
         customTime={booking.customTime}
         roomName={roomName}
         seatNumber={booking.seatNumber}

@@ -19,16 +19,14 @@ const ThemeProviderContext = createContext<ThemeProviderState>({
 
 /**
  * 旧页面的主题入口，内部代理 2.0 的 theme store。
- * wallpaper 模式对旧组件呈现为 dark；DOM 应用统一由 ThemeSync 处理。
+ * DOM 应用统一由 ThemeSync 处理。
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const mode = useThemeStore((s) => s.mode)
   const setMode = useThemeStore((s) => s.setMode)
 
-  const legacyTheme: Theme = mode === "wallpaper" ? "dark" : mode
-
   const value = {
-    theme: legacyTheme,
+    theme: mode,
     setTheme: (theme: Theme) => setMode(theme),
   }
 

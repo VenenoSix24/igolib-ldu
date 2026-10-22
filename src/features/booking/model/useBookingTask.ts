@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { submitRequest, cancelTask } from "@/services/api";
 import type { ApiConfig } from "@/lib/api-config";
+import { useRuntimeStore } from "@/stores/runtime";
 
 export interface LogEntry {
   id: string;
@@ -87,6 +88,14 @@ export function useBookingTask() {
     };
   }, []);
 
+  // 运行态与结果事件广播给灵动岛
+  useEffect(() => {
+    const runtime = useRuntimeStore.getState();
+    runtime.setBookingRunning(status === "running" || status === "connecting");
+    if (status === "success") runtime.pushEvent("success", "预约成功");
+    else if (status === "failed") runtime.pushEvent("error", "预约失败");
+  }, [status]);
+
   const addLog = (
     message: string,
     type: LogEntry["type"] = "info",
@@ -151,19 +160,20 @@ export function useBookingTask() {
     selectedSeatKey: string;
     roomName: string;
   }) => {
-    const { apiConfig, libId, seatNumber, cookieStr, opMode, execTime, customTime, defaultTime, backupSeats, selectedSeatKey, roomName } = params;
-    try {
-      setLogs([]);
-      setStatus("connecting");
-      setCurrentPhase("idle");
-      const newClientId = generateUUID();
-      activeClientIdRef.current = newClientId;
+      const { apiConfig, libId, seatNumber, cookieStr, opMode, execTime, customTime, defaultTime, backupSeats, selectedSeatKey, roomName } = params;
+      useRuntimeStore.getState().setContext(`${roomName || "未选场馆"} · ${seatNumber} 号`);
+      try {
+        setLogs([]);
+        setStatus("connecting");
+        setCurrentPhase("idle");
+        const newClientId = generateUUID();
+        activeClientIdRef.current = newClientId;
 
-      const defaultTimeStr = `${defaultTime ?? "21:48"}:00`;
-      const timeStrDisplay = execTime === "immediate" ? "立即开始" : (execTime === "2148" ? defaultTimeStr : customTime);
-      const modeDisplay = opMode === "scheduled" ? "明日预约模式" : "立即抢座模式";
+        const defaultTimeStr = `${defaultTime ?? "21:48"}:00`;
+        const timeStrDisplay = execTime === "immediate" ? "立即开始" : (execTime === "2148" ? defaultTimeStr : customTime);
+        const modeDisplay = opMode === "scheduled" ? "明日预约模式" : "立即抢座模式";
 
-      addLog(`🚀 任务初始化...`, "info", "phase", { phase: "start" });
+        addLog("任务初始化...", "info", "phase", { phase: "start" });
       addLog(`任务清单: 模式 [${modeDisplay}] | 场馆 [${roomName || "加载中"}] | 座位 [${seatNumber}]${backupSeats?.length ? ` | 备选 [${backupSeats.map((b) => b.name).join(" → ")}]` : ""} | 计划执行 [${timeStrDisplay}]`, "info", "phase");
       addLog("正在进行环境检查与身份校验...", "info");
 

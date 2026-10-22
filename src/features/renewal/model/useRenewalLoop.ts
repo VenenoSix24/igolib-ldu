@@ -11,6 +11,7 @@ import type { ReservationInfo, LibRuleInfo } from "@/services/LibraryService";
 import { useSettingsStore } from "@/stores/settings";
 import { useBackupSeatsStore } from "@/stores/backupSeats";
 import { useAuthStore, cookieBlocked } from "@/stores/auth";
+import { useRuntimeStore } from "@/stores/runtime";
 import { notify } from "@/lib/notify";
 import { createLogger } from "@/lib/logger";
 
@@ -84,6 +85,15 @@ export function useRenewalLoop() {
     const ticker = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(ticker);
   }, [running]);
+
+  // 运行态与轮次结果广播给灵动岛
+  useEffect(() => {
+    useRuntimeStore.getState().setRenewing(running);
+  }, [running]);
+
+  useEffect(() => {
+    if (lastResult) useRuntimeStore.getState().pushEvent(lastResult.kind, lastResult.title);
+  }, [lastResult]);
 
   const clearTimer = () => {
     if (timerRef.current) {

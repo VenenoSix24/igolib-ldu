@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN" data-theme="light" data-accent="ya">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,21 +7,25 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>我去抢个座</title>
-  <link href="https://fonts.googleapis.com" rel="preconnect" />
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-    rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&amp;display=swap"
-    rel="stylesheet" />
   <script>
+    // 首帧前落主题，避免浅色闪烁；读持久化 store，失败回退鸦青浅色
     (function () {
-      const theme = localStorage.getItem('vite-ui-theme') || 'system';
-      if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      var root = document.documentElement;
+      var mode = 'system';
+      var accent = 'ya';
+      try {
+        var saved = JSON.parse(localStorage.getItem('igolib:theme:v1') || '{}');
+        var modes = ['system', 'dark', 'light'];
+        var accents = ['ya', 'pine', 'dai', 'zhe', 'jiang', 'qingci', 'xing', 'moka', 'xiang'];
+        if (modes.indexOf(saved.state && saved.state.mode) >= 0) mode = saved.state.mode;
+        else if (modes.indexOf(localStorage.getItem('vite-ui-theme')) >= 0) mode = localStorage.getItem('vite-ui-theme');
+        if (saved.state && accents.indexOf(saved.state.accent) >= 0) accent = saved.state.accent;
+      } catch (e) { }
+      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.classList.toggle('dark', dark);
+      root.classList.toggle('light', !dark);
+      root.dataset.theme = dark ? 'dark' : 'light';
+      root.dataset.accent = accent;
     })();
   </script>
 </head>

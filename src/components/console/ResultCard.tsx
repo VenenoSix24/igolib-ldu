@@ -21,26 +21,26 @@ export function ResultCard({
       className={cn(
         "border p-4 md:p-5",
         kind === "success"
-          ? "border-emerald-500/40 bg-emerald-500/[0.08]"
-          : "border-red-500/40 bg-red-500/[0.08]",
+          ? "success-sweep border-[rgba(16,185,129,0.35)] bg-[rgba(16,185,129,0.08)]"
+          : "border-[rgba(244,63,94,0.35)] bg-[rgba(244,63,94,0.08)]",
         className,
       )}
     >
       <div className="flex items-center gap-3">
         {kind === "success" ? (
-          <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-500" />
+          <CheckCircle2 className="h-6 w-6 shrink-0 text-ok-ink dark:text-[#6ee7b7]" />
         ) : (
-          <XCircle className="h-6 w-6 shrink-0 text-red-500" />
+          <XCircle className="h-6 w-6 shrink-0 text-err-ink dark:text-[#fda4af]" />
         )}
         <div className="min-w-0 flex-1">
           <p className={cn(
             "text-[13.5px] font-bold",
-            kind === "success" ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"
+            kind === "success" ? "text-ok-ink dark:text-[#6ee7b7]" : "text-err-ink dark:text-[#fda4af]",
           )}>
             {title}
           </p>
           {detail && (
-            <p className="mt-0.5 break-words text-[11.5px] text-slate-600 dark:text-slate-300">{detail}</p>
+            <p className="mt-0.5 break-words text-[11.5px] text-mut">{detail}</p>
           )}
         </div>
         {onClose && (
@@ -48,7 +48,7 @@ export function ResultCard({
             type="button"
             aria-label="关闭结果提示"
             onClick={onClose}
-            className="shrink-0 cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-white/50 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
+            className="shrink-0 cursor-pointer rounded-md p-1 text-sub transition-colors hover:bg-[rgba(100,116,139,0.1)] hover:text-ink"
           >
             <X className="h-4 w-4" />
           </button>

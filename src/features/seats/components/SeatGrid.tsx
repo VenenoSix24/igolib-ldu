@@ -35,27 +35,27 @@ export function SeatGrid({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-300">
+      <div className="flex items-center justify-between text-[10px] text-sub">
         <span className="flex items-center gap-1"><Armchair className="h-3 w-3" />共 {seats.length} 座</span>
         <span className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-[3px] border border-green-500/40 bg-green-500/20" />空闲
+            <span className="h-2.5 w-2.5 rounded-[3px] border border-[rgba(16,185,129,0.4)] bg-[rgba(16,185,129,0.14)]" />空闲
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-[3px] border border-blue-500 bg-blue-500" />已选
+            <span className="h-2.5 w-2.5 rounded-[3px] border border-[var(--pri)] bg-[var(--pri)]" />已选
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-[3px] border border-amber-500/50 bg-amber-500/25" />备选
+            <span className="h-2.5 w-2.5 rounded-[3px] border border-[var(--acc)] bg-[color-mix(in_srgb,var(--acc)_22%,transparent)]" />备选
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2.5 w-2.5 rounded-[3px] bg-slate-300 dark:bg-white/15" />占用
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-[rgba(100,116,139,0.18)]" />占用
           </span>
         </span>
       </div>
 
       <div
         className={cn(
-          "max-h-64 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]",
+          "max-h-64 overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--glass-2)] p-3",
           hasCoords ? "grid justify-center" : "flex flex-wrap gap-1.5",
         )}
         style={
@@ -110,15 +110,15 @@ export function SeatGrid({
                   : undefined
               }
               className={cn(
-                "flex touch-none select-none items-center justify-center rounded-[5px] border text-[9px] font-bold transition-all",
+                "flex touch-none select-none items-center justify-center rounded-[6px] border text-[9px] font-bold transition-all",
                 cell >= 26 ? "min-h-[26px] min-w-[26px]" : cell >= 22 ? "h-[22px] w-[22px]" : "h-[18px] w-[18px] text-[8px]",
                 selected
-                  ? "border-blue-500 bg-blue-500 text-white shadow-[0_2px_8px_rgba(59,130,246,0.45)]"
+                  ? "border-[var(--pri)] bg-[var(--pri)] text-[var(--pri-ink)] shadow-[0_2px_8px_color-mix(in_srgb,var(--pri)_45%,transparent)]"
                   : inBackup
-                    ? "cursor-pointer border-amber-500 bg-amber-500/25 text-amber-700 dark:text-amber-300"
+                    ? "cursor-pointer border-[var(--acc)] bg-[color-mix(in_srgb,var(--acc)_22%,transparent)] text-pri-text dark:text-acc-hi"
                     : clickable
-                      ? "cursor-pointer border-green-500/40 bg-green-500/15 text-green-700 hover:scale-110 hover:bg-green-500/30 dark:text-green-300"
-                      : "cursor-not-allowed border-transparent bg-slate-300 text-slate-400 dark:bg-white/10 dark:text-slate-300",
+                      ? "cursor-pointer border-[rgba(16,185,129,0.4)] bg-[rgba(16,185,129,0.14)] text-ok-ink hover:scale-110 hover:bg-[rgba(16,185,129,0.28)] dark:text-[#6ee7b7]"
+                      : "cursor-not-allowed border-transparent bg-[rgba(100,116,139,0.15)] text-sub",
               )}
             >
               {seat.name}

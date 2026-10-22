@@ -1,7 +1,7 @@
 {
   "name": "igolib-ldu",
   "private": true,
-  "version": "1.0.28",
+  "version": "2.0.0",
   "homepage": ".",
   "type": "module",
   "scripts": {
@@ -13,6 +13,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-separator": "^1.1.8",

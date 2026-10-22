@@ -2,8 +2,6 @@ import { useState } from "react";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { motion, AnimatePresence } from "framer-motion";
 import { KeyRound, X, RefreshCw, ClipboardPaste, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { AuthService } from "@/services/AuthService";
 import type { ApiConfig } from "@/lib/api-config";
 import { QRCodeCanvas } from "qrcode.react";
@@ -46,39 +44,40 @@ export function AuthQrDialog({ isOpen, onClose, apiConfig, onCookie }: AuthQrDia
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.3)] backdrop-blur-[6px] dark:bg-[rgba(2,6,23,0.55)]"
             onClick={onClose}
           />
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ x: "-50%", y: "-50%" }}
-            className="fixed left-1/2 top-1/2 w-[90%] max-w-sm bg-white dark:bg-neutral-950 rounded-2xl shadow-2xl z-50 overflow-hidden border dark:border-neutral-800"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-neutral-800">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                <KeyRound className="w-5 h-5 text-blue-500" />
+          {/* 居中定位 wrapper：motion 只做浮入动画，不参与定位 transform */}
+          <div className="pointer-events-none fixed inset-0 z-50 grid place-items-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.985, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.985 }}
+              transition={{ duration: 0.25, ease: [0.3, 1.15, 0.4, 1] }}
+              className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-3xl border border-[var(--gborder)] bg-[var(--glass-3)] shadow-2xl backdrop-blur-2xl"
+            >
+            <div className="flex items-center justify-between border-b border-[var(--line2)] p-4">
+              <h2 className="flex items-center gap-2 text-[15px] font-extrabold">
+                <KeyRound className="h-[18px] w-[18px] text-pri-text dark:text-acc-hi" />
                 扫码获取 Cookie
               </h2>
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                className="cursor-pointer rounded-full p-1.5 text-mut transition-colors hover:bg-[rgba(100,116,139,0.12)] hover:text-ink"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
+            <div className="space-y-5 p-5">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
-                  <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">使用微信扫描下方二维码</span>
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--pri)] text-[10px] font-bold text-[var(--pri-ink)]">1</span>
+                  <span className="text-[13px] font-bold">使用微信扫描下方二维码</span>
                 </div>
                 <div className="flex justify-center">
-                  <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100">
+                  <div className="rounded-2xl border border-[var(--line)] bg-white p-3 shadow-sm">
                     <QRCodeCanvas
                       value={AuthService.buildAuthUrl(apiConfig.wxAppId, apiConfig.apiUrl)}
                       size={160}
@@ -86,23 +85,23 @@ export function AuthQrDialog({ isOpen, onClose, apiConfig, onCookie }: AuthQrDia
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400 text-center">
-                  扫码后在微信中完成授权，然后点击右上角「···」复制链接
+                <p className="text-center text-[11px] text-sub">
+                  扫码后在微信中完成授权，然后点右上角「···」复制链接
                 </p>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
-                  <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">粘贴复制的回调链接</span>
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--pri)] text-[10px] font-bold text-[var(--pri-ink)]">2</span>
+                  <span className="text-[13px] font-bold">粘贴复制的回调链接</span>
                 </div>
                 <div className="space-y-3">
                   <div className="relative">
-                    <Input
+                    <input
                       placeholder="https://xxxx/graphql/?code=xxx&state=1"
                       value={authInputUrl}
                       onChange={(e) => setAuthInputUrl(e.target.value)}
-                      className="w-full pr-9 text-xs font-mono dark:bg-[rgb(16,16,16)] dark:border-neutral-700"
+                      className="input mono pr-9 text-[11.5px]"
                     />
                     <button
                       type="button"
@@ -114,42 +113,41 @@ export function AuthQrDialog({ isOpen, onClose, apiConfig, onCookie }: AuthQrDia
                           alert("无法获取剪贴板内容，请手动长按输入框粘贴");
                         }
                       }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 p-1 transition-colors"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer p-1 text-sub transition-colors hover:text-ink"
                       title="从剪贴板粘贴"
                     >
-                      <ClipboardPaste className="w-4 h-4" />
+                      <ClipboardPaste className="h-4 w-4" />
                     </button>
                   </div>
-                  <Button
-                    size="sm"
+                  <button
+                    type="button"
                     onClick={handleAuthExchange}
                     disabled={authLoading || !authInputUrl}
-                    className="w-full"
+                    className="btn grad w-full"
                   >
-                    {authLoading ? (
-                      <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                    ) : null}
-                    {authLoading ? "解析中..." : "解析并粘贴 Cookie"}
-                  </Button>
+                    {authLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
+                    {authLoading ? "解析中…" : "解析并粘贴 Cookie"}
+                  </button>
                 </div>
               </div>
             </div>
 
             {authError && (
-              <div className="mx-5 mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+              <div className="mx-5 mb-4 rounded-[14px] border border-[rgba(244,63,94,0.25)] bg-[rgba(244,63,94,0.08)] p-3">
+                <p className="flex items-center gap-2 text-[11.5px] text-err-ink dark:text-[#fda4af]">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   {authError}
                 </p>
               </div>
             )}
 
-            <div className="px-5 py-3 border-t border-slate-200 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-800/50">
-              <p className="text-[10px] text-slate-400 text-center">
+            <div className="border-t border-[var(--line2)] px-5 py-3">
+              <p className="text-center text-[10px] text-sub">
                 链接仅用于本地解析 Code，不会向第三方上传
               </p>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

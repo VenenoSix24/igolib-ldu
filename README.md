@@ -7,7 +7,7 @@
   <a href="https://igolib.ivyris.top/#/download"><b>⬇️ 官网下载</b></a> •
   <a href="https://github.com/VenenoSix24/igolib-ldu/releases/latest"><b>⭐ GitHub下载</b></a>
   <br /><br />
-  <img src="https://img.shields.io/badge/App_Version-v1.0.28-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
+  <img src="https://img.shields.io/badge/App_Version-v2.0.0-2ea44f?style=flat-square&logo=tauri&logoColor=white" />
   <img src="https://img.shields.io/badge/Core_Logic-v4.6.25_TS-E10098?style=flat-square&logo=graphql&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/React-19.2.0-282c34?style=flat-square&logo=react&logoColor=white" />
@@ -15,19 +15,17 @@
   <img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-red?style=flat-square&logo=open-source-initiative&logoColor=white" />
 </p>
 
-
-
 一个基于 **React + TypeScript + Tauri** 的全平台图书馆座位预约系统。
 
 本项目已完成从 **Python 后端** 到 **纯前端驱动跨平台架构** 的全面迁移。核心逻辑、GraphQL API 交互、WebSocket 队列处理以及任务调度器均已重写为 TypeScript 模块。通过使用 Tauri 2.0，应用现已完美适配 **Android、Windows、macOS 以及 Linux** 平台，提供一致的体验。
 
 > 如果你**需要 Python 做为后端**的版本，请切换到 [**dev 分支**](https://github.com/VenenoSix24/igolib-ldu/tree/dev)。Python 版本可能会更新不及时！
-> 
+>
 > **如果对你有帮助，请 Star 一下项目吧！** ⭐
 
 ![igolib-ts-p1.jpg](https://s2.loli.net/2026/01/25/YaLWsrDVJHZwITf.jpg)
 
-*(基于某个我去图书馆，谁去图书馆？！！)*
+_(基于某个我去图书馆，谁去图书馆？！！)_
 
 ## ✨ 功能特性
 
@@ -55,11 +53,13 @@
 如果您希望参与开发或自行从源码构建应用：
 
 ### 环境要求
+
 - [Node.js](https://nodejs.org/) (推荐 v22+) & [pnpm](https://pnpm.io/)
 - [Rust](https://www.rust-lang.org/)
 - **移动端编译额外要求**: [Android Studio](https://developer.android.com/studio) (Android) 或 [Xcode](https://developer.apple.com/xcode/) (iOS)
 
 ### 开发运行
+
 1. **安装依赖**
    ```bash
    pnpm install
@@ -76,6 +76,7 @@
    ```
 
 ### 编译打包
+
 ```bash
 pnpm tauri build                # 打包桌面端
 pnpm tauri android build        # 打包 Android
@@ -107,11 +108,9 @@ pnpm tauri android build        # 打包 Android
 
 <img src="https://s2.loli.net/2026/01/25/TCFcJxO317gMfjy.jpg" alt="igolib-ts-p3.jpg" style="zoom: 33%;" />
 
-
 ## 📄 许可证
 
 本项目采用 **AGPL-3.0** 开源许可证。
-
 
 - 任何使用本项目代码的衍生项目 **必须开源**
 - 修改后的代码 **必须以 AGPL-3.0 进行发布**
