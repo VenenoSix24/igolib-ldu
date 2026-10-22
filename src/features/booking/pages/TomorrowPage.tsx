@@ -97,7 +97,7 @@ export function TomorrowPage() {
             </div>
             <div className="bigtime">
               <span className="shimmer text-[34px] md:text-[44px]">{scheduled ? targetTime : "立即"}</span>
-              <span className={cn("cap", scheduled && "hidden md:inline")}>{scheduled ? "准时自动提交" : "启动后立即提交"}</span>
+              <span className={cn("cap", scheduled && "hidden md:inline")}>{scheduled ? "准时自动执行" : "启动后立即执行"}</span>
             </div>
             <div className="sub-row">
               {scheduled && (

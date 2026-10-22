@@ -16,11 +16,10 @@ const LINKS = [
   { label: "项目主页", url: HOME_URL, display: "igolib.ivyris.top" },
   { label: "更新日志", url: RELEASES_URL, display: "GitHub Releases" },
   { label: "反馈问题", url: ISSUES_URL, display: "GitHub Issues" },
-  { label: "联系邮箱", url: "mailto:feedback@igolib.ivyris.top", display: "feedback@igolib.ivyris.top" },
+  { label: "联系邮箱", url: "mailto:lagbqy@gmail.com", display: "lagbqy@gmail.com" },
 ];
 
-/** 占位：群入口待定，仅展示群号 */
-const GROUP_ID = "123456789";
+const GROUP_URL = "https://t.me/igolib_ldu";
 
 function open(url: string) {
   if (isTauri()) void openUrl(url);
@@ -90,14 +89,21 @@ export function AboutPage() {
               </span>
             </button>
           ))}
-          <div className="setrow">
+          <button
+            type="button"
+            onClick={() => open(GROUP_URL)}
+            className="setrow w-full cursor-pointer text-left"
+          >
             <span className="text-[12.5px] font-semibold">交流群</span>
-            <span className="sr mono text-[11px] text-sub">{GROUP_ID}（占位）</span>
-          </div>
+            <span className="sr items-center text-[11px] text-sub">
+              Telegram @igolib_ldu
+              <ExternalLink className="h-3.5 w-3.5" />
+            </span>
+          </button>
         </div>
 
         <p className="mt-4 border-t border-[var(--line2)] pt-3 text-[10.5px] leading-relaxed text-sub">
-          Cookie 仅在本地解析使用，不向第三方上传；预约请求仅发往所选 API 预设的服务端。
+          Cookie 仅在本地解析使用，不会进行上传；预约请求仅发往所选 API 预设的服务端。
         </p>
       </GlassCard>
 

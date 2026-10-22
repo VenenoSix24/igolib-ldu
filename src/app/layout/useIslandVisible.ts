@@ -16,6 +16,7 @@ export function useIslandVisible(tickMs = 1000): boolean {
   const scanning = useRuntimeStore((s) => s.scanning);
   const renewing = useRuntimeStore((s) => s.renewing);
   const lastEvent = useRuntimeStore((s) => s.lastEvent);
+  const debug = useRuntimeStore((s) => s.debug);
   const booking = useSettingsStore((s) => s.booking);
   const defaultTime = useSettingsStore((s) => s.prefs.defaultExecTime);
   const cookieStatus = useAuthStore((s) => s.cookieStatus);
@@ -26,6 +27,7 @@ export function useIslandVisible(tickMs = 1000): boolean {
     return () => clearInterval(id);
   }, [tickMs]);
 
+  if (debug) return true;
   const readyish = cookieStatus === "valid" && Boolean(booking.libId) && Boolean(booking.seatNumber);
   const targetTs = readyish ? nextTargetTs(booking.tomorrowExecTime, booking.customTime, defaultTime) : null;
   const nearTarget = targetTs !== null && targetTs - now < NEAR_WINDOW;

@@ -22,13 +22,55 @@ import { LogsPanel } from "../../logs/components/LogsPanel";
 
 function greeting(): string {
   const h = new Date().getHours();
-  if (h < 6) return "夜深了";
-  if (h < 12) return "早上好";
-  if (h < 18) return "下午好";
-  return "晚上好";
+  if (h < 6) return "夜深了，早点休息吧～";
+  if (h < 12) return "早上好，新的一天元气满满哦";
+  if (h < 18) return "下午好，慢慢学，总会有收获";
+  return "晚上好，要注意劳逸结合哦";
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** dev 调试：模拟灵动岛运行态与结果事件（生产构建剔除） */
+function IslandDebug() {
+  const [on, setOn] = useState(false);
+  const toggle = () => {
+    const s = useRuntimeStore.getState();
+    const next = !on;
+    setOn(next);
+    s.setDebug(next);
+    if (next) {
+      s.setContext("三楼阅览区 · 056 号");
+      s.setBookingRunning(true);
+    } else {
+      s.setBookingRunning(false);
+      s.setContext("");
+    }
+  };
+  return (
+    <div className="mt-2 border-t border-[var(--line2)] pt-2.5">
+      <p className="mb-1.5 px-1 text-[12px] font-bold">灵动岛调试</p>
+      <div className="flex flex-wrap gap-1.5 px-1">
+        <button type="button" className={cn("btn sm", on ? "danger" : "dark")} onClick={toggle}>
+          {on ? "停止模拟" : "模拟任务运行"}
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => useRuntimeStore.getState().pushEvent("success", "预约成功 · 三楼阅览区 056 号")}
+        >
+          模拟成功事件
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => useRuntimeStore.getState().pushEvent("error", "预约失败 · 座位已被抢占")}
+        >
+          模拟失败事件
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -152,7 +194,7 @@ export function HomePage() {
           </div>
           <div className="mt-5 shrink-0 md:mt-0 md:w-[190px]">
             <button type="button" className="btn grad big w-full" onClick={() => navigate("/app/tomorrow")}>
-              去明日预约
+              明日预约
             </button>
             <button type="button" className="btn dark big mt-2.5 w-full" onClick={() => navigate("/app/grab")}>
               立即抢座
@@ -246,16 +288,18 @@ export function HomePage() {
 
             <label className="flex h-[46px] cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5 transition-colors hover:border-[var(--line2)]">
               <span className="text-[12px] font-semibold">明日默认时间</span>
-              <input
-                type="time"
-                aria-label="明日默认执行时间"
-                value={prefs.defaultExecTime}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (/^\d{2}:\d{2}$/.test(v)) setPrefs({ defaultExecTime: v });
-                }}
-                className="numinput cursor-pointer"
-              />
+              <span className="flex h-[30px] items-center justify-center gap-1 rounded-[10px] border border-[var(--line)] bg-[var(--glass-3)] px-2.5">
+                <input
+                  type="time"
+                  aria-label="明日默认执行时间"
+                  value={prefs.defaultExecTime}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (/^\d{2}:\d{2}$/.test(v)) setPrefs({ defaultExecTime: v });
+                  }}
+                  className="cursor-pointer border-0 bg-transparent p-0 text-center font-mono text-[12px] tabular-nums outline-none"
+                />
+              </span>
             </label>
 
             <label className="flex h-[46px] cursor-pointer items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--glass-2)] px-3.5 transition-colors hover:border-[var(--line2)]">
@@ -359,6 +403,7 @@ export function HomePage() {
                   <p className="mb-1.5 px-1 text-[12px] font-bold">运行日志</p>
                   <LogsPanel />
                 </div>
+                {import.meta.env.DEV && <IslandDebug />}
               </div>
             </motion.div>
           )}

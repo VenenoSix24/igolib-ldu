@@ -92,7 +92,7 @@ export function GrabPage() {
             </div>
             <div className="bigtime">
               <span className="shimmer text-[34px] md:text-[44px]">{timed ? targetTime : "立即"}</span>
-              <span className={cn("cap", timed && "hidden md:inline")}>{timed ? "到点自动提交" : "选好座位后自动提交"}</span>
+              <span className={cn("cap", timed && "hidden md:inline")}>{timed ? "计时结束执行" : "选好座位后自动执行"}</span>
             </div>
             <div className="sub-row">
               {timed && (
