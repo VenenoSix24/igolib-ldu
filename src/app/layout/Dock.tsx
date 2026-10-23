@@ -12,7 +12,7 @@ export function Dock() {
   return createPortal(
     <nav
       aria-label="底部导航"
-      className="glass fixed bottom-[calc(env(safe-area-inset-bottom)+20px)] left-1/2 z-10 flex -translate-x-1/2 items-stretch gap-0.5 rounded-full p-1.5 md:hidden"
+      className="glass dockbar fixed bottom-[calc(env(safe-area-inset-bottom)+14px)] left-1/2 z-10 flex -translate-x-1/2 items-stretch gap-0.5 rounded-full p-1.5 md:hidden"
     >
       {NAV_ITEMS.filter((item) => item.dock).map(({ path, shortLabel, icon: Icon }) => (
         <NavLink key={path} to={path} className={({ isActive }) => cn("dockitem", isActive && "on")}>

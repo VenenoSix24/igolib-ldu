@@ -373,6 +373,9 @@ html[data-theme="dark"] .aurora i { opacity:.55; filter:blur(90px) saturate(.85)
   position:relative;
   overflow:hidden;
 }
+/* 手机 dock 描边：浅色灰黑细线把白底栏从白页面里衬出来；深色用亮灰细线 */
+nav.dockbar { border-color:rgba(15,23,42,0.14); box-shadow:0 8px 28px rgba(15,23,42,0.12) }
+html[data-theme="dark"] nav.dockbar { border-color:rgba(148,163,184,0.28); box-shadow:0 8px 28px rgba(0,0,0,0.5) }
 .glass::before {
   content:"";
   position:absolute; inset-inline:0; top:0; height:1px;
@@ -553,7 +556,7 @@ html[data-theme="dark"] .tooth.miss { color:#fcd34d }
 html[data-theme="dark"] .navitem.on { color:var(--acc-hi) }
 
 /* 手机 dock 项 */
-.dockitem { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:8px 19px 7px; border-radius:999px;
+.dockitem { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:8px 21px 7px; border-radius:999px;
   font-size:11px; font-weight:600; color:var(--ink); transition:all .2s; white-space:nowrap }
 .dockitem.on { background:rgba(15,23,42,0.08); color:var(--pri-text); box-shadow:var(--sh-row) }
 html[data-theme="dark"] .dockitem.on { background:rgba(148,163,184,0.18); color:var(--acc-hi) }
