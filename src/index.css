@@ -553,10 +553,10 @@ html[data-theme="dark"] .tooth.miss { color:#fcd34d }
 html[data-theme="dark"] .navitem.on { color:var(--acc-hi) }
 
 /* 手机 dock 项 */
-.dockitem { display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 14px 5px; border-radius:999px;
-  font-size:10.5px; font-weight:600; color:var(--ink); transition:all .2s; white-space:nowrap }
-.dockitem.on { background:var(--glass-3); color:var(--pri-text); box-shadow:var(--sh-row) }
-html[data-theme="dark"] .dockitem.on { background:color-mix(in srgb,var(--pri) 30%,transparent); color:var(--acc-hi) }
+.dockitem { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:8px 19px 7px; border-radius:999px;
+  font-size:11px; font-weight:600; color:var(--ink); transition:all .2s; white-space:nowrap }
+.dockitem.on { background:rgba(15,23,42,0.08); color:var(--pri-text); box-shadow:var(--sh-row) }
+html[data-theme="dark"] .dockitem.on { background:rgba(148,163,184,0.18); color:var(--acc-hi) }
 .dockitem:active { transform:scale(.94) }
 
 /* 页面进场 */
@@ -620,7 +620,7 @@ html[data-theme="dark"] .ti-err { color:#fda4af }
 @layer components {
 
 /* 事件驱动：空闲时收起（任务运行 / 临近触发 / 事件未消隐时浮现） */
-.isle { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:50; height:40px; padding:0 16px;
+.isle { position:fixed; top:calc(env(safe-area-inset-top, 0px) + 12px); left:50%; transform:translateX(-50%); z-index:50; height:40px; padding:0 16px;
   border-radius:999px; background:rgba(2,6,23,0.95); backdrop-filter:blur(24px); color:#fff;
   box-shadow:var(--sh-island); display:flex; align-items:center; gap:12px; border:1px solid rgba(255,255,255,0.1);
   transition:opacity .3s cubic-bezier(.3,1.2,.4,1), transform .3s cubic-bezier(.3,1.2,.4,1); cursor:pointer; white-space:nowrap }
@@ -643,15 +643,15 @@ html[data-theme="dark"] .ti-err { color:#fda4af }
 .isle .eq i:nth-child(3) { height:6px; background:rgba(16,185,129,0.7); animation-delay:.36s }
 .isle .eq.idle i { animation-play-state:paused; opacity:.4; height:5px }
 @keyframes eq { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(.45)} }
-.isle-pop { position:fixed; top:58px; left:50%; transform:translateX(-50%) translateY(-6px); z-index:49; width:min(340px,92vw);
+.isle-pop { position:fixed; top:calc(env(safe-area-inset-top, 0px) + 58px); left:50%; transform:translateX(-50%) translateY(-6px); z-index:49; width:min(340px,92vw);
   background:var(--glass-3); backdrop-filter:blur(24px) saturate(1.5); -webkit-backdrop-filter:blur(24px) saturate(1.5);
   border:1px solid var(--gborder); border-radius:24px; box-shadow:var(--sh-glass); padding:16px;
   opacity:0; pointer-events:none; transition:opacity .25s cubic-bezier(.3,1.1,.4,1), transform .25s cubic-bezier(.3,1.1,.4,1) }
 .isle-pop.open { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto }
 
 @media (max-width:860px) {
-  .isle { top:10px; height:34px; padding:0 12px; gap:8px }
+  .isle { top:calc(env(safe-area-inset-top, 0px) + 10px); height:34px; padding:0 12px; gap:8px }
   .isle .il-txt { max-width:110px; overflow:hidden; text-overflow:ellipsis }
-  .isle-pop { top:50px; width:300px }
+  .isle-pop { top:calc(env(safe-area-inset-top, 0px) + 50px); width:300px }
 }
 }
