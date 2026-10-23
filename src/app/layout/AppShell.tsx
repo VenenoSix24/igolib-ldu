@@ -12,7 +12,10 @@ export function AppShell() {
   const islandVisible = useIslandVisible(1000);
 
   return (
-    <div className="app-root relative min-h-[100dvh]" style={{ background: "var(--bg)" }}>
+    <div
+      className="app-root relative min-h-[100dvh]"
+      style={{ background: "var(--bg)", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       <div className="aurora" aria-hidden="true"><i /><i /><i /></div>
       <TaskIsland />
       <div
